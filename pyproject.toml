@@ -1,0 +1,28 @@
+[project]
+name = "lunchmoney-mcp"
+version = "0.1.0"
+description = "Lunch Money Application"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "alembic>=1.18.5",
+    "asyncpg>=0.31.0",
+    "httpx>=0.28.1",
+    "lunchmoney-python-async>=2.25.0",
+    "sqlalchemy[asyncio]>=2.0.51",
+    "sqlmodel>=0.0.39",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.22",
+    "ty>=0.0.61",
+]
