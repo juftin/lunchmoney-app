@@ -1,5 +1,6 @@
 """Tests for normalized transaction graphs and related records."""
 
+from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
 from types import NoneType
 from typing import get_args
@@ -11,6 +12,8 @@ from lunchmoney.models import (
     TransactionObject,
 )
 from sqlalchemy import JSON, DateTime, Numeric, String, inspect
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.schema import CreateTable
 from sqlalchemy.types import TypeDecorator
 from sqlmodel import SQLModel, Session, create_engine, select
 
@@ -150,6 +153,105 @@ def test_split_and_group_relationships_are_independent() -> None:
     ).model_dump(mode="json")
 
 
+def test_persisted_split_children_retain_reverse_api_order() -> None:
+    """Reload split children in their original global API order."""
+    children = [
+        child_transaction_object(
+            transaction_id=transaction_id,
+            tag_ids=[],
+        ).model_copy(update={"category_id": None, "manual_account_id": None})
+        for transaction_id in (102, 101)
+    ]
+    api_transaction = transaction_object(
+        tag_ids=[],
+        children=children,
+        files=None,
+    ).model_copy(update={"category_id": None, "plaid_account_id": None})
+    record = Transaction.from_api(api_transaction)
+    engine = create_engine("sqlite://")
+    SQLModel.metadata.create_all(engine)
+
+    with Session(engine) as session:
+        session.add(record)
+        session.commit()
+        session.expire_all()
+
+        reloaded = session.get(Transaction, record.id)
+
+        assert reloaded is not None
+        assert [child.id for child in reloaded.split_children] == [102, 101]
+        assert reloaded.to_api().model_dump(mode="json") == api_transaction.model_dump(
+            mode="json"
+        )
+
+
+def test_mixed_children_retain_group_before_split_api_order() -> None:
+    """Merge group and split relationships using their global API positions."""
+    group_child = child_transaction_object(
+        transaction_id=201,
+        split_parent_id=None,
+        group_parent_id=100,
+        tag_ids=[],
+    ).model_copy(update={"category_id": None, "manual_account_id": None})
+    split_child = child_transaction_object(
+        transaction_id=101,
+        tag_ids=[],
+    ).model_copy(update={"category_id": None, "manual_account_id": None})
+    api_transaction = transaction_object(
+        tag_ids=[],
+        children=[group_child, split_child],
+        files=None,
+        is_group_parent=True,
+    ).model_copy(update={"category_id": None, "plaid_account_id": None})
+    record = Transaction.from_api(api_transaction)
+
+    converted = record.to_api()
+
+    assert isinstance(converted, TransactionObject)
+    assert [child.id for child in converted.children or []] == [201, 101]
+
+    engine = create_engine("sqlite://")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(record)
+        session.commit()
+        session.expire_all()
+
+        reloaded = session.get(Transaction, record.id)
+
+        assert reloaded is not None
+        assert reloaded.to_api().model_dump(mode="json") == api_transaction.model_dump(
+            mode="json"
+        )
+
+
+@pytest.mark.parametrize(
+    ("split_parent_id", "group_parent_id"),
+    [(None, None), (100, 100)],
+    ids=["neither-parent-relation", "both-parent-relations"],
+)
+def test_parent_rejects_children_without_exactly_one_enclosing_relation(
+    split_parent_id: int | None,
+    group_parent_id: int | None,
+) -> None:
+    """Reject nested children whose ownership by the enclosing parent is unclear."""
+    child = child_transaction_object(
+        split_parent_id=split_parent_id,
+        group_parent_id=group_parent_id,
+        tag_ids=[],
+    )
+    api_transaction = transaction_object(children=[child], tag_ids=[])
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Child transaction 101 must belong to exactly one split or group "
+            "relationship on parent transaction 100"
+        ),
+    ):
+        Transaction.from_api(api_transaction)
+
+
 def test_transaction_table_covers_generated_scalar_union() -> None:
     """Map every parent/child scalar field plus conversion-state columns."""
     api_fields = set(TransactionObject.model_fields) | set(
@@ -161,10 +263,20 @@ def test_transaction_table_covers_generated_scalar_union() -> None:
         "tag_ids",
         "children",
         "files",
-    } | {"children_present", "files_present", "kind"}
+    } | {
+        "child_position",
+        "children_present",
+        "created_at_offset_minutes",
+        "files_present",
+        "kind",
+        "updated_at_offset_minutes",
+    }
+    assert table.c.child_position.nullable is True
     assert isinstance(table.c.kind.type, String)
     assert table.c.children_present.nullable is False
     assert table.c.files_present.nullable is False
+    assert table.c.created_at_offset_minutes.nullable is True
+    assert table.c.updated_at_offset_minutes.nullable is True
 
 
 def test_transaction_scalar_columns_match_generated_requirements() -> None:
@@ -278,6 +390,7 @@ def test_transaction_attachment_maps_api_id_to_nullable_indexed_column() -> None
     assert set(table.c.keys()) == api_fields - {"id"} | {
         "id",
         "api_id",
+        "created_at_offset_minutes",
         "transaction_id",
     }
     assert table.c.id.primary_key is True
@@ -319,6 +432,7 @@ def test_transaction_relationships_own_nested_records() -> None:
         assert children_relationship._calculated_foreign_keys == {
             table.c[foreign_key_name]
         }
+        assert tuple(children_relationship.order_by) == (table.c.child_position,)
 
 
 def test_owned_and_referenced_foreign_keys_declare_delete_actions() -> None:
@@ -365,14 +479,47 @@ def test_persisted_tag_ids_retain_api_order() -> None:
         assert reloaded.to_api().tag_ids == api_transaction.tag_ids
 
 
-def test_persisted_timestamps_round_trip_exactly() -> None:
-    """Retain timezone-aware transaction and attachment timestamps on SQLite."""
+@pytest.mark.parametrize(
+    ("timestamp", "expected_json"),
+    [
+        (datetime(2026, 1, 2, 3, 4, 5), "2026-01-02T03:04:05"),
+        (datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC), "2026-01-02T03:04:05Z"),
+        (
+            datetime(
+                2026,
+                1,
+                2,
+                3,
+                4,
+                5,
+                tzinfo=timezone(timedelta(hours=5, minutes=30)),
+            ),
+            "2026-01-02T03:04:05+05:30",
+        ),
+    ],
+    ids=["naive", "utc", "positive-offset"],
+)
+def test_persisted_timestamps_round_trip_exact_source_shape(
+    timestamp: datetime,
+    expected_json: str,
+) -> None:
+    """Retain naive and aware source representations after a SQLite reload."""
+    api_attachment = transaction_attachment_object().model_copy(
+        update={"created_at": timestamp}
+    )
     api_transaction = transaction_object(
         tag_ids=[],
         children=None,
-        files=[transaction_attachment_object()],
+        files=[api_attachment],
         is_split_parent=False,
-    ).model_copy(update={"category_id": None, "plaid_account_id": None})
+    ).model_copy(
+        update={
+            "category_id": None,
+            "created_at": timestamp,
+            "plaid_account_id": None,
+            "updated_at": timestamp,
+        }
+    )
     record = Transaction.from_api(api_transaction)
     engine = create_engine("sqlite://")
     SQLModel.metadata.create_all(engine)
@@ -385,9 +532,29 @@ def test_persisted_timestamps_round_trip_exactly() -> None:
         reloaded = session.get(Transaction, record.id)
 
         assert reloaded is not None
+        converted_json = reloaded.to_api().model_dump(mode="json")
+        assert converted_json["created_at"] == expected_json
+        assert converted_json["updated_at"] == expected_json
+        assert converted_json["files"][0]["created_at"] == expected_json
         assert reloaded.to_api().model_dump(mode="json") == api_transaction.model_dump(
             mode="json"
         )
+
+
+def test_transaction_tables_compile_for_postgresql() -> None:
+    """Keep native timezone-aware datetime columns portable to PostgreSQL."""
+    for table_name in (
+        "transactions",
+        "transaction_tag_links",
+        "transaction_attachments",
+    ):
+        table = SQLModel.metadata.tables[table_name]
+
+        ddl = str(CreateTable(table).compile(dialect=postgresql.dialect()))
+
+        assert f"CREATE TABLE {table_name}" in ddl
+        if table_name != "transaction_tag_links":
+            assert "TIMESTAMP WITH TIME ZONE" in ddl
 
 
 def test_persisted_transaction_graph_round_trips_and_cascades() -> None:

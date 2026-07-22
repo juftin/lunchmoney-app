@@ -2,7 +2,7 @@
 
 from builtins import type as builtin_type
 from collections.abc import Iterable
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any, ClassVar, Optional, Self, cast
@@ -27,8 +27,31 @@ def _decimal_to_api_string(value: Decimal) -> str:
     return format(value, ".4f")
 
 
+def _datetime_offset_minutes(value: datetime | None) -> int | None:
+    """Return the source UTC offset, using ``None`` for naive datetimes."""
+    if value is None or value.tzinfo is None:
+        return None
+    offset = value.utcoffset()
+    if offset is None:
+        return None
+    return int(offset.total_seconds() / 60)
+
+
+def _restore_datetime_shape(
+    value: datetime | None,
+    *,
+    offset_minutes: int | None,
+) -> datetime | None:
+    """Restore a generated model's naive or offset-aware datetime shape."""
+    if value is None:
+        return None
+    if offset_minutes is None:
+        return value.replace(tzinfo=None)
+    return value.astimezone(timezone(timedelta(minutes=offset_minutes)))
+
+
 class _UTCDateTime(TypeDecorator[datetime]):
-    """Preserve UTC-aware timestamps across SQLite and PostgreSQL."""
+    """Store native timestamps in UTC across SQLite and PostgreSQL."""
 
     impl = DateTime(timezone=True)
     cache_ok = True
@@ -38,10 +61,12 @@ class _UTCDateTime(TypeDecorator[datetime]):
         value: datetime | None,
         dialect: Dialect,
     ) -> datetime | None:
-        """Normalize aware values to UTC before database storage."""
+        """Normalize values to UTC for native database storage and querying."""
         del dialect
-        if value is None or value.tzinfo is None:
+        if value is None:
             return value
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
         return value.astimezone(UTC)
 
     def process_result_value(
@@ -122,6 +147,8 @@ class TransactionAttachment(SQLModel, table=True):
         sa_type=cast(builtin_type[Any], _UTCDateTime()),
     )
     """Optional timestamp when the attachment was created."""
+    created_at_offset_minutes: int | None = None
+    """Source UTC offset in minutes, or ``None`` when the source was naive."""
 
     transaction: Optional["Transaction"] = Relationship(back_populates="attachments")
     """Transaction that owns this attachment."""
@@ -156,6 +183,7 @@ class TransactionAttachment(SQLModel, table=True):
             size=model.size,
             notes=model.notes,
             created_at=model.created_at,
+            created_at_offset_minutes=_datetime_offset_minutes(model.created_at),
         )
 
     def to_api(self) -> TransactionAttachmentObject:
@@ -174,7 +202,10 @@ class TransactionAttachment(SQLModel, table=True):
                 "type": self.type,
                 "size": self.size,
                 "notes": self.notes,
-                "created_at": self.created_at,
+                "created_at": _restore_datetime_shape(
+                    self.created_at,
+                    offset_minutes=self.created_at_offset_minutes,
+                ),
             }
         )
 
@@ -225,8 +256,12 @@ class Transaction(SQLModel, table=True):
     """Whether the source account considers the transaction pending."""
     created_at: datetime = Field(sa_type=cast(builtin_type[Any], _UTCDateTime()))
     """Timestamp when the transaction was created."""
+    created_at_offset_minutes: int | None = None
+    """Created timestamp's source offset, or ``None`` when it was naive."""
     updated_at: datetime = Field(sa_type=cast(builtin_type[Any], _UTCDateTime()))
     """Timestamp when the transaction was last updated."""
+    updated_at_offset_minutes: int | None = None
+    """Updated timestamp's source offset, or ``None`` when it was naive."""
     is_split_parent: bool | None = None
     """Whether this row owns split child transactions."""
     split_parent_id: int | None = Field(
@@ -247,6 +282,8 @@ class Transaction(SQLModel, table=True):
     """Optional arbitrary metadata supplied by an API caller."""
     source: str | None
     """Optional source that created the transaction."""
+    child_position: int | None = None
+    """Global position within the source parent's nested child list."""
     children_present: bool
     """Whether the source parent explicitly included its children list."""
     files_present: bool
@@ -279,6 +316,7 @@ class Transaction(SQLModel, table=True):
         cascade_delete=True,
         sa_relationship_kwargs={
             "foreign_keys": "Transaction.split_parent_id",
+            "order_by": "Transaction.child_position",
             "single_parent": True,
         },
     )
@@ -296,6 +334,7 @@ class Transaction(SQLModel, table=True):
         cascade_delete=True,
         sa_relationship_kwargs={
             "foreign_keys": "Transaction.group_parent_id",
+            "order_by": "Transaction.child_position",
             "single_parent": True,
         },
     )
@@ -362,11 +401,21 @@ class Transaction(SQLModel, table=True):
         ]
 
         if isinstance(model, TransactionObject):
-            for child_model in model.children or []:
+            for position, child_model in enumerate(model.children or []):
+                is_split_child = child_model.split_parent_id == model.id
+                is_group_child = child_model.group_parent_id == model.id
+                if is_split_child == is_group_child:
+                    msg = (
+                        f"Child transaction {child_model.id} must belong to exactly "
+                        "one split or group relationship on parent transaction "
+                        f"{model.id}"
+                    )
+                    raise ValueError(msg)
                 child = cls.from_api(child_model, tags=available_tags.values())
-                if child_model.split_parent_id == model.id:
+                child.child_position = position
+                if is_split_child:
                     record.split_children.append(child)
-                elif child_model.group_parent_id == model.id:
+                else:
                     record.group_children.append(child)
 
         return record
@@ -396,7 +445,9 @@ class Transaction(SQLModel, table=True):
             status=model.status,
             is_pending=model.is_pending,
             created_at=model.created_at,
+            created_at_offset_minutes=_datetime_offset_minutes(model.created_at),
             updated_at=model.updated_at,
+            updated_at_offset_minutes=_datetime_offset_minutes(model.updated_at),
             is_split_parent=model.is_split_parent,
             split_parent_id=model.split_parent_id,
             is_group_parent=model.is_group_parent,
@@ -468,7 +519,7 @@ class Transaction(SQLModel, table=True):
             if child.id not in child_ids:
                 children.append(child)
                 child_ids.add(child.id)
-        return children
+        return sorted(children, key=lambda child: child.child_position or 0)
 
     def _api_values(self) -> dict[str, Any]:
         """Return all API values shared by parent and child transaction schemas."""
@@ -489,8 +540,14 @@ class Transaction(SQLModel, table=True):
             "notes": self.notes,
             "status": self.status,
             "is_pending": self.is_pending,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
+            "created_at": _restore_datetime_shape(
+                self.created_at,
+                offset_minutes=self.created_at_offset_minutes,
+            ),
+            "updated_at": _restore_datetime_shape(
+                self.updated_at,
+                offset_minutes=self.updated_at_offset_minutes,
+            ),
             "is_split_parent": self.is_split_parent,
             "split_parent_id": self.split_parent_id,
             "is_group_parent": self.is_group_parent,
