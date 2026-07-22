@@ -36,6 +36,14 @@ ROUND_TRIP_CASES: list[
 ]
 """Generated factories paired with their SQLModel conversion methods."""
 
+ACCOUNT_BALANCE_ROUND_TRIP_CASES: list[
+    tuple[Callable[[], BaseModel], Callable[[Any], _RoundTripRecord], str]
+] = [
+    (plaid_account_object, PlaidAccount.from_api, "1250.5000"),
+    (manual_account_object, ManualAccount.from_api, "750.2500"),
+]
+"""Four-decimal balance fixtures paired with their SQLModel conversion methods."""
+
 
 @pytest.mark.parametrize(("api_factory", "record_factory"), ROUND_TRIP_CASES)
 def test_scalar_record_round_trip_is_exact(
@@ -47,6 +55,24 @@ def test_scalar_record_round_trip_is_exact(
 
     round_tripped = record_factory(api_model).to_api()
 
+    assert round_tripped.model_dump(mode="json") == api_model.model_dump(mode="json")
+
+
+@pytest.mark.parametrize(
+    ("api_factory", "record_factory", "expected_balance"),
+    ACCOUNT_BALANCE_ROUND_TRIP_CASES,
+)
+def test_account_balance_round_trip_preserves_four_decimal_api_strings(
+    api_factory: Callable[[], BaseModel],
+    record_factory: Callable[[Any], _RoundTripRecord],
+    expected_balance: str,
+) -> None:
+    """Preserve Lunch Money's canonical four-decimal account balances exactly."""
+    api_model = api_factory()
+
+    round_tripped = record_factory(api_model).to_api()
+
+    assert api_model.model_dump(mode="json")["balance"] == expected_balance
     assert round_tripped.model_dump(mode="json") == api_model.model_dump(mode="json")
 
 
@@ -64,6 +90,26 @@ def test_scalar_records_cover_every_generated_field(
 ) -> None:
     """Declare one SQLModel field for every generated scalar API field."""
     assert set(record_type.model_fields) == set(api_type.model_fields)
+
+
+@pytest.mark.parametrize(
+    ("record_type", "api_type"),
+    [
+        (User, type(user_object())),
+        (PlaidAccount, type(plaid_account_object())),
+        (ManualAccount, type(manual_account_object())),
+        (Tag, type(tag_object())),
+    ],
+)
+def test_scalar_records_match_generated_field_requirements_and_defaults(
+    record_type: type[SQLModel], api_type: type[BaseModel]
+) -> None:
+    """Mirror generated requiredness and defaults for every scalar field."""
+    for field_name, api_field in api_type.model_fields.items():
+        record_field = record_type.model_fields[field_name]
+
+        assert record_field.is_required() is api_field.is_required()
+        assert record_field.default == api_field.default
 
 
 def test_monetary_fields_are_decimal_numeric_columns() -> None:
@@ -87,6 +133,8 @@ def test_monetary_fields_are_decimal_numeric_columns() -> None:
             assert isinstance(column_type, Numeric)
             assert column_type.precision == 20
             assert column_type.scale == 10
+
+    assert SQLModel.metadata.tables["plaid_accounts"].c.limit.nullable is True
 
 
 def test_generated_enums_are_stored_as_strings() -> None:

@@ -15,9 +15,8 @@ from sqlmodel import Field, SQLModel
 
 
 def _decimal_to_api_string(value: Decimal) -> str:
-    """Format a stored decimal without database-added trailing zeroes."""
-    formatted = format(value, "f")
-    return formatted.rstrip("0").rstrip(".") if "." in formatted else formatted
+    """Format a stored decimal using Lunch Money's canonical four decimals."""
+    return format(value, ".4f")
 
 
 class PlaidAccount(SQLModel, table=True):
@@ -49,9 +48,7 @@ class PlaidAccount(SQLModel, table=True):
     """Lunch Money account synchronization status."""
     allow_transaction_modifications: bool
     """Whether imported transactions may be modified."""
-    limit: Decimal | None = Field(
-        default=None, sa_type=cast(builtin_type[Any], Numeric(20, 10))
-    )
+    limit: Decimal | None = Field(sa_type=cast(builtin_type[Any], Numeric(20, 10)))
     """Optional account credit limit."""
     balance: Decimal = Field(sa_type=cast(builtin_type[Any], Numeric(20, 10)))
     """Current account balance."""
