@@ -29,6 +29,18 @@ def test_explicit_database_url_precedes_environment(
     )
 
 
+def test_database_uses_environment_url_without_explicit_argument(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use the configured environment URL when construction has no URL."""
+    database_url = "sqlite+aiosqlite:///environment.db"
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", database_url)
+
+    database = LunchMoneyDatabase()
+
+    assert str(database.engine.url) == database_url
+
+
 @pytest.mark.asyncio
 async def test_database_exposes_native_async_session(tmp_path: Path) -> None:
     """Yield SQLModel's native async session and dispose cleanly."""
