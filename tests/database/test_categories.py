@@ -8,6 +8,24 @@ from lunchmoney_mcp.database.models import Category, CategoryKind
 from factories import category_object, child_category_object
 
 
+def test_parent_category_round_trips_children_shape_independently_of_group() -> None:
+    """Preserve generated-valid null and empty children shapes for every group state."""
+    for is_group, children in (
+        (False, None),
+        (False, []),
+        (True, None),
+        (True, []),
+    ):
+        api_parent = category_object(children=children).model_copy(
+            update={"is_group": is_group}
+        )
+
+        converted = Category.from_api(api_parent).to_api()
+
+        assert isinstance(converted, CategoryObject)
+        assert converted.model_dump(mode="json") == api_parent.model_dump(mode="json")
+
+
 def test_category_graph_round_trip_is_exact_and_preserves_child_order() -> None:
     """Build an owned category graph and preserve its complete API JSON."""
     first_child = child_category_object()
@@ -69,9 +87,10 @@ def test_category_table_covers_generated_scalar_union() -> None:
     api_scalar_fields = api_fields - {"children"}
     table = SQLModel.metadata.tables["categories"]
 
-    assert set(table.c.keys()) == api_scalar_fields | {"kind"}
+    assert set(table.c.keys()) == api_scalar_fields | {"children_present", "kind"}
     assert isinstance(table.c.kind.type, String)
     assert table.c.collapsed.nullable is True
+    assert table.c.children_present.nullable is False
 
 
 def test_category_group_id_is_a_self_foreign_key() -> None:

@@ -51,6 +51,8 @@ class Category(SQLModel, table=True):
     """Optional display order supplied by Lunch Money."""
     collapsed: bool | None
     """Optional collapsed state shared by the generated category schemas."""
+    children_present: bool
+    """Whether the source parent API object explicitly included ``children``."""
     kind: CategoryKind = Field(sa_type=String)
     """Generated schema represented by this normalized row."""
 
@@ -91,12 +93,14 @@ class Category(SQLModel, table=True):
             model,
             kind=CategoryKind.PARENT,
             group_id=model.group_id,
+            children_present=model.children is not None,
         )
         record.children = [
             cls._from_api_model(
                 child,
                 kind=CategoryKind.CHILD,
                 group_id=model.id,
+                children_present=False,
             )
             for child in model.children or []
         ]
@@ -109,6 +113,7 @@ class Category(SQLModel, table=True):
         *,
         kind: CategoryKind,
         group_id: int | None,
+        children_present: bool,
     ) -> Self:
         """Create one normalized row from either generated category schema."""
         return cls(
@@ -126,6 +131,7 @@ class Category(SQLModel, table=True):
             archived_at=model.archived_at,
             order=model.order,
             collapsed=model.collapsed,
+            children_present=children_present,
             kind=kind,
         )
 
@@ -141,10 +147,8 @@ class Category(SQLModel, table=True):
             return self.to_child_api()
 
         values = self._api_values()
-        if self.children:
+        if self.children_present:
             values["children"] = [child.to_child_api() for child in self.children]
-        elif self.is_group:
-            values["children"] = []
         else:
             values["children"] = None
         return CategoryObject.model_validate(values)
