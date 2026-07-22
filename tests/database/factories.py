@@ -6,10 +6,13 @@ from lunchmoney.models import (
     AccountTypeEnum,
     CategoryObject,
     ChildCategoryObject,
+    ChildTransactionObject,
     CurrencyEnum,
     ManualAccountObject,
     PlaidAccountObject,
     TagObject,
+    TransactionAttachmentObject,
+    TransactionObject,
     UserObject,
 )
 
@@ -152,5 +155,112 @@ def category_object(
             "archived_at": None,
             "order": 1,
             "collapsed": True,
+        }
+    )
+
+
+def transaction_attachment_object(
+    attachment_id: int | None = 501,
+) -> TransactionAttachmentObject:
+    """Build a complete synthetic generated transaction attachment object."""
+    return TransactionAttachmentObject.model_validate(
+        {
+            "id": attachment_id,
+            "uploaded_by": 1,
+            "name": f"synthetic-attachment-{attachment_id}.pdf",
+            "type": "application/pdf",
+            "size": 128,
+            "notes": "Synthetic attachment used by database tests",
+            "created_at": SYNTHETIC_DATETIME,
+        }
+    )
+
+
+def child_transaction_object(
+    *,
+    transaction_id: int = 101,
+    split_parent_id: int | None = 100,
+    group_parent_id: int | None = None,
+    tag_ids: list[int] | None = None,
+    files: list[TransactionAttachmentObject] | None = None,
+) -> ChildTransactionObject:
+    """Build a complete synthetic generated child transaction object."""
+    return ChildTransactionObject.model_validate(
+        {
+            "id": transaction_id,
+            "date": SYNTHETIC_DATE,
+            "amount": "25.1250",
+            "currency": next(iter(CurrencyEnum)),
+            "to_base": 25.125,
+            "recurring_id": 701,
+            "payee": "Synthetic Child Payee",
+            "original_name": "SYNTHETIC CHILD PAYEE RAW",
+            "category_id": 10,
+            "notes": "Synthetic child transaction notes",
+            "status": "reviewed",
+            "is_pending": False,
+            "created_at": SYNTHETIC_DATETIME,
+            "updated_at": SYNTHETIC_DATETIME,
+            "is_split_parent": False,
+            "split_parent_id": split_parent_id,
+            "is_group_parent": False,
+            "group_parent_id": group_parent_id,
+            "manual_account_id": 3,
+            "plaid_account_id": None,
+            "tag_ids": tag_ids if tag_ids is not None else [22],
+            "source": "split",
+            "external_id": "synthetic-child-external-id",
+            "plaid_metadata": {"merchant": {"name": "Synthetic Child Merchant"}},
+            "custom_metadata": {
+                "source": "synthetic-child-fixture",
+                "nested": {"version": 1},
+            },
+            "files": files,
+        }
+    )
+
+
+def transaction_object(
+    *,
+    transaction_id: int = 100,
+    tag_ids: list[int] | None = None,
+    children: list[ChildTransactionObject] | None = None,
+    files: list[TransactionAttachmentObject] | None = None,
+    is_split_parent: bool | None = True,
+    is_group_parent: bool = False,
+) -> TransactionObject:
+    """Build a complete synthetic generated parent transaction object."""
+    return TransactionObject.model_validate(
+        {
+            "id": transaction_id,
+            "date": SYNTHETIC_DATE,
+            "amount": "125.6250",
+            "currency": next(iter(CurrencyEnum)),
+            "to_base": 125.625,
+            "recurring_id": 700,
+            "payee": "Synthetic Parent Payee",
+            "original_name": "SYNTHETIC PARENT PAYEE RAW",
+            "category_id": 10,
+            "plaid_account_id": 2,
+            "manual_account_id": None,
+            "external_id": "synthetic-parent-external-id",
+            "tag_ids": tag_ids if tag_ids is not None else [21],
+            "notes": "Synthetic parent transaction notes",
+            "status": "reviewed",
+            "is_pending": False,
+            "created_at": SYNTHETIC_DATETIME,
+            "updated_at": SYNTHETIC_DATETIME,
+            "is_split_parent": is_split_parent,
+            "split_parent_id": None,
+            "is_group_parent": is_group_parent,
+            "group_parent_id": None,
+            "children": children,
+            "plaid_metadata": {"merchant": {"name": "Synthetic Merchant"}},
+            "custom_metadata": {
+                "source": "synthetic-parent-fixture",
+                "nested": {"version": 1},
+            },
+            "files": files,
+            "source": "plaid",
         }
     )
