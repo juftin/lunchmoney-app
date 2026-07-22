@@ -4,6 +4,8 @@ from datetime import UTC, date, datetime
 
 from lunchmoney.models import (
     AccountTypeEnum,
+    CategoryObject,
+    ChildCategoryObject,
     CurrencyEnum,
     ManualAccountObject,
     PlaidAccountObject,
@@ -103,5 +105,52 @@ def tag_object(tag_id: int = 1) -> TagObject:
             "created_at": SYNTHETIC_DATETIME,
             "archived": True,
             "archived_at": SYNTHETIC_DATETIME,
+        }
+    )
+
+
+def child_category_object() -> ChildCategoryObject:
+    """Build a complete synthetic generated child category object."""
+    return ChildCategoryObject.model_validate(
+        {
+            "id": 11,
+            "name": "Synthetic Child Category",
+            "description": "Synthetic child category used by database tests",
+            "is_income": False,
+            "exclude_from_budget": False,
+            "exclude_from_totals": True,
+            "updated_at": SYNTHETIC_DATETIME,
+            "created_at": SYNTHETIC_DATETIME,
+            "group_id": 10,
+            "is_group": False,
+            "archived": True,
+            "archived_at": SYNTHETIC_DATETIME,
+            "order": 2,
+            "collapsed": False,
+        }
+    )
+
+
+def category_object(
+    children: list[ChildCategoryObject] | None = None,
+) -> CategoryObject:
+    """Build a complete synthetic generated parent category object."""
+    return CategoryObject.model_validate(
+        {
+            "id": 10,
+            "name": "Synthetic Category",
+            "description": "Synthetic category used by database tests",
+            "is_income": False,
+            "exclude_from_budget": True,
+            "exclude_from_totals": False,
+            "updated_at": SYNTHETIC_DATETIME,
+            "created_at": SYNTHETIC_DATETIME,
+            "group_id": None,
+            "is_group": children is not None,
+            "children": children,
+            "archived": False,
+            "archived_at": None,
+            "order": 1,
+            "collapsed": True,
         }
     )
