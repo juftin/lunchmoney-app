@@ -1,4 +1,4 @@
-"""Public async SQLModel database interfaces."""
+"""Public async SQLModel database configuration and persistence interfaces."""
 
 from lunchmoney_mcp.database.backend import (
     DEFAULT_DATABASE_URL,
