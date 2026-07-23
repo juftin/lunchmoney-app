@@ -5,5 +5,31 @@ from lunchmoney_mcp.database.backend import (
     LunchMoneyDatabase,
     resolve_database_url,
 )
+from lunchmoney_mcp.database.models import (
+    Category,
+    CategoryKind,
+    ManualAccount,
+    PlaidAccount,
+    Tag,
+    Transaction,
+    TransactionAttachment,
+    TransactionKind,
+    TransactionTagLink,
+    User,
+)
 
-__all__ = ["DEFAULT_DATABASE_URL", "LunchMoneyDatabase", "resolve_database_url"]
+__all__ = [
+    "Category",
+    "CategoryKind",
+    "DEFAULT_DATABASE_URL",
+    "LunchMoneyDatabase",
+    "ManualAccount",
+    "PlaidAccount",
+    "Tag",
+    "Transaction",
+    "TransactionAttachment",
+    "TransactionKind",
+    "TransactionTagLink",
+    "User",
+    "resolve_database_url",
+]
