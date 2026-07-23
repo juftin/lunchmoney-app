@@ -344,6 +344,58 @@ async def test_transaction_upsert_replaces_owned_children(
 
 
 @pytest.mark.asyncio
+async def test_transaction_child_upsert_removes_former_owned_graph(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Delete descendants when an existing parent transaction becomes a child."""
+    await database.upsert_many(_dependency_records())
+    tags = [Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))]
+    former_child = child_transaction_object(
+        transaction_id=101,
+        tag_ids=[22],
+        files=[transaction_attachment_object(attachment_id=601)],
+    )
+    await database.upsert(
+        Transaction.from_api(
+            transaction_object(children=[former_child]),
+            tags=tags,
+        )
+    )
+    await database.upsert(
+        Transaction.from_api(
+            transaction_object(transaction_id=200, children=None),
+            tags=tags,
+        )
+    )
+
+    moved = await database.upsert(
+        Transaction.from_api(
+            child_transaction_object(
+                transaction_id=100,
+                split_parent_id=200,
+                tag_ids=[21],
+                files=None,
+            ),
+            tags=tags,
+        )
+    )
+
+    assert moved.split_parent_id == 200
+    assert moved.split_children == []
+    assert moved.group_children == []
+    assert await database.get(Transaction, 101) is None
+    async with database.session() as session:
+        attachments = (
+            await session.exec(
+                select(TransactionAttachment).where(
+                    TransactionAttachment.transaction_id == 101
+                )
+            )
+        ).all()
+    assert attachments == []
+
+
+@pytest.mark.asyncio
 async def test_transaction_upsert_replaces_attachments_and_tag_links(
     database: LunchMoneyDatabase,
 ) -> None:

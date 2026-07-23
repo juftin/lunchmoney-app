@@ -293,13 +293,25 @@ def _update_category_graph(existing: Category, incoming: Category) -> None:
     existing.children = replacement
 
 
-def _update_transaction_graph(existing: Transaction, incoming: Transaction) -> None:
+async def _update_transaction_graph(
+    session: AsyncSession,
+    existing: Transaction,
+    incoming: Transaction,
+) -> None:
     """Update transaction scalars and atomically replace every owned collection."""
+    is_child = TransactionKind(incoming.kind) is TransactionKind.CHILD
+    if is_child:
+        await session.refresh(
+            existing,
+            attribute_names=["split_children", "group_children"],
+        )
     existing.sqlmodel_update(incoming)
     existing.attachments = _replacement_attachments(existing, incoming)
     existing.tag_links = _replacement_tag_links(existing, incoming)
 
-    if TransactionKind(incoming.kind) is TransactionKind.CHILD:
+    if is_child:
+        existing.split_children = []
+        existing.group_children = []
         return
 
     managed_children = {
@@ -313,7 +325,7 @@ def _update_transaction_graph(existing: Transaction, incoming: Transaction) -> N
         if managed is None:
             managed = _clone_transaction_graph(child)
         else:
-            _update_transaction_graph(managed, child)
+            await _update_transaction_graph(session, managed, child)
         managed.split_parent_id = existing.id
         managed.group_parent_id = None
         split_replacement.append(managed)
@@ -324,7 +336,7 @@ def _update_transaction_graph(existing: Transaction, incoming: Transaction) -> N
         if managed is None:
             managed = _clone_transaction_graph(child)
         else:
-            _update_transaction_graph(managed, child)
+            await _update_transaction_graph(session, managed, child)
         managed.split_parent_id = None
         managed.group_parent_id = existing.id
         group_replacement.append(managed)
@@ -367,7 +379,7 @@ async def _upsert_record(session: AsyncSession, record: SQLModel) -> None:
         if existing_transaction is None:
             session.add(_clone_transaction_graph(transaction))
         else:
-            _update_transaction_graph(existing_transaction, transaction)
+            await _update_transaction_graph(session, existing_transaction, transaction)
         return
 
     existing = await session.get(record_type, primary_key)
