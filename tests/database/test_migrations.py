@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -9,7 +10,7 @@ from typing import Any
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import MetaData, UniqueConstraint, inspect
+from sqlalchemy import Integer, MetaData, String, UniqueConstraint, inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
@@ -99,6 +100,77 @@ def _metadata_contract(metadata: MetaData) -> dict[str, dict[str, Any]]:
     return contract
 
 
+def _database_default_is_explicit(
+    column: Mapping[str, Any],
+    primary_key_columns: tuple[str, ...],
+) -> bool:
+    """Distinguish explicit defaults from generated integer-key sequences."""
+    default = column.get("default")
+    if default is None:
+        return False
+    return not (
+        column.get("name") in primary_key_columns
+        and _type_contract(column["type"])[0] == "Integer"
+        and isinstance(default, str)
+        and re.fullmatch(r"\s*nextval\s*\(.+\)\s*", default, flags=re.IGNORECASE)
+        and (column.get("autoincrement") is True or column.get("identity") is not None)
+    )
+
+
+@pytest.mark.parametrize(
+    ("column", "primary_key_columns", "expected"),
+    [
+        (
+            {
+                "name": "id",
+                "type": Integer(),
+                "default": "nextval('users_id_seq'::regclass)",
+                "autoincrement": True,
+            },
+            ("id",),
+            False,
+        ),
+        (
+            {
+                "name": "id",
+                "type": Integer(),
+                "default": "nextval('users_id_seq'::regclass)",
+                "identity": {"always": False},
+            },
+            ("id",),
+            False,
+        ),
+        (
+            {
+                "name": "id",
+                "type": Integer(),
+                "default": "42",
+                "autoincrement": True,
+            },
+            ("id",),
+            True,
+        ),
+        (
+            {
+                "name": "name",
+                "type": String(),
+                "default": "nextval('users_id_seq'::regclass)",
+                "autoincrement": True,
+            },
+            ("name",),
+            True,
+        ),
+    ],
+)
+def test_database_default_ignores_dialect_generated_autoincrement_default(
+    column: Mapping[str, Any],
+    primary_key_columns: tuple[str, ...],
+    expected: bool,
+) -> None:
+    """Ignore generated PostgreSQL sequence defaults but retain explicit defaults."""
+    assert _database_default_is_explicit(column, primary_key_columns) is expected
+
+
 def _database_contract(connection: Connection) -> dict[str, dict[str, Any]]:
     """Inspect the migrated schema using the same shape as model metadata."""
     inspector = inspect(connection)
@@ -111,7 +183,14 @@ def _database_contract(connection: Connection) -> dict[str, dict[str, Any]]:
                 column["name"]: {
                     "type": _type_contract(column["type"]),
                     "nullable": column["nullable"],
-                    "default": column["default"] is not None,
+                    "default": _database_default_is_explicit(
+                        column,
+                        tuple(
+                            inspector.get_pk_constraint(table_name)[
+                                "constrained_columns"
+                            ]
+                        ),
+                    ),
                 }
                 for column in columns
             },
@@ -172,6 +251,23 @@ async def _table_names(database_url: str) -> set[str]:
         await engine.dispose()
 
 
+def _assert_initial_migration_contract(
+    config: Config,
+    database_url: str,
+    metadata: MetaData,
+) -> None:
+    """Verify a migrated schema matches metadata and always return it to base."""
+    command.upgrade(config, "head")
+    try:
+        table_names = asyncio.run(_table_names(database_url))
+        assert set(metadata.tables) <= table_names
+        assert asyncio.run(_inspect_database(database_url)) == _metadata_contract(
+            metadata
+        )
+    finally:
+        command.downgrade(config, "base")
+
+
 def test_initial_migration_matches_metadata_and_downgrades(
     migration_database_url: str,
     monkeypatch: pytest.MonkeyPatch,
@@ -183,18 +279,33 @@ def test_initial_migration_matches_metadata_and_downgrades(
     )
     config = _migration_config(migration_database_url)
 
-    command.upgrade(config, "head")
-
-    table_names = asyncio.run(_table_names(migration_database_url))
-    assert set(SQLModel.metadata.tables) <= table_names
-    assert asyncio.run(_inspect_database(migration_database_url)) == _metadata_contract(
-        SQLModel.metadata
+    _assert_initial_migration_contract(
+        config=config,
+        database_url=migration_database_url,
+        metadata=SQLModel.metadata,
     )
-
-    command.downgrade(config, "base")
 
     remaining_tables = asyncio.run(_table_names(migration_database_url))
     assert set(SQLModel.metadata.tables).isdisjoint(remaining_tables)
+
+
+def test_migration_contract_downgrades_after_contract_assertion_failure(
+    tmp_path: Path,
+) -> None:
+    """Reverse an upgraded schema even when the schema contract assertion fails."""
+    database_url = f"sqlite+aiosqlite:///{tmp_path / 'failed-contract.db'}"
+    config = _migration_config(database_url)
+
+    with pytest.raises(AssertionError):
+        _assert_initial_migration_contract(
+            config=config,
+            database_url=database_url,
+            metadata=MetaData(),
+        )
+
+    assert set(SQLModel.metadata.tables).isdisjoint(
+        asyncio.run(_table_names(database_url))
+    )
 
 
 def test_migration_uses_environment_url_when_config_is_empty(
@@ -207,6 +318,7 @@ def test_migration_uses_environment_url_when_config_is_empty(
     config = _migration_config()
 
     command.upgrade(config, "head")
-
-    assert set(SQLModel.metadata.tables) <= asyncio.run(_table_names(database_url))
-    command.downgrade(config, "base")
+    try:
+        assert set(SQLModel.metadata.tables) <= asyncio.run(_table_names(database_url))
+    finally:
+        command.downgrade(config, "base")
