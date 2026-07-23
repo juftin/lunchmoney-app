@@ -2,11 +2,18 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, ClassVar, Optional, Self
+from builtins import type as builtin_type
+from typing import Any, ClassVar, Optional, Self, cast
 
 from lunchmoney.models import CategoryObject, ChildCategoryObject
 from sqlalchemy import String
 from sqlmodel import Field, Relationship, SQLModel
+
+from lunchmoney_mcp.database.models._datetime import (
+    UTCDateTime,
+    datetime_offset_minutes,
+    restore_datetime_shape,
+)
 
 
 class CategoryKind(StrEnum):
@@ -35,18 +42,24 @@ class Category(SQLModel, table=True):
     """Whether the category is excluded from budget calculations."""
     exclude_from_totals: bool
     """Whether the category is excluded from aggregate totals."""
-    updated_at: datetime
+    updated_at: datetime = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Timestamp when the category was last updated."""
-    created_at: datetime
+    updated_at_offset_minutes: int | None = None
+    """Source update timestamp offset, or ``None`` when it was naive."""
+    created_at: datetime = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Timestamp when the category was created."""
+    created_at_offset_minutes: int | None = None
+    """Source creation timestamp offset, or ``None`` when it was naive."""
     group_id: int | None = Field(foreign_key="categories.id")
     """Optional identifier of this child category's owning parent."""
     is_group: bool
     """Whether the category groups child categories."""
     archived: bool
     """Whether the category is archived."""
-    archived_at: datetime | None
+    archived_at: datetime | None = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Optional timestamp when the category was archived."""
+    archived_at_offset_minutes: int | None = None
+    """Source archive timestamp offset, or ``None`` when it was naive."""
     order: int | None
     """Optional display order supplied by Lunch Money."""
     collapsed: bool | None
@@ -124,11 +137,14 @@ class Category(SQLModel, table=True):
             exclude_from_budget=model.exclude_from_budget,
             exclude_from_totals=model.exclude_from_totals,
             updated_at=model.updated_at,
+            updated_at_offset_minutes=datetime_offset_minutes(model.updated_at),
             created_at=model.created_at,
+            created_at_offset_minutes=datetime_offset_minutes(model.created_at),
             group_id=group_id,
             is_group=model.is_group,
             archived=model.archived,
             archived_at=model.archived_at,
+            archived_at_offset_minutes=datetime_offset_minutes(model.archived_at),
             order=model.order,
             collapsed=model.collapsed,
             children_present=children_present,
@@ -172,12 +188,21 @@ class Category(SQLModel, table=True):
             "is_income": self.is_income,
             "exclude_from_budget": self.exclude_from_budget,
             "exclude_from_totals": self.exclude_from_totals,
-            "updated_at": self.updated_at,
-            "created_at": self.created_at,
+            "updated_at": restore_datetime_shape(
+                self.updated_at,
+                offset_minutes=self.updated_at_offset_minutes,
+            ),
+            "created_at": restore_datetime_shape(
+                self.created_at,
+                offset_minutes=self.created_at_offset_minutes,
+            ),
             "group_id": self.group_id,
             "is_group": self.is_group,
             "archived": self.archived,
-            "archived_at": self.archived_at,
+            "archived_at": restore_datetime_shape(
+                self.archived_at,
+                offset_minutes=self.archived_at_offset_minutes,
+            ),
             "order": self.order,
             "collapsed": self.collapsed,
         }

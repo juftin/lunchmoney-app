@@ -2,7 +2,7 @@
 
 from builtins import type as builtin_type
 from collections.abc import Iterable
-from datetime import UTC, date, datetime, timedelta, timezone
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any, ClassVar, Optional, Self, cast
@@ -12,11 +12,14 @@ from lunchmoney.models import (
     TransactionAttachmentObject,
     TransactionObject,
 )
-from sqlalchemy import JSON, DateTime, Numeric, String
-from sqlalchemy.engine import Dialect
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy import JSON, Numeric, String
 from sqlmodel import Field, Relationship, SQLModel
 
+from lunchmoney_mcp.database.models._datetime import (
+    UTCDateTime,
+    datetime_offset_minutes,
+    restore_datetime_shape,
+)
 from lunchmoney_mcp.database.models.accounts import ManualAccount, PlaidAccount
 from lunchmoney_mcp.database.models.categories import Category
 from lunchmoney_mcp.database.models.tags import Tag
@@ -25,62 +28,6 @@ from lunchmoney_mcp.database.models.tags import Tag
 def _decimal_to_api_string(value: Decimal) -> str:
     """Format a stored transaction amount using the API's four decimals."""
     return format(value, ".4f")
-
-
-def _datetime_offset_minutes(value: datetime | None) -> int | None:
-    """Return the source UTC offset, using ``None`` for naive datetimes."""
-    if value is None or value.tzinfo is None:
-        return None
-    offset = value.utcoffset()
-    if offset is None:
-        return None
-    return int(offset.total_seconds() / 60)
-
-
-def _restore_datetime_shape(
-    value: datetime | None,
-    *,
-    offset_minutes: int | None,
-) -> datetime | None:
-    """Restore a generated model's naive or offset-aware datetime shape."""
-    if value is None:
-        return None
-    if offset_minutes is None:
-        return value.replace(tzinfo=None)
-    return value.astimezone(timezone(timedelta(minutes=offset_minutes)))
-
-
-class _UTCDateTime(TypeDecorator[datetime]):
-    """Store native timestamps in UTC across SQLite and PostgreSQL."""
-
-    impl = DateTime(timezone=True)
-    cache_ok = True
-
-    def process_bind_param(
-        self,
-        value: datetime | None,
-        dialect: Dialect,
-    ) -> datetime | None:
-        """Normalize values to UTC for native database storage and querying."""
-        del dialect
-        if value is None:
-            return value
-        if value.tzinfo is None:
-            return value.replace(tzinfo=UTC)
-        return value.astimezone(UTC)
-
-    def process_result_value(
-        self,
-        value: datetime | None,
-        dialect: Dialect,
-    ) -> datetime | None:
-        """Restore the UTC marker omitted by SQLite's datetime adapter."""
-        del dialect
-        if value is None:
-            return None
-        if value.tzinfo is None:
-            return value.replace(tzinfo=UTC)
-        return value.astimezone(UTC)
 
 
 class TransactionKind(StrEnum):
@@ -132,6 +79,8 @@ class TransactionAttachment(SQLModel, table=True):
         ondelete="CASCADE",
     )
     """Identifier of the transaction that owns the attachment."""
+    position: int
+    """Zero-based position of the attachment in the source API list."""
     uploaded_by: int | None = None
     """Optional identifier of the user who uploaded the attachment."""
     name: str | None = None
@@ -144,7 +93,7 @@ class TransactionAttachment(SQLModel, table=True):
     """Optional notes stored with the attachment."""
     created_at: datetime | None = Field(
         default=None,
-        sa_type=cast(builtin_type[Any], _UTCDateTime()),
+        sa_type=cast(builtin_type[Any], UTCDateTime()),
     )
     """Optional timestamp when the attachment was created."""
     created_at_offset_minutes: int | None = None
@@ -159,6 +108,7 @@ class TransactionAttachment(SQLModel, table=True):
         model: TransactionAttachmentObject,
         *,
         transaction_id: int,
+        position: int,
     ) -> Self:
         """Create an owned attachment from a generated API object.
 
@@ -168,6 +118,8 @@ class TransactionAttachment(SQLModel, table=True):
             Generated Lunch Money attachment to convert.
         transaction_id
             Identifier of the transaction that owns the attachment.
+        position
+            Zero-based position of the attachment in the source API list.
 
         Returns
         -------
@@ -177,13 +129,14 @@ class TransactionAttachment(SQLModel, table=True):
         return cls(
             api_id=model.id,
             transaction_id=transaction_id,
+            position=position,
             uploaded_by=model.uploaded_by,
             name=model.name,
             type=model.type,
             size=model.size,
             notes=model.notes,
             created_at=model.created_at,
-            created_at_offset_minutes=_datetime_offset_minutes(model.created_at),
+            created_at_offset_minutes=datetime_offset_minutes(model.created_at),
         )
 
     def to_api(self) -> TransactionAttachmentObject:
@@ -202,7 +155,7 @@ class TransactionAttachment(SQLModel, table=True):
                 "type": self.type,
                 "size": self.size,
                 "notes": self.notes,
-                "created_at": _restore_datetime_shape(
+                "created_at": restore_datetime_shape(
                     self.created_at,
                     offset_minutes=self.created_at_offset_minutes,
                 ),
@@ -254,11 +207,11 @@ class Transaction(SQLModel, table=True):
     """Transaction review status."""
     is_pending: bool
     """Whether the source account considers the transaction pending."""
-    created_at: datetime = Field(sa_type=cast(builtin_type[Any], _UTCDateTime()))
+    created_at: datetime = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Timestamp when the transaction was created."""
     created_at_offset_minutes: int | None = None
     """Created timestamp's source offset, or ``None`` when it was naive."""
-    updated_at: datetime = Field(sa_type=cast(builtin_type[Any], _UTCDateTime()))
+    updated_at: datetime = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Timestamp when the transaction was last updated."""
     updated_at_offset_minutes: int | None = None
     """Updated timestamp's source offset, or ``None`` when it was naive."""
@@ -360,7 +313,7 @@ class Transaction(SQLModel, table=True):
         back_populates="transaction",
         cascade_delete=True,
         sa_relationship_kwargs={
-            "order_by": "TransactionAttachment.id",
+            "order_by": "TransactionAttachment.position",
             "single_parent": True,
         },
     )
@@ -396,8 +349,12 @@ class Transaction(SQLModel, table=True):
         record = cls._from_api_model(model, kind=kind)
         record._set_tag_graph(model.tag_ids, available_tags=available_tags)
         record.attachments = [
-            TransactionAttachment.from_api(file, transaction_id=model.id)
-            for file in model.files or []
+            TransactionAttachment.from_api(
+                file,
+                transaction_id=model.id,
+                position=position,
+            )
+            for position, file in enumerate(model.files or [])
         ]
 
         if isinstance(model, TransactionObject):
@@ -445,9 +402,9 @@ class Transaction(SQLModel, table=True):
             status=model.status,
             is_pending=model.is_pending,
             created_at=model.created_at,
-            created_at_offset_minutes=_datetime_offset_minutes(model.created_at),
+            created_at_offset_minutes=datetime_offset_minutes(model.created_at),
             updated_at=model.updated_at,
-            updated_at_offset_minutes=_datetime_offset_minutes(model.updated_at),
+            updated_at_offset_minutes=datetime_offset_minutes(model.updated_at),
             is_split_parent=model.is_split_parent,
             split_parent_id=model.split_parent_id,
             is_group_parent=model.is_group_parent,
@@ -540,11 +497,11 @@ class Transaction(SQLModel, table=True):
             "notes": self.notes,
             "status": self.status,
             "is_pending": self.is_pending,
-            "created_at": _restore_datetime_shape(
+            "created_at": restore_datetime_shape(
                 self.created_at,
                 offset_minutes=self.created_at_offset_minutes,
             ),
-            "updated_at": _restore_datetime_shape(
+            "updated_at": restore_datetime_shape(
                 self.updated_at,
                 offset_minutes=self.updated_at_offset_minutes,
             ),

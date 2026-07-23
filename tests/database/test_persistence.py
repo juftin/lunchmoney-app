@@ -1,6 +1,7 @@
 """Persistence contract tests for relationship-aware async database helpers."""
 
 from collections.abc import Iterable
+from datetime import UTC, datetime, timedelta, timezone
 from typing import cast
 
 import pytest
@@ -82,6 +83,29 @@ def _transaction_record(
     return Transaction.from_api(api_record, tags=tags)
 
 
+def _mixed_child_transaction_record() -> Transaction:
+    """Build a parent graph containing one split and one group child."""
+    split_child = child_transaction_object(
+        transaction_id=101,
+        tag_ids=[22],
+        files=None,
+    )
+    group_child = child_transaction_object(
+        transaction_id=102,
+        split_parent_id=None,
+        group_parent_id=100,
+        tag_ids=[22],
+        files=None,
+    )
+    api_record = transaction_object(
+        children=[split_child, group_child],
+        is_group_parent=True,
+        tag_ids=[21],
+    )
+    tags = [Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))]
+    return Transaction.from_api(api_record, tags=tags)
+
+
 @pytest.mark.asyncio
 async def test_scalar_upsert_inserts_and_updates(database: LunchMoneyDatabase) -> None:
     """Insert a scalar record and update that row without creating a duplicate."""
@@ -96,6 +120,80 @@ async def test_scalar_upsert_inserts_and_updates(database: LunchMoneyDatabase) -
     assert updated.name == "Updated Synthetic User"
     assert [record.id for record in stored] == [changed.id]
     _assert_detached(updated)
+
+
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        datetime(2026, 1, 2, 3, 4, 5),
+        datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC),
+        datetime(
+            2026,
+            1,
+            2,
+            3,
+            4,
+            5,
+            tzinfo=timezone(timedelta(hours=-7)),
+        ),
+    ],
+    ids=["naive", "utc", "negative-offset"],
+)
+@pytest.mark.asyncio
+async def test_persisted_scalar_and_category_timestamps_round_trip_exactly(
+    database: LunchMoneyDatabase,
+    timestamp: datetime,
+) -> None:
+    """Preserve exact API JSON timestamp shape across a SQLite reload."""
+    api_plaid = plaid_account_object().model_copy(
+        update={
+            "balance_last_update": timestamp,
+            "last_import": timestamp,
+            "last_fetch": timestamp,
+            "plaid_last_successful_update": timestamp,
+        }
+    )
+    api_manual = manual_account_object().model_copy(
+        update={
+            "balance_as_of": timestamp,
+            "created_at": timestamp,
+            "updated_at": timestamp,
+        }
+    )
+    api_tag = tag_object().model_copy(
+        update={
+            "created_at": timestamp,
+            "updated_at": timestamp,
+            "archived_at": timestamp,
+        }
+    )
+    api_child = child_category_object().model_copy(
+        update={
+            "created_at": timestamp,
+            "updated_at": timestamp,
+            "archived_at": timestamp,
+        }
+    )
+    api_category = category_object(children=[api_child]).model_copy(
+        update={
+            "created_at": timestamp,
+            "updated_at": timestamp,
+            "archived_at": timestamp,
+        }
+    )
+    api_records = [api_plaid, api_manual, api_tag, api_category]
+    records = [
+        PlaidAccount.from_api(api_plaid),
+        ManualAccount.from_api(api_manual),
+        Tag.from_api(api_tag),
+        Category.from_api(api_category),
+    ]
+
+    stored = await database.upsert_many(records)
+
+    assert [record.to_api().model_dump(mode="json") for record in stored] == [
+        record.model_dump(mode="json") for record in api_records
+    ]
 
 
 @pytest.mark.asyncio
@@ -118,6 +216,54 @@ async def test_mixed_upsert_many_orders_dependencies_atomically(
         expected_transaction.to_api().model_dump(mode="json")
     )
     _assert_detached(transaction)
+
+
+@pytest.mark.asyncio
+async def test_upsert_many_orders_separate_category_parent_before_child(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Persist a child-first category batch while returning caller order."""
+    api_child = child_category_object()
+    parent = Category.from_api(category_object(children=None))
+    child = Category.from_api(category_object(children=[api_child])).children[0]
+
+    stored = await database.upsert_many([child, parent])
+
+    assert [record.id for record in stored] == [child.id, parent.id]
+    assert stored[0].to_api().id == api_child.id
+    assert stored[0].parent is not None
+    assert stored[0].parent.id == parent.id
+
+
+@pytest.mark.asyncio
+async def test_upsert_many_orders_separate_transaction_parent_before_child(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Persist a child-first transaction batch while returning caller order."""
+    tags = [Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))]
+    parent = Transaction.from_api(
+        transaction_object(children=None),
+        tags=tags,
+    )
+    api_child = child_transaction_object()
+    child = Transaction.from_api(api_child, tags=tags)
+    requested = [child, parent, *_dependency_records()]
+
+    stored = await database.upsert_many(requested)
+
+    assert [
+        cast(
+            User | PlaidAccount | ManualAccount | Category | Tag | Transaction, record
+        ).id
+        for record in stored
+    ] == [101, 100, 1, 2, 3, 10, 21, 22]
+    stored_child = stored[0]
+    assert isinstance(stored_child, Transaction)
+    assert stored_child.to_api().model_dump(mode="json") == api_child.model_dump(
+        mode="json"
+    )
+    assert stored_child.split_parent is not None
+    assert stored_child.split_parent.id == parent.id
 
 
 @pytest.mark.asyncio
@@ -229,6 +375,33 @@ async def test_transaction_upsert_replaces_attachments_and_tag_links(
 
 
 @pytest.mark.asyncio
+async def test_transaction_attachment_replacement_preserves_incoming_order(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Reload retained attachments in the replacement API list order."""
+    await database.upsert_many(_dependency_records())
+    await database.upsert(
+        _transaction_record(
+            attachment_ids=(501, 502),
+            include_child=False,
+        )
+    )
+    replacement = _transaction_record(
+        attachment_ids=(502, 501),
+        include_child=False,
+    )
+
+    updated = await database.upsert(replacement)
+    reloaded = await database.get(Transaction, replacement.id)
+
+    assert [attachment.api_id for attachment in updated.attachments] == [502, 501]
+    assert reloaded is not None
+    assert [attachment.api_id for attachment in reloaded.attachments] == [502, 501]
+    converted = reloaded.to_api()
+    assert [attachment.id for attachment in converted.files or []] == [502, 501]
+
+
+@pytest.mark.asyncio
 async def test_get_and_list_return_detached_eager_graphs(
     database: LunchMoneyDatabase,
 ) -> None:
@@ -253,6 +426,53 @@ async def test_get_and_list_return_detached_eager_graphs(
     for record in listed:
         _assert_detached(record)
         record.to_api()
+
+
+@pytest.mark.asyncio
+async def test_get_detaches_transaction_category_and_child_parent_graphs(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Keep referenced category and nested parent access usable after get()."""
+    transaction = _mixed_child_transaction_record()
+    await database.upsert_many([*_dependency_records(), transaction])
+
+    stored = await database.get(Transaction, transaction.id)
+
+    assert stored is not None
+    assert stored.category is not None
+    assert stored.category.to_api().model_dump(mode="json") == (
+        category_object(children=[child_category_object()]).model_dump(mode="json")
+    )
+    split_child = stored.split_children[0]
+    group_child = stored.group_children[0]
+    assert split_child.category is not None
+    split_child.category.to_api()
+    assert split_child.split_parent is stored
+    assert split_child.group_parent is None
+    assert group_child.category is not None
+    group_child.category.to_api()
+    assert group_child.group_parent is stored
+    assert group_child.split_parent is None
+
+
+@pytest.mark.asyncio
+async def test_list_detaches_transaction_category_and_child_parent_graphs(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Keep referenced category and parent access usable after list()."""
+    transaction = _mixed_child_transaction_record()
+    await database.upsert_many([*_dependency_records(), transaction])
+
+    listed = await database.list(Transaction)
+
+    by_id = {record.id: record for record in listed}
+    for record in listed:
+        assert record.category is not None
+        record.category.to_api()
+    assert by_id[101].split_parent is by_id[100]
+    assert by_id[101].group_parent is None
+    assert by_id[102].group_parent is by_id[100]
+    assert by_id[102].split_parent is None
 
 
 @pytest.mark.asyncio

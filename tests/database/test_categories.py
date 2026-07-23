@@ -1,7 +1,10 @@
 """Tests for normalized self-referencing category records."""
 
 from lunchmoney.models import CategoryObject, ChildCategoryObject
-from sqlalchemy import String, inspect
+from sqlalchemy import DateTime, String, inspect
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.types import TypeDecorator
 from sqlmodel import SQLModel, Session, create_engine
 
 from lunchmoney_mcp.database.models import Category, CategoryKind
@@ -87,10 +90,37 @@ def test_category_table_covers_generated_scalar_union() -> None:
     api_scalar_fields = api_fields - {"children"}
     table = SQLModel.metadata.tables["categories"]
 
-    assert set(table.c.keys()) == api_scalar_fields | {"children_present", "kind"}
+    assert set(table.c.keys()) == api_scalar_fields | {
+        "archived_at_offset_minutes",
+        "children_present",
+        "created_at_offset_minutes",
+        "kind",
+        "updated_at_offset_minutes",
+    }
     assert isinstance(table.c.kind.type, String)
     assert table.c.collapsed.nullable is True
     assert table.c.children_present.nullable is False
+
+
+def test_category_timestamp_columns_are_native_and_retain_source_offsets() -> None:
+    """Use portable native datetimes plus nullable source-offset state."""
+    table = SQLModel.metadata.tables["categories"]
+    for field_name in ("updated_at", "created_at", "archived_at"):
+        column_type = table.c[field_name].type
+        assert isinstance(column_type, TypeDecorator)
+        assert isinstance(column_type.impl, DateTime)
+        assert column_type.impl.timezone is True
+        assert table.c[f"{field_name}_offset_minutes"].nullable is True
+
+
+def test_category_table_compiles_for_postgresql() -> None:
+    """Compile source-shape timestamp storage to PostgreSQL native columns."""
+    table = SQLModel.metadata.tables["categories"]
+
+    ddl = str(CreateTable(table).compile(dialect=postgresql.dialect()))
+
+    assert "CREATE TABLE categories" in ddl
+    assert "TIMESTAMP WITH TIME ZONE" in ddl
 
 
 def test_category_group_id_is_a_self_foreign_key() -> None:

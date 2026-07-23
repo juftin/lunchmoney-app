@@ -59,6 +59,7 @@ def test_transaction_graph_round_trip_is_exact() -> None:
     assert [attachment.api_id for attachment in record.attachments] == [
         file.id for file in api_transaction.files or []
     ]
+    assert [attachment.position for attachment in record.attachments] == [0, 1]
     assert [child.id for child in record.split_children] == [101]
     assert record.split_children[0].split_parent is record
     assert record.to_api().model_dump(mode="json") == api_transaction.model_dump(
@@ -317,6 +318,7 @@ def test_nullable_transaction_and_attachment_fields_round_trip() -> None:
     attachment_converted = TransactionAttachment.from_api(
         api_attachment,
         transaction_id=api_transaction.id,
+        position=0,
     ).to_api()
 
     assert transaction_converted.model_dump(mode="json") == api_transaction.model_dump(
@@ -391,12 +393,14 @@ def test_transaction_attachment_maps_api_id_to_nullable_indexed_column() -> None
         "id",
         "api_id",
         "created_at_offset_minutes",
+        "position",
         "transaction_id",
     }
     assert table.c.id.primary_key is True
     assert table.c.id.autoincrement in {True, "auto"}
     assert table.c.api_id.nullable is True
     assert table.c.api_id.index is True
+    assert table.c.position.nullable is False
     assert {
         foreign_key.target_fullname
         for foreign_key in table.c.transaction_id.foreign_keys
@@ -417,6 +421,10 @@ def test_transaction_relationships_own_nested_records() -> None:
         assert relationship.cascade.delete is True
         assert relationship.cascade.delete_orphan is True
         assert relationship.single_parent is True
+    attachment_table = SQLModel.metadata.tables["transaction_attachments"]
+    assert tuple(mapper.relationships["attachments"].order_by) == (
+        attachment_table.c.position,
+    )
     for parent_name, children_name, foreign_key_name in (
         ("split_parent", "split_children", "split_parent_id"),
         ("group_parent", "group_children", "group_parent_id"),

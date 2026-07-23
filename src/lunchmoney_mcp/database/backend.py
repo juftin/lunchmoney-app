@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from lunchmoney_mcp.database.models import (
     Category,
+    CategoryKind,
     ManualAccount,
     PlaidAccount,
     Tag,
@@ -67,19 +68,23 @@ def _ensure_supported_record(record: SQLModel) -> None:
         raise TypeError(msg)
 
 
-def _dependency_order(record: SQLModel) -> int:
-    """Return the foreign-key-safe persistence order for a supported record."""
+def _dependency_order(record: SQLModel) -> tuple[int, int]:
+    """Return the foreign-key-safe model and self-parent persistence order."""
     record_type = type(record)
     if record_type is User:
-        return 0
+        return (0, 0)
     if record_type in {PlaidAccount, ManualAccount}:
-        return 1
+        return (1, 0)
     if record_type is Category:
-        return 2
+        category = cast(Category, record)
+        child_order = int(CategoryKind(category.kind) is CategoryKind.CHILD)
+        return (2, child_order)
     if record_type is Tag:
-        return 3
+        return (3, 0)
     if record_type is Transaction:
-        return 4
+        transaction = cast(Transaction, record)
+        child_order = int(TransactionKind(transaction.kind) is TransactionKind.CHILD)
+        return (4, child_order)
     msg = f"Unsupported SQLModel record: {record_type.__name__}"
     raise TypeError(msg)
 
@@ -139,6 +144,7 @@ def _eager_options(model: type[SQLModel]) -> tuple[Any, ...]:
         )
     if model is Transaction:
         category = _loader_attribute(Transaction.category)
+        category_children = _loader_attribute(Category.children)
         plaid_account = _loader_attribute(Transaction.plaid_account)
         manual_account = _loader_attribute(Transaction.manual_account)
         split_parent = _loader_attribute(Transaction.split_parent)
@@ -150,7 +156,7 @@ def _eager_options(model: type[SQLModel]) -> tuple[Any, ...]:
         split_children = _loader_attribute(Transaction.split_children)
         group_children = _loader_attribute(Transaction.group_children)
         return (
-            selectinload(category),
+            selectinload(category).selectinload(category_children),
             selectinload(plaid_account),
             selectinload(manual_account),
             selectinload(split_parent),
@@ -158,18 +164,26 @@ def _eager_options(model: type[SQLModel]) -> tuple[Any, ...]:
             selectinload(tag_links).selectinload(link_tag),
             selectinload(tags),
             selectinload(attachments),
-            selectinload(split_children).selectinload(category),
+            selectinload(split_children)
+            .selectinload(category)
+            .selectinload(category_children),
             selectinload(split_children).selectinload(plaid_account),
             selectinload(split_children).selectinload(manual_account),
             selectinload(split_children).selectinload(tag_links).selectinload(link_tag),
             selectinload(split_children).selectinload(tags),
             selectinload(split_children).selectinload(attachments),
-            selectinload(group_children).selectinload(category),
+            selectinload(split_children).selectinload(split_parent),
+            selectinload(split_children).selectinload(group_parent),
+            selectinload(group_children)
+            .selectinload(category)
+            .selectinload(category_children),
             selectinload(group_children).selectinload(plaid_account),
             selectinload(group_children).selectinload(manual_account),
             selectinload(group_children).selectinload(tag_links).selectinload(link_tag),
             selectinload(group_children).selectinload(tags),
             selectinload(group_children).selectinload(attachments),
+            selectinload(group_children).selectinload(split_parent),
+            selectinload(group_children).selectinload(group_parent),
         )
     return ()
 
@@ -220,18 +234,20 @@ def _replacement_attachments(
     }
     used: set[int] = set()
     replacement: list[TransactionAttachment] = []
-    for attachment in incoming.attachments:
+    for position, attachment in enumerate(incoming.attachments):
         managed = by_id.get(attachment.id) if attachment.id is not None else None
         if managed is None and attachment.api_id is not None:
             managed = by_api_id.get(attachment.api_id)
         if managed is not None and id(managed) not in used:
             managed.sqlmodel_update(attachment.model_dump(exclude={"id"}))
             managed.transaction_id = existing.id
+            managed.position = position
             used.add(id(managed))
             replacement.append(managed)
             continue
         clone = TransactionAttachment.model_validate(attachment.model_dump())
         clone.transaction_id = existing.id
+        clone.position = position
         replacement.append(clone)
     return replacement
 

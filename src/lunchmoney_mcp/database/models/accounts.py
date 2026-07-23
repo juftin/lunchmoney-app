@@ -13,6 +13,12 @@ from lunchmoney.models import (
 from sqlalchemy import JSON, Numeric, String
 from sqlmodel import Field, SQLModel
 
+from lunchmoney_mcp.database.models._datetime import (
+    UTCDateTime,
+    datetime_offset_minutes,
+    restore_datetime_shape,
+)
+
 
 def _decimal_to_api_string(value: Decimal) -> str:
     """Format a stored decimal using Lunch Money's canonical four decimals."""
@@ -56,16 +62,28 @@ class PlaidAccount(SQLModel, table=True):
     """Three-letter account currency code."""
     to_base: Decimal = Field(sa_type=cast(builtin_type[Any], Numeric(20, 10)))
     """Balance converted to the user's primary currency."""
-    balance_last_update: datetime | None
+    balance_last_update: datetime | None = Field(
+        sa_type=cast(builtin_type[Any], UTCDateTime())
+    )
     """Optional timestamp of the last balance update."""
+    balance_last_update_offset_minutes: int | None = None
+    """Source balance-update offset, or ``None`` when it was naive."""
     import_start_date: date | None
     """Optional earliest transaction import date."""
-    last_import: datetime | None
+    last_import: datetime | None = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Optional timestamp of the last transaction import."""
-    last_fetch: datetime | None
+    last_import_offset_minutes: int | None = None
+    """Source last-import offset, or ``None`` when it was naive."""
+    last_fetch: datetime | None = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Optional timestamp of the last successful Plaid fetch."""
-    plaid_last_successful_update: datetime | None
+    last_fetch_offset_minutes: int | None = None
+    """Source last-fetch offset, or ``None`` when it was naive."""
+    plaid_last_successful_update: datetime | None = Field(
+        sa_type=cast(builtin_type[Any], UTCDateTime())
+    )
     """Optional timestamp of Plaid's last successful institution update."""
+    plaid_last_successful_update_offset_minutes: int | None = None
+    """Source Plaid-success offset, or ``None`` when it was naive."""
 
     @classmethod
     def from_api(cls, model: PlaidAccountObject) -> Self:
@@ -99,10 +117,18 @@ class PlaidAccount(SQLModel, table=True):
             currency=model.currency,
             to_base=Decimal(str(model.to_base)),
             balance_last_update=model.balance_last_update,
+            balance_last_update_offset_minutes=datetime_offset_minutes(
+                model.balance_last_update
+            ),
             import_start_date=model.import_start_date,
             last_import=model.last_import,
+            last_import_offset_minutes=datetime_offset_minutes(model.last_import),
             last_fetch=model.last_fetch,
+            last_fetch_offset_minutes=datetime_offset_minutes(model.last_fetch),
             plaid_last_successful_update=model.plaid_last_successful_update,
+            plaid_last_successful_update_offset_minutes=datetime_offset_minutes(
+                model.plaid_last_successful_update
+            ),
         )
 
     def to_api(self) -> PlaidAccountObject:
@@ -133,11 +159,23 @@ class PlaidAccount(SQLModel, table=True):
                 "balance": _decimal_to_api_string(self.balance),
                 "currency": self.currency,
                 "to_base": float(self.to_base),
-                "balance_last_update": self.balance_last_update,
+                "balance_last_update": restore_datetime_shape(
+                    self.balance_last_update,
+                    offset_minutes=self.balance_last_update_offset_minutes,
+                ),
                 "import_start_date": self.import_start_date,
-                "last_import": self.last_import,
-                "last_fetch": self.last_fetch,
-                "plaid_last_successful_update": self.plaid_last_successful_update,
+                "last_import": restore_datetime_shape(
+                    self.last_import,
+                    offset_minutes=self.last_import_offset_minutes,
+                ),
+                "last_fetch": restore_datetime_shape(
+                    self.last_fetch,
+                    offset_minutes=self.last_fetch_offset_minutes,
+                ),
+                "plaid_last_successful_update": restore_datetime_shape(
+                    self.plaid_last_successful_update,
+                    offset_minutes=self.plaid_last_successful_update_offset_minutes,
+                ),
             }
         )
 
@@ -165,8 +203,10 @@ class ManualAccount(SQLModel, table=True):
     """Three-letter account currency code."""
     to_base: Decimal = Field(sa_type=cast(builtin_type[Any], Numeric(20, 10)))
     """Balance converted to the user's primary currency."""
-    balance_as_of: datetime
+    balance_as_of: datetime = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Timestamp at which the balance was current."""
+    balance_as_of_offset_minutes: int | None = None
+    """Source balance timestamp offset, or ``None`` when it was naive."""
     status: str
     """Manual account lifecycle status."""
     closed_on: date | None
@@ -179,10 +219,14 @@ class ManualAccount(SQLModel, table=True):
     """Whether the account is excluded from transaction assignment."""
     created_by_name: str
     """Name of the user who created the account."""
-    created_at: datetime
+    created_at: datetime = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Timestamp when the account was created."""
-    updated_at: datetime
+    created_at_offset_minutes: int | None = None
+    """Source creation timestamp offset, or ``None`` when it was naive."""
+    updated_at: datetime = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """Timestamp when the account was last updated."""
+    updated_at_offset_minutes: int | None = None
+    """Source update timestamp offset, or ``None`` when it was naive."""
 
     @classmethod
     def from_api(cls, model: ManualAccountObject) -> Self:
@@ -209,6 +253,7 @@ class ManualAccount(SQLModel, table=True):
             currency=model.currency,
             to_base=Decimal(str(model.to_base)),
             balance_as_of=model.balance_as_of,
+            balance_as_of_offset_minutes=datetime_offset_minutes(model.balance_as_of),
             status=model.status,
             closed_on=model.closed_on,
             external_id=model.external_id,
@@ -216,7 +261,9 @@ class ManualAccount(SQLModel, table=True):
             exclude_from_transactions=model.exclude_from_transactions,
             created_by_name=model.created_by_name,
             created_at=model.created_at,
+            created_at_offset_minutes=datetime_offset_minutes(model.created_at),
             updated_at=model.updated_at,
+            updated_at_offset_minutes=datetime_offset_minutes(model.updated_at),
         )
 
     def to_api(self) -> ManualAccountObject:
@@ -238,14 +285,23 @@ class ManualAccount(SQLModel, table=True):
                 "balance": _decimal_to_api_string(self.balance),
                 "currency": self.currency,
                 "to_base": float(self.to_base),
-                "balance_as_of": self.balance_as_of,
+                "balance_as_of": restore_datetime_shape(
+                    self.balance_as_of,
+                    offset_minutes=self.balance_as_of_offset_minutes,
+                ),
                 "status": self.status,
                 "closed_on": self.closed_on,
                 "external_id": self.external_id,
                 "custom_metadata": self.custom_metadata,
                 "exclude_from_transactions": self.exclude_from_transactions,
                 "created_by_name": self.created_by_name,
-                "created_at": self.created_at,
-                "updated_at": self.updated_at,
+                "created_at": restore_datetime_shape(
+                    self.created_at,
+                    offset_minutes=self.created_at_offset_minutes,
+                ),
+                "updated_at": restore_datetime_shape(
+                    self.updated_at,
+                    offset_minutes=self.updated_at_offset_minutes,
+                ),
             }
         )

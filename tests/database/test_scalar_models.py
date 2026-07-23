@@ -6,7 +6,10 @@ from typing import Any, Protocol
 
 import pytest
 from pydantic import BaseModel
-from sqlalchemy import JSON, Numeric, String
+from sqlalchemy import JSON, DateTime, Numeric, String
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.schema import CreateTable
+from sqlalchemy.types import TypeDecorator
 from sqlmodel import SQLModel
 
 from lunchmoney_mcp.database.models import ManualAccount, PlaidAccount, Tag, User
@@ -43,6 +46,25 @@ ACCOUNT_BALANCE_ROUND_TRIP_CASES: list[
     (manual_account_object, ManualAccount.from_api, "750.2500"),
 ]
 """Four-decimal balance fixtures paired with their SQLModel conversion methods."""
+
+TIMESTAMP_FIELDS_BY_RECORD: dict[type[SQLModel], tuple[str, ...]] = {
+    PlaidAccount: (
+        "balance_last_update",
+        "last_import",
+        "last_fetch",
+        "plaid_last_successful_update",
+    ),
+    ManualAccount: ("balance_as_of", "created_at", "updated_at"),
+    Tag: ("updated_at", "created_at", "archived_at"),
+}
+"""Timestamp fields whose source offsets require persisted conversion state."""
+
+TABLE_NAME_BY_RECORD: dict[type[SQLModel], str] = {
+    PlaidAccount: "plaid_accounts",
+    ManualAccount: "manual_accounts",
+    Tag: "tags",
+}
+"""Explicit table names for scalar records with timestamp state."""
 
 
 @pytest.mark.parametrize(("api_factory", "record_factory"), ROUND_TRIP_CASES)
@@ -88,8 +110,13 @@ def test_account_balance_round_trip_preserves_four_decimal_api_strings(
 def test_scalar_records_cover_every_generated_field(
     record_type: type[SQLModel], api_type: type[BaseModel]
 ) -> None:
-    """Declare one SQLModel field for every generated scalar API field."""
-    assert set(record_type.model_fields) == set(api_type.model_fields)
+    """Declare every API field plus explicit timestamp source-shape state."""
+    expected_fields = set(api_type.model_fields) | {
+        f"{field_name}_offset_minutes"
+        for field_name in TIMESTAMP_FIELDS_BY_RECORD.get(record_type, ())
+    }
+
+    assert set(record_type.model_fields) == expected_fields
 
 
 @pytest.mark.parametrize(
@@ -170,3 +197,27 @@ def test_scalar_tables_are_registered() -> None:
         "manual_accounts",
         "tags",
     }.issubset(SQLModel.metadata.tables)
+
+
+def test_scalar_timestamp_columns_are_native_and_retain_source_offsets() -> None:
+    """Use portable native datetimes plus nullable source-offset state."""
+    for record_type, field_names in TIMESTAMP_FIELDS_BY_RECORD.items():
+        table = SQLModel.metadata.tables[TABLE_NAME_BY_RECORD[record_type]]
+        for field_name in field_names:
+            column_type = table.c[field_name].type
+            assert isinstance(column_type, TypeDecorator)
+            assert isinstance(column_type.impl, DateTime)
+            assert column_type.impl.timezone is True
+            assert table.c[f"{field_name}_offset_minutes"].nullable is True
+
+
+def test_scalar_timestamp_tables_compile_for_postgresql() -> None:
+    """Compile source-shape timestamp storage to PostgreSQL native columns."""
+    for record_type in TIMESTAMP_FIELDS_BY_RECORD:
+        table_name = TABLE_NAME_BY_RECORD[record_type]
+        table = SQLModel.metadata.tables[table_name]
+
+        ddl = str(CreateTable(table).compile(dialect=postgresql.dialect()))
+
+        assert f"CREATE TABLE {table_name}" in ddl
+        assert "TIMESTAMP WITH TIME ZONE" in ddl
