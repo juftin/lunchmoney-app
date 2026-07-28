@@ -1,5 +1,7 @@
 """FastMCP server instance and parallel tool definitions for Lunch Money operations."""
 
+from typing import TYPE_CHECKING
+
 from fastmcp import FastMCP
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
@@ -18,6 +20,10 @@ from lunchmoney_mcp.services import (
     fetch_user_info,
 )
 
+if TYPE_CHECKING:
+    from lunchmoney_mcp.client import LunchMoneyApp
+    from lunchmoney_mcp import LunchMoneyDatabase
+
 mcp: FastMCP[None] = FastMCP("Lunch Money MCP")
 
 
@@ -35,8 +41,8 @@ async def sync_data(days: int = 30) -> SyncResult:
     SyncResult
         Summary of synchronized records.
     """
-    db = get_database()
-    client = get_lunchmoney_app()
+    db: LunchMoneyDatabase = get_database()
+    client: LunchMoneyApp = get_lunchmoney_app()
     return await execute_mcp_sync(db=db, client=client, days=days)
 
 
@@ -49,7 +55,7 @@ async def get_user_info() -> UserInfo | None:
     UserInfo | None
         User profile details or None if no user profile exists in database.
     """
-    db = get_database()
+    db: LunchMoneyDatabase = get_database()
     return await fetch_user_info(db=db)
 
 
@@ -62,7 +68,7 @@ async def list_categories() -> list[CategoryInfo]:
     list[CategoryInfo]
         List of all budget category objects in database.
     """
-    db = get_database()
+    db: LunchMoneyDatabase = get_database()
     return await fetch_categories(db=db)
 
 
@@ -75,7 +81,7 @@ async def list_accounts() -> AccountsSummary:
     AccountsSummary
         Summary of connected Plaid and manual accounts.
     """
-    db = get_database()
+    db: LunchMoneyDatabase = get_database()
     return await fetch_accounts(db=db)
 
 
@@ -97,7 +103,7 @@ async def get_recent_transactions(
     list[TransactionInfo]
         Filtered list of matching transaction objects ordered by date descending.
     """
-    db = get_database()
+    db: LunchMoneyDatabase = get_database()
     return await fetch_recent_transactions(db=db, days=days, limit=limit)
 
 
