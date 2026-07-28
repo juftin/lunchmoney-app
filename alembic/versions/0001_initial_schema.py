@@ -38,7 +38,11 @@ def upgrade() -> None:
         sa.Column("collapsed", sa.Boolean(), nullable=True),
         sa.Column("children_present", sa.Boolean(), nullable=False),
         sa.Column("kind", sa.String(), nullable=False),
-        sa.ForeignKeyConstraint(["group_id"], ["categories.id"]),
+        sa.ForeignKeyConstraint(
+            ["group_id"],
+            ["categories.id"],
+            ondelete="CASCADE",
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_categories_id", "categories", ["id"], unique=False)
@@ -166,7 +170,9 @@ def upgrade() -> None:
         sa.Column("is_group_parent", sa.Boolean(), nullable=False),
         sa.Column("group_parent_id", sa.Integer(), nullable=True),
         sa.Column("plaid_metadata", sa.JSON(), nullable=True),
+        sa.Column("plaid_metadata_present", sa.Boolean(), nullable=False),
         sa.Column("custom_metadata", sa.JSON(), nullable=True),
+        sa.Column("custom_metadata_present", sa.Boolean(), nullable=False),
         sa.Column("source", sa.String(), nullable=True),
         sa.Column("child_position", sa.Integer(), nullable=True),
         sa.Column("children_present", sa.Boolean(), nullable=False),

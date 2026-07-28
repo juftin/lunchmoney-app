@@ -231,8 +231,12 @@ class Transaction(SQLModel, table=True):
     """Optional identifier of the group transaction containing this row."""
     plaid_metadata: dict[str, Any] | None = Field(default=None, sa_type=JSON)
     """Optional arbitrary metadata received from Plaid."""
+    plaid_metadata_present: bool = False
+    """Whether an upsert explicitly supplies the Plaid metadata value."""
     custom_metadata: dict[str, Any] | None = Field(default=None, sa_type=JSON)
     """Optional arbitrary metadata supplied by an API caller."""
+    custom_metadata_present: bool = False
+    """Whether an upsert explicitly supplies the custom metadata value."""
     source: str | None
     """Optional source that created the transaction."""
     child_position: int | None = None
@@ -410,7 +414,9 @@ class Transaction(SQLModel, table=True):
             is_group_parent=model.is_group_parent,
             group_parent_id=model.group_parent_id,
             plaid_metadata=model.plaid_metadata,
+            plaid_metadata_present=model.plaid_metadata is not None,
             custom_metadata=model.custom_metadata,
+            custom_metadata_present=model.custom_metadata is not None,
             source=model.source,
             children_present=(
                 isinstance(model, TransactionObject) and model.children is not None

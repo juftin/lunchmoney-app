@@ -55,6 +55,8 @@ def test_transaction_graph_round_trip_is_exact() -> None:
     assert record.kind == TransactionKind.PARENT
     assert record.amount == Decimal(api_transaction.amount)
     assert record.to_base == Decimal(str(api_transaction.to_base))
+    assert record.plaid_metadata_present is True
+    assert record.custom_metadata_present is True
     assert [tag.id for tag in record.tags] == api_transaction.tag_ids
     assert [attachment.api_id for attachment in record.attachments] == [
         file.id for file in api_transaction.files or []
@@ -114,6 +116,18 @@ def test_child_transaction_preserves_absent_and_empty_files(
 
     assert isinstance(converted, ChildTransactionObject)
     assert converted.model_dump(mode="json") == api_child.model_dump(mode="json")
+
+
+def test_transaction_from_api_marks_only_non_null_metadata_present() -> None:
+    """Treat null API metadata as omitted while retaining native clear flags."""
+    shallow_api = transaction_object(children=None, files=None).model_copy(
+        update={"custom_metadata": None, "plaid_metadata": None}
+    )
+
+    record = Transaction.from_api(shallow_api)
+
+    assert record.plaid_metadata_present is False
+    assert record.custom_metadata_present is False
 
 
 def test_split_and_group_relationships_are_independent() -> None:
@@ -270,12 +284,16 @@ def test_transaction_table_covers_generated_scalar_union() -> None:
         "created_at_offset_minutes",
         "files_present",
         "kind",
+        "plaid_metadata_present",
+        "custom_metadata_present",
         "updated_at_offset_minutes",
     }
     assert table.c.child_position.nullable is True
     assert isinstance(table.c.kind.type, String)
     assert table.c.children_present.nullable is False
     assert table.c.files_present.nullable is False
+    assert table.c.plaid_metadata_present.nullable is False
+    assert table.c.custom_metadata_present.nullable is False
     assert table.c.created_at_offset_minutes.nullable is True
     assert table.c.updated_at_offset_minutes.nullable is True
 

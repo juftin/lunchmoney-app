@@ -4,6 +4,7 @@ from lunchmoney_mcp.database.backend import (
     DEFAULT_DATABASE_URL,
     LunchMoneyDatabase,
     resolve_database_url,
+    run_migrations,
 )
 from lunchmoney_mcp.database.models import (
     Category,
@@ -32,4 +33,5 @@ __all__ = [
     "TransactionTagLink",
     "User",
     "resolve_database_url",
+    "run_migrations",
 ]

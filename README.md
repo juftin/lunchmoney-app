@@ -20,8 +20,8 @@ Create or update the schema before using the database. Runtime database construc
 does not call `create_all()` or run migrations automatically.
 
 ```bash
-LUNCHMONEY_DATABASE_URL=sqlite+aiosqlite:///lunchmoney.db \
-  uv run alembic upgrade head
+export LUNCHMONEY_DATABASE_URL=sqlite+aiosqlite:///lunchmoney.db
+uv run alembic upgrade head
 ```
 
 The same command works with a `postgresql+asyncpg` URL. Run the following to reverse all

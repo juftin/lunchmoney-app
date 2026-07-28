@@ -1,12 +1,18 @@
 """Async SQLModel database configuration and lifecycle helpers."""
 
+import asyncio
 import os
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
+from heapq import heappop, heappush
+from pathlib import Path
 from types import TracebackType
 from typing import Any, Self, cast
 
-from sqlalchemy import event
+from alembic import command
+from alembic.config import Config
+
+from sqlalchemy import event, update
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import SQLModel, select
@@ -14,7 +20,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from lunchmoney_mcp.database.models import (
     Category,
-    CategoryKind,
     ManualAccount,
     PlaidAccount,
     Tag,
@@ -34,11 +39,30 @@ _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
 """Explicit record classes accepted by the convenience persistence API."""
 
 
+PROJECT_ROOT: Path = Path(__file__).parents[3]
+"""Repository root containing the Alembic configuration."""
+
+
 def resolve_database_url(database_url: str | None = None) -> str:
     """Resolve an explicit, environment-provided, or default database URL."""
     if database_url is not None:
         return database_url
     return os.getenv("LUNCHMONEY_DATABASE_URL", DEFAULT_DATABASE_URL)
+
+
+async def run_migrations(
+    database_url: str | None = None, revision: str = "head"
+) -> None:
+    """Run Alembic database migrations to upgrade the schema."""
+
+    def _sync_upgrade() -> None:
+        resolved_url = resolve_database_url(database_url)
+        config = Config(str(PROJECT_ROOT / "alembic.ini"))
+        config.set_main_option("script_location", str(PROJECT_ROOT / "alembic"))
+        config.set_main_option("sqlalchemy.url", resolved_url.replace("%", "%%"))
+        command.upgrade(config, revision)
+
+    await asyncio.to_thread(_sync_upgrade)
 
 
 def _enable_sqlite_foreign_keys(
@@ -68,25 +92,78 @@ def _ensure_supported_record(record: SQLModel) -> None:
         raise TypeError(msg)
 
 
-def _dependency_order(record: SQLModel) -> tuple[int, int]:
-    """Return the foreign-key-safe model and self-parent persistence order."""
+def _model_rank(record: SQLModel) -> int:
+    """Return the broad persistence rank for one supported record."""
     record_type = type(record)
     if record_type is User:
-        return (0, 0)
+        return 0
     if record_type in {PlaidAccount, ManualAccount}:
-        return (1, 0)
+        return 1
     if record_type is Category:
-        category = cast(Category, record)
-        child_order = int(CategoryKind(category.kind) is CategoryKind.CHILD)
-        return (2, child_order)
+        return 2
     if record_type is Tag:
-        return (3, 0)
+        return 3
     if record_type is Transaction:
-        transaction = cast(Transaction, record)
-        child_order = int(TransactionKind(transaction.kind) is TransactionKind.CHILD)
-        return (4, child_order)
+        return 4
     msg = f"Unsupported SQLModel record: {record_type.__name__}"
     raise TypeError(msg)
+
+
+def _dependency_order(records: list[SQLModel]) -> list[tuple[int, SQLModel]]:
+    """Return a stable broad-rank and self-foreign-key topological ordering."""
+    identity_indices: dict[tuple[type[SQLModel], int], int] = {}
+    for index, record in enumerate(records):
+        identity = (type(record), _record_primary_key(record))
+        identity_indices.setdefault(identity, index)
+
+    dependencies: dict[int, set[int]] = {index: set() for index in range(len(records))}
+    dependents: dict[int, set[int]] = {index: set() for index in range(len(records))}
+    for index, record in enumerate(records):
+        parent_identities: list[tuple[type[SQLModel], int]] = []
+        if type(record) is Category:
+            category = record
+            if category.group_id is not None:
+                parent_identities.append((Category, category.group_id))
+        elif type(record) is Transaction:
+            transaction = record
+            for parent_id in (
+                transaction.split_parent_id,
+                transaction.group_parent_id,
+            ):
+                if parent_id is not None:
+                    parent_identities.append((Transaction, parent_id))
+
+        for parent_identity in parent_identities:
+            parent_index = identity_indices.get(parent_identity)
+            if parent_index is None or parent_index == index:
+                continue
+            dependencies[index].add(parent_index)
+            dependents[parent_index].add(index)
+
+    ordered: list[tuple[int, SQLModel]] = []
+    for rank in range(5):
+        rank_indices = [
+            index for index, record in enumerate(records) if _model_rank(record) == rank
+        ]
+        ready: list[int] = []
+        for index in rank_indices:
+            if not dependencies[index]:
+                heappush(ready, index)
+
+        ordered_indices: set[int] = set()
+        while ready:
+            index = heappop(ready)
+            ordered_indices.add(index)
+            ordered.append((index, records[index]))
+            for dependent_index in sorted(dependents[index]):
+                dependencies[dependent_index].discard(index)
+                if not dependencies[dependent_index]:
+                    heappush(ready, dependent_index)
+
+        for index in rank_indices:
+            if index not in ordered_indices:
+                ordered.append((index, records[index]))
+    return ordered
 
 
 def _record_primary_key(record: SQLModel) -> int:
@@ -188,18 +265,32 @@ def _eager_options(model: type[SQLModel]) -> tuple[Any, ...]:
     return ()
 
 
-def _clone_category_graph(record: Category) -> Category:
-    """Copy a transient category graph without carrying ORM session state."""
+def _clone_category_record(record: Category) -> Category:
+    """Copy one transient category row without carrying ORM session state."""
     clone = Category.model_validate(record.model_dump())
-    clone.children = [
-        Category.model_validate(child.model_dump()) for child in record.children
-    ]
+    clone.children = []
+    return clone
+
+
+def _clone_transaction_record(record: Transaction) -> Transaction:
+    """Copy one transient transaction row and normalize metadata presence."""
+    clone = Transaction.model_validate(record.model_dump())
+    clone.plaid_metadata_present = (
+        record.plaid_metadata_present or record.plaid_metadata is not None
+    )
+    clone.custom_metadata_present = (
+        record.custom_metadata_present or record.custom_metadata is not None
+    )
+    clone.tag_links = []
+    clone.attachments = []
+    clone.split_children = []
+    clone.group_children = []
     return clone
 
 
 def _clone_transaction_graph(record: Transaction) -> Transaction:
     """Copy a transaction graph without shared records or ORM session state."""
-    clone = Transaction.model_validate(record.model_dump())
+    clone = _clone_transaction_record(record)
     clone.tag_links = [
         TransactionTagLink.model_validate(link.model_dump())
         for link in record.tag_links
@@ -275,22 +366,60 @@ def _replacement_tag_links(
     return replacement
 
 
-def _update_category_graph(existing: Category, incoming: Category) -> None:
-    """Update category scalars and atomically replace its owned children."""
-    existing.sqlmodel_update(incoming)
+async def _update_category_graph(
+    session: AsyncSession,
+    existing: Category,
+    incoming: Category,
+) -> None:
+    """Update category scalars and replace explicitly supplied children."""
+    values = incoming.model_dump()
+    if not incoming.children_present:
+        values.pop("children_present")
+    existing.sqlmodel_update(values)
+    if not incoming.children_present:
+        return
+
     by_id = {child.id: child for child in existing.children}
     replacement: list[Category] = []
     for child in incoming.children:
         managed = by_id.get(child.id)
+        if managed is None:
+            managed = await _load_record(session, Category, child.id)
         if managed is not None:
             managed.sqlmodel_update(child)
             managed.group_id = existing.id
             replacement.append(managed)
             continue
-        clone = Category.model_validate(child.model_dump())
+        clone = _clone_category_record(child)
         clone.group_id = existing.id
         replacement.append(clone)
     existing.children = replacement
+
+
+def _transaction_update_values(incoming: Transaction) -> dict[str, Any]:
+    """Return scalar update values honoring optional metadata masks."""
+    values = incoming.model_dump()
+    plaid_metadata_present = (
+        incoming.plaid_metadata_present or incoming.plaid_metadata is not None
+    )
+    custom_metadata_present = (
+        incoming.custom_metadata_present or incoming.custom_metadata is not None
+    )
+    values["plaid_metadata_present"] = plaid_metadata_present
+    values["custom_metadata_present"] = custom_metadata_present
+    if not incoming.children_present and (
+        TransactionKind(incoming.kind) is not TransactionKind.CHILD
+    ):
+        values.pop("children_present")
+    if not incoming.files_present:
+        values.pop("files_present")
+    if not plaid_metadata_present:
+        values.pop("plaid_metadata")
+        values.pop("plaid_metadata_present")
+    if not custom_metadata_present:
+        values.pop("custom_metadata")
+        values.pop("custom_metadata_present")
+    return values
 
 
 async def _update_transaction_graph(
@@ -298,20 +427,24 @@ async def _update_transaction_graph(
     existing: Transaction,
     incoming: Transaction,
 ) -> None:
-    """Update transaction scalars and atomically replace every owned collection."""
+    """Update transaction scalars and replace explicitly supplied collections."""
     is_child = TransactionKind(incoming.kind) is TransactionKind.CHILD
     if is_child:
         await session.refresh(
             existing,
             attribute_names=["split_children", "group_children"],
         )
-    existing.sqlmodel_update(incoming)
-    existing.attachments = _replacement_attachments(existing, incoming)
+    existing.sqlmodel_update(_transaction_update_values(incoming))
+    if incoming.files_present:
+        existing.attachments = _replacement_attachments(existing, incoming)
     existing.tag_links = _replacement_tag_links(existing, incoming)
 
     if is_child:
         existing.split_children = []
         existing.group_children = []
+        return
+
+    if not incoming.children_present:
         return
 
     managed_children = {
@@ -323,9 +456,11 @@ async def _update_transaction_graph(
     for child in incoming.split_children:
         managed = managed_children.get(child.id)
         if managed is None:
-            managed = _clone_transaction_graph(child)
-        else:
+            managed = await _load_record(session, Transaction, child.id)
+        if managed is not None:
             await _update_transaction_graph(session, managed, child)
+        else:
+            managed = _clone_transaction_graph(child)
         managed.split_parent_id = existing.id
         managed.group_parent_id = None
         split_replacement.append(managed)
@@ -334,15 +469,54 @@ async def _update_transaction_graph(
     for child in incoming.group_children:
         managed = managed_children.get(child.id)
         if managed is None:
-            managed = _clone_transaction_graph(child)
-        else:
+            managed = await _load_record(session, Transaction, child.id)
+        if managed is not None:
             await _update_transaction_graph(session, managed, child)
+        else:
+            managed = _clone_transaction_graph(child)
         managed.split_parent_id = None
         managed.group_parent_id = existing.id
         group_replacement.append(managed)
 
     existing.split_children = split_replacement
     existing.group_children = group_replacement
+
+
+async def _detach_claimed_children(
+    session: AsyncSession,
+    records: Iterable[SQLModel],
+) -> None:
+    """Detach existing claimed children before caller-ordered graph additions."""
+    category_child_ids: set[int] = set()
+    transaction_child_ids: set[int] = set()
+    for record in records:
+        if type(record) is Category:
+            category = record
+            if category.children_present:
+                category_child_ids.update(child.id for child in category.children)
+        elif type(record) is Transaction:
+            transaction = record
+            if transaction.children_present:
+                transaction_child_ids.update(
+                    child.id
+                    for child in [
+                        *transaction.split_children,
+                        *transaction.group_children,
+                    ]
+                )
+
+    if category_child_ids:
+        await session.exec(
+            update(Category)
+            .where(_primary_key_attribute(Category).in_(category_child_ids))
+            .values(group_id=None)
+        )
+    if transaction_child_ids:
+        await session.exec(
+            update(Transaction)
+            .where(_primary_key_attribute(Transaction).in_(transaction_child_ids))
+            .values(split_parent_id=None, group_parent_id=None)
+        )
 
 
 async def _load_record[RecordT: SQLModel](
@@ -369,17 +543,19 @@ async def _upsert_record(session: AsyncSession, record: SQLModel) -> None:
         category = cast(Category, record)
         existing_category = await _load_record(session, Category, primary_key)
         if existing_category is None:
-            session.add(_clone_category_graph(category))
-        else:
-            _update_category_graph(existing_category, category)
+            existing_category = _clone_category_record(category)
+            session.add(existing_category)
+            await session.flush()
+        await _update_category_graph(session, existing_category, category)
         return
     if record_type is Transaction:
         transaction = cast(Transaction, record)
         existing_transaction = await _load_record(session, Transaction, primary_key)
         if existing_transaction is None:
-            session.add(_clone_transaction_graph(transaction))
-        else:
-            await _update_transaction_graph(session, existing_transaction, transaction)
+            existing_transaction = _clone_transaction_record(transaction)
+            session.add(existing_transaction)
+            await session.flush()
+        await _update_transaction_graph(session, existing_transaction, transaction)
         return
 
     existing = await session.get(record_type, primary_key)
@@ -430,10 +606,7 @@ class LunchMoneyDatabase:
         requested = list(records)
         for record in requested:
             _ensure_supported_record(record)
-        ordered = sorted(
-            enumerate(requested),
-            key=lambda item: (_dependency_order(item[1]), item[0]),
-        )
+        ordered = _dependency_order(cast(list[SQLModel], requested))
 
         if not requested:
             return []
@@ -441,6 +614,7 @@ class LunchMoneyDatabase:
         stored_by_index: dict[int, RecordT] = {}
         async with self.session_factory() as session:
             async with session.begin():
+                await _detach_claimed_children(session, requested)
                 for _, record in ordered:
                     await _upsert_record(session, record)
                 await session.flush()

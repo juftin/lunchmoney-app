@@ -1,5 +1,6 @@
 """Shared fixtures for asynchronous persistence integration tests."""
 
+import os
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
@@ -25,6 +26,24 @@ def migrated_database_url(tmp_path: Path) -> Iterator[str]:
     command.upgrade(config, "head")
     yield database_url
     command.downgrade(config, "base")
+
+
+@pytest.fixture
+def migrated_postgres_database_url() -> Iterator[str]:
+    """Apply and always reverse migrations around the optional PostgreSQL test."""
+    database_url = os.getenv("TEST_POSTGRES_URL")
+    if not database_url:
+        pytest.skip("TEST_POSTGRES_URL is not configured")
+    config = Config(str(PROJECT_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(PROJECT_ROOT / "alembic"))
+    config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
+
+    try:
+        command.downgrade(config, "base")
+        command.upgrade(config, "head")
+        yield database_url
+    finally:
+        command.downgrade(config, "base")
 
 
 @pytest_asyncio.fixture

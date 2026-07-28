@@ -2,13 +2,14 @@
 
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta, timezone
+from decimal import Decimal
 from typing import cast
 
 import pytest
-from lunchmoney.models import CategoryObject
+from lunchmoney.models import CategoryObject, TransactionObject
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel, col, delete, select
 
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import (
@@ -267,6 +268,77 @@ async def test_upsert_many_orders_separate_transaction_parent_before_child(
 
 
 @pytest.mark.asyncio
+async def test_upsert_many_topologically_orders_top_level_category_dependency(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Order top-level category rows by their actual self foreign key."""
+    parent = Category.from_api(category_object(children=None))
+    dependent_api = category_object(children=None).model_copy(
+        update={
+            "id": 12,
+            "name": "Top-level dependent category",
+            "group_id": parent.id,
+        }
+    )
+    dependent = Category.from_api(dependent_api)
+
+    stored = await database.upsert_many([dependent, parent])
+
+    assert [record.id for record in stored] == [dependent.id, parent.id]
+    assert stored[0].parent is not None
+    assert stored[0].parent.id == parent.id
+
+
+@pytest.mark.parametrize(
+    ("parent_id_field", "parent_relationship"),
+    [
+        ("split_parent_id", "split_parent"),
+        ("group_parent_id", "group_parent"),
+    ],
+    ids=["split", "group"],
+)
+@pytest.mark.asyncio
+async def test_upsert_many_topologically_orders_top_level_transaction_dependency(
+    database: LunchMoneyDatabase,
+    parent_id_field: str,
+    parent_relationship: str,
+) -> None:
+    """Order top-level transaction rows by their actual self foreign key."""
+    tags = [Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))]
+    is_group = parent_id_field == "group_parent_id"
+    parent = Transaction.from_api(
+        transaction_object(
+            children=None,
+            is_group_parent=is_group,
+            is_split_parent=not is_group,
+        ),
+        tags=tags,
+    )
+    dependent_api = transaction_object(transaction_id=102, children=None).model_copy(
+        update={
+            "is_split_parent": False,
+            parent_id_field: parent.id,
+        }
+    )
+    dependent = Transaction.from_api(dependent_api, tags=tags)
+    requested = [dependent, parent, *_dependency_records()]
+
+    stored = await database.upsert_many(requested)
+
+    assert [
+        cast(
+            User | PlaidAccount | ManualAccount | Category | Tag | Transaction, record
+        ).id
+        for record in stored
+    ] == [102, 100, 1, 2, 3, 10, 21, 22]
+    stored_dependent = stored[0]
+    assert isinstance(stored_dependent, Transaction)
+    stored_parent = getattr(stored_dependent, parent_relationship)
+    assert stored_parent is not None
+    assert stored_parent.id == parent.id
+
+
+@pytest.mark.asyncio
 async def test_category_upsert_replaces_owned_children(
     database: LunchMoneyDatabase,
 ) -> None:
@@ -293,6 +365,42 @@ async def test_category_upsert_replaces_owned_children(
     converted = updated.to_api()
     assert isinstance(converted, CategoryObject)
     assert [child.id for child in converted.children or []] == [11, 13]
+
+
+@pytest.mark.asyncio
+async def test_category_shallow_upsert_preserves_children_until_explicit_empty(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Use category child presence as an update mask for owned rows."""
+    await database.upsert(
+        Category.from_api(category_object(children=[child_category_object()]))
+    )
+    shallow = Category.from_api(category_object(children=None))
+    shallow.name = "Shallow category update"
+
+    preserved = await database.upsert(shallow)
+
+    assert preserved.name == "Shallow category update"
+    assert preserved.children_present is True
+    assert [child.id for child in preserved.children] == [11]
+    preserved_api = preserved.to_api()
+    assert isinstance(preserved_api, CategoryObject)
+    assert [child.id for child in preserved_api.children or []] == [11]
+    assert await database.get(Category, 11) is not None
+    reloaded = await database.get(Category, shallow.id)
+    assert reloaded is not None
+    reloaded_api = reloaded.to_api()
+    assert isinstance(reloaded_api, CategoryObject)
+    assert [child.id for child in reloaded_api.children or []] == [11]
+
+    cleared = await database.upsert(Category.from_api(category_object(children=[])))
+
+    assert cleared.children_present is True
+    assert cleared.children == []
+    cleared_api = cleared.to_api()
+    assert isinstance(cleared_api, CategoryObject)
+    assert cleared_api.children == []
+    assert await database.get(Category, 11) is None
 
 
 @pytest.mark.asyncio
@@ -341,6 +449,112 @@ async def test_transaction_upsert_replaces_owned_children(
     assert [
         attachment.api_id for attachment in updated.split_children[1].attachments
     ] == [603]
+
+
+@pytest.mark.asyncio
+async def test_transaction_shallow_upsert_preserves_graph_and_metadata(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Preserve omitted owned rows and metadata while updating shallow scalars."""
+    await database.upsert_many(_dependency_records())
+    full = _transaction_record(
+        attachment_ids=(501,),
+        include_child=True,
+    )
+    await database.upsert(full)
+    shallow_api = transaction_object(children=None, files=None).model_copy(
+        update={
+            "custom_metadata": None,
+            "payee": "Shallow transaction update",
+            "plaid_metadata": None,
+        }
+    )
+    shallow = Transaction.from_api(
+        shallow_api,
+        tags=[Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))],
+    )
+
+    preserved = await database.upsert(shallow)
+
+    assert preserved.payee == "Shallow transaction update"
+    assert preserved.children_present is True
+    assert preserved.files_present is True
+    assert preserved.plaid_metadata_present is True
+    assert preserved.custom_metadata_present is True
+    assert [child.id for child in preserved.split_children] == [101]
+    assert [attachment.api_id for attachment in preserved.attachments] == [501]
+    assert preserved.plaid_metadata == full.plaid_metadata
+    assert preserved.custom_metadata == full.custom_metadata
+    preserved_api = preserved.to_api()
+    assert isinstance(preserved_api, TransactionObject)
+    assert [child.id for child in preserved_api.children or []] == [101]
+    assert [attachment.id for attachment in preserved_api.files or []] == [501]
+    assert await database.get(Transaction, 101) is not None
+    reloaded = await database.get(Transaction, shallow.id)
+    assert reloaded is not None
+    reloaded_api = reloaded.to_api()
+    assert isinstance(reloaded_api, TransactionObject)
+    assert [child.id for child in reloaded_api.children or []] == [101]
+    assert [attachment.id for attachment in reloaded_api.files or []] == [501]
+
+    metadata_update_api = shallow_api.model_copy(
+        update={
+            "custom_metadata": {"updated": {"version": 2}},
+            "plaid_metadata": {"merchant": {"name": "Updated merchant"}},
+        }
+    )
+    metadata_update = Transaction.from_api(
+        metadata_update_api,
+        tags=[Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))],
+    )
+
+    overwritten = await database.upsert(metadata_update)
+
+    assert overwritten.plaid_metadata == {"merchant": {"name": "Updated merchant"}}
+    assert overwritten.custom_metadata == {"updated": {"version": 2}}
+    assert [child.id for child in overwritten.split_children] == [101]
+    assert [attachment.api_id for attachment in overwritten.attachments] == [501]
+
+
+@pytest.mark.asyncio
+async def test_transaction_explicit_empty_and_metadata_flags_clear_stored_data(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Clear owned rows with empty lists and metadata with native presence flags."""
+    await database.upsert_many(_dependency_records())
+    await database.upsert(
+        _transaction_record(
+            attachment_ids=(501,),
+            include_child=True,
+        )
+    )
+    explicit_empty_api = transaction_object(children=[], files=[]).model_copy(
+        update={
+            "custom_metadata": None,
+            "plaid_metadata": None,
+        }
+    )
+    explicit_empty = Transaction.from_api(
+        explicit_empty_api,
+        tags=[Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))],
+    )
+    explicit_empty.plaid_metadata_present = True
+    explicit_empty.custom_metadata_present = True
+
+    cleared = await database.upsert(explicit_empty)
+
+    assert cleared.children_present is True
+    assert cleared.files_present is True
+    assert cleared.split_children == []
+    assert cleared.group_children == []
+    assert cleared.attachments == []
+    assert cleared.plaid_metadata is None
+    assert cleared.custom_metadata is None
+    cleared_api = cleared.to_api()
+    assert isinstance(cleared_api, TransactionObject)
+    assert cleared_api.children == []
+    assert cleared_api.files == []
+    assert await database.get(Transaction, 101) is None
 
 
 @pytest.mark.asyncio
@@ -453,6 +667,125 @@ async def test_transaction_attachment_replacement_preserves_incoming_order(
     assert [attachment.id for attachment in converted.files or []] == [502, 501]
 
 
+@pytest.mark.parametrize("new_parent_first", [False, True])
+@pytest.mark.asyncio
+async def test_category_child_move_is_independent_of_parent_caller_order(
+    database: LunchMoneyDatabase,
+    new_parent_first: bool,
+) -> None:
+    """Move one category child using either source/destination caller order."""
+    child = child_category_object()
+    source = Category.from_api(category_object(children=[child]))
+    destination_api = category_object(children=[]).model_copy(
+        update={"id": 20, "name": "Destination category"}
+    )
+    destination = Category.from_api(destination_api)
+    await database.upsert_many([source, destination])
+
+    source_update = Category.from_api(category_object(children=[]))
+    destination_update = Category.from_api(
+        destination_api.model_copy(update={"children": [child]})
+    )
+    requested = (
+        [destination_update, source_update]
+        if new_parent_first
+        else [source_update, destination_update]
+    )
+
+    await database.upsert_many(requested)
+
+    stored_source = await database.get(Category, source.id)
+    stored_destination = await database.get(Category, destination.id)
+    categories = await database.list(Category)
+    assert stored_source is not None
+    assert stored_source.children == []
+    assert stored_destination is not None
+    assert [record.id for record in stored_destination.children] == [child.id]
+    assert stored_destination.children[0].group_id == destination.id
+    assert [record.id for record in categories].count(child.id) == 1
+
+
+@pytest.mark.parametrize("new_parent_first", [False, True])
+@pytest.mark.asyncio
+async def test_transaction_child_move_is_independent_of_parent_caller_order(
+    database: LunchMoneyDatabase,
+    new_parent_first: bool,
+) -> None:
+    """Move one transaction child using either source/destination caller order."""
+    await database.upsert_many(_dependency_records())
+    tags = [Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))]
+    child = child_transaction_object(
+        transaction_id=101,
+        tag_ids=[22],
+        files=[transaction_attachment_object(attachment_id=601)],
+    )
+    source = Transaction.from_api(
+        transaction_object(children=[child]),
+        tags=tags,
+    )
+    destination_api = transaction_object(
+        transaction_id=200,
+        children=[],
+        is_split_parent=False,
+        is_group_parent=True,
+    )
+    destination = Transaction.from_api(destination_api, tags=tags)
+    await database.upsert_many([source, destination])
+
+    moved_child = child.model_copy(
+        update={
+            "group_parent_id": destination.id,
+            "payee": "Moved child",
+            "split_parent_id": None,
+        }
+    )
+    source_update = Transaction.from_api(
+        transaction_object(children=[]),
+        tags=tags,
+    )
+    destination_update = Transaction.from_api(
+        destination_api.model_copy(update={"children": [moved_child]}),
+        tags=tags,
+    )
+    requested = (
+        [destination_update, source_update]
+        if new_parent_first
+        else [source_update, destination_update]
+    )
+
+    await database.upsert_many(requested)
+
+    stored_source = await database.get(Transaction, source.id)
+    stored_destination = await database.get(Transaction, destination.id)
+    transactions = await database.list(Transaction)
+    assert stored_source is not None
+    assert stored_source.split_children == []
+    assert stored_destination is not None
+    assert [record.id for record in stored_destination.group_children] == [child.id]
+    stored_child = stored_destination.group_children[0]
+    assert stored_child.payee == "Moved child"
+    assert stored_child.split_parent_id is None
+    assert stored_child.group_parent_id == destination.id
+    assert [record.id for record in transactions].count(child.id) == 1
+    async with database.session() as session:
+        attachments = (
+            await session.exec(
+                select(TransactionAttachment).where(
+                    TransactionAttachment.transaction_id == child.id
+                )
+            )
+        ).all()
+        links = (
+            await session.exec(
+                select(TransactionTagLink).where(
+                    TransactionTagLink.transaction_id == child.id
+                )
+            )
+        ).all()
+    assert [attachment.api_id for attachment in attachments] == [601]
+    assert [link.tag_id for link in links] == [22]
+
+
 @pytest.mark.asyncio
 async def test_get_and_list_return_detached_eager_graphs(
     database: LunchMoneyDatabase,
@@ -546,6 +879,23 @@ async def test_delete_returns_existence_and_cascades_owned_graphs(
 
 
 @pytest.mark.asyncio
+async def test_native_category_delete_uses_database_cascade(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Cascade category children for a direct native SQL delete statement."""
+    await database.upsert(
+        Category.from_api(category_object(children=[child_category_object()]))
+    )
+
+    async with database.session() as session:
+        await session.exec(delete(Category).where(col(Category.id) == 10))
+        await session.commit()
+
+    assert await database.get(Category, 10) is None
+    assert await database.get(Category, 11) is None
+
+
+@pytest.mark.asyncio
 async def test_delete_preserves_native_restrict_integrity_error(
     database: LunchMoneyDatabase,
 ) -> None:
@@ -611,3 +961,71 @@ async def test_session_exposes_native_exec_and_explicit_commit(
 
     assert [record.id for record in records] == [user_object().id]
     assert foreign_keys == 1
+
+
+@pytest.mark.asyncio
+async def test_postgres_representative_persistence_contract(
+    migrated_postgres_database_url: str,
+) -> None:
+    """Exercise representative persistence behavior against live PostgreSQL."""
+    tags = [Tag.from_api(tag_object(21)), Tag.from_api(tag_object(22))]
+    original = _transaction_record(
+        attachment_ids=(501,),
+        include_child=True,
+    )
+
+    async with LunchMoneyDatabase(migrated_postgres_database_url) as database:
+        await database.upsert_many([*_dependency_records(), original])
+        stored = await database.get(Transaction, original.id)
+        assert stored is not None
+        assert stored.amount == Decimal("125.6250")
+        assert stored.custom_metadata == original.custom_metadata
+        assert stored.to_api().created_at == original.to_api().created_at
+
+        replacement_child = child_transaction_object(
+            transaction_id=102,
+            tag_ids=[22],
+            files=[transaction_attachment_object(attachment_id=602)],
+        )
+        replacement_api = transaction_object(
+            children=[replacement_child],
+            files=[transaction_attachment_object(attachment_id=502)],
+        ).model_copy(update={"custom_metadata": {"replacement": {"version": 2}}})
+        replacement = Transaction.from_api(replacement_api, tags=tags)
+
+        updated = await database.upsert(replacement)
+
+        assert [child.id for child in updated.split_children] == [102]
+        assert [attachment.api_id for attachment in updated.attachments] == [502]
+        assert updated.custom_metadata == {"replacement": {"version": 2}}
+        assert await database.get(Transaction, 101) is None
+
+        rollback_user = User.from_api(user_object())
+        rollback_user.id = 999
+        invalid_transaction = Transaction.from_api(
+            transaction_object(
+                transaction_id=999,
+                tag_ids=[999],
+                children=None,
+                files=None,
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await database.upsert_many([rollback_user, invalid_transaction])
+        assert await database.get(User, rollback_user.id) is None
+        assert await database.get(Transaction, invalid_transaction.id) is None
+
+        async with database.session() as session:
+            await session.exec(
+                delete(Transaction).where(col(Transaction.id) == original.id)
+            )
+            await session.commit()
+        assert await database.get(Transaction, 102) is None
+        async with database.session() as session:
+            assert (await session.exec(select(TransactionTagLink))).all() == []
+            assert (await session.exec(select(TransactionAttachment))).all() == []
+
+        async with database.session() as session:
+            await session.exec(delete(Category).where(col(Category.id) == 10))
+            await session.commit()
+        assert await database.get(Category, 11) is None

@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment and virtualenvs
+.venv/
+env/
+venv/
+ENV/
+
+# Caches and tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.superpowers/
+.idea/
+.vscode/
+
+# Application runtime databases & lockfiles
+*.db
+*.sqlite3
+.lunchmoney_*.lock

@@ -50,7 +50,10 @@ class Category(SQLModel, table=True):
     """Timestamp when the category was created."""
     created_at_offset_minutes: int | None = None
     """Source creation timestamp offset, or ``None`` when it was naive."""
-    group_id: int | None = Field(foreign_key="categories.id")
+    group_id: int | None = Field(
+        foreign_key="categories.id",
+        ondelete="CASCADE",
+    )
     """Optional identifier of this child category's owning parent."""
     is_group: bool
     """Whether the category groups child categories."""

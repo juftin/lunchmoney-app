@@ -100,6 +100,7 @@ def test_category_table_covers_generated_scalar_union() -> None:
     assert isinstance(table.c.kind.type, String)
     assert table.c.collapsed.nullable is True
     assert table.c.children_present.nullable is False
+    assert next(iter(table.c.group_id.foreign_keys)).ondelete == "CASCADE"
 
 
 def test_category_timestamp_columns_are_native_and_retain_source_offsets() -> None:
