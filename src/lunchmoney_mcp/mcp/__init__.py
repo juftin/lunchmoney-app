@@ -1,6 +1,6 @@
 """Model Context Protocol (MCP) server integration package."""
 
-from lunchmoney_mcp.mcp.tools import (
+from lunchmoney_mcp.mcp.server import (
     get_recent_transactions,
     get_user_info,
     list_accounts,

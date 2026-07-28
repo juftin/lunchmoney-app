@@ -1,5 +1,5 @@
 """
-MCP Tools and Resources for Lunch Money operations using TOON (Token-Oriented Object Notation).
+FastMCP server instance and tool definitions for Lunch Money operations.
 """
 
 import datetime
