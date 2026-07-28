@@ -7,10 +7,11 @@ from unittest.mock import AsyncMock
 
 import sys
 import pytest
-from lunchmoney_mcp import app as fastapi_app
+from lunchmoney_mcp.app import app as fastapi_app
 from lunchmoney_mcp import client as app_module
 
-app_server_module = sys.modules["lunchmoney_mcp.app"]
+app_main_module = sys.modules["lunchmoney_mcp.app.main"]
+lifespan_module = sys.modules["lunchmoney_mcp.app.lifespan"]
 
 
 def create_app(
@@ -318,8 +319,8 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     async def mock_sync(client: Any, db: Any, days: int = 30) -> app_module.SyncSummary:
         return app_module.SyncSummary(user=1, transactions=5)
 
-    monkeypatch.setattr(app_server_module, "run_migrations", mock_migrations)
-    monkeypatch.setattr(app_server_module, "sync_database", mock_sync)
+    monkeypatch.setattr(app_main_module, "run_migrations", mock_migrations)
+    monkeypatch.setattr(app_main_module, "sync_database", mock_sync)
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 
@@ -367,7 +368,7 @@ def test_fastapi_lifespan_migration_single_worker(
         nonlocal migrations_ran
         migrations_ran = True
 
-    monkeypatch.setattr(app_server_module, "run_migrations", mock_migrations)
+    monkeypatch.setattr(lifespan_module, "run_migrations", mock_migrations)
 
     with TestClient(fastapi_app) as client:
         response = client.get("/")
