@@ -26,27 +26,27 @@ from lunchmoney_mcp.schemas import RootResponse
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
+fastapi_app = FastAPI(
     title="Lunch Money MCP",
     description="Lunch Money Model Context Protocol Server & API",
     lifespan=lifespan,
 )
 
 
-@app.get(path="/", response_model=RootResponse, tags=["Health"])
+@fastapi_app.get(path="/", response_model=RootResponse, tags=["Health"])
 async def root() -> RootResponse:
     """Root endpoint returning status message."""
     return RootResponse(message="Hello World")
 
 
-app.include_router(sync_router)
-app.include_router(user_router)
-app.include_router(categories_router)
-app.include_router(accounts_router)
-app.include_router(transactions_router)
+fastapi_app.include_router(sync_router)
+fastapi_app.include_router(user_router)
+fastapi_app.include_router(categories_router)
+fastapi_app.include_router(accounts_router)
+fastapi_app.include_router(transactions_router)
 
-mcp: FastMCP[None] = FastMCP.from_fastapi(app=app)
-fastapi_app = app
+mcp: FastMCP[None] = FastMCP.from_fastapi(app=fastapi_app)
+app: FastAPI = fastapi_app
 
 __all__: list[str] = [
     "app",
