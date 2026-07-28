@@ -3,9 +3,7 @@
 import logging
 
 from fastapi import FastAPI
-from fastmcp import FastMCP
 from fastmcp.server.http import StarletteWithLifespan
-from fastmcp.server.providers.openapi import MCPType, RouteMap
 from fastmcp.utilities.lifespan import combine_lifespans
 
 from lunchmoney_mcp.app.lifespan import lifespan
@@ -16,6 +14,7 @@ from lunchmoney_mcp.app.routers import (
     transactions_router,
     user_router,
 )
+from lunchmoney_mcp.mcp import mcp
 from lunchmoney_mcp.schemas import RootResponse
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -50,18 +49,6 @@ fastapi_app.include_router(categories_router)
 fastapi_app.include_router(accounts_router)
 fastapi_app.include_router(transactions_router)
 
-mcp: FastMCP[None] = FastMCP.from_fastapi(
-    app=fastapi_app,
-    route_maps=[
-        # GET + Params → ResourceTemplates
-        RouteMap(
-            methods=["GET"], pattern=r".*\{.*\}.*", mcp_type=MCPType.RESOURCE_TEMPLATE
-        ),
-        # GET → Resources
-        RouteMap(methods=["GET"], pattern=r".*", mcp_type=MCPType.RESOURCE),
-        # POST/PUT/PATCH/DELETE → Tools
-    ],
-)
 mcp_app: StarletteWithLifespan = mcp.http_app(path="/mcp")
 app = FastAPI(
     routes=[
@@ -73,7 +60,9 @@ app = FastAPI(
 
 __all__: list[str] = [
     "app",
+    "fastapi_app",
     "mcp",
+    "mcp_app",
 ]
 
 if __name__ == "__main__":
