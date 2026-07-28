@@ -319,10 +319,10 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     async def mock_sync(client: Any, db: Any, days: int = 30) -> app_module.SyncSummary:
         return app_module.SyncSummary(user=1, transactions=5)
 
-    from lunchmoney_mcp.app.routers import sync as sync_router_module
+    import lunchmoney_mcp.services.sync as sync_service_module
 
-    monkeypatch.setattr(sync_router_module, "run_migrations", mock_migrations)
-    monkeypatch.setattr(sync_router_module, "sync_database", mock_sync)
+    monkeypatch.setattr(sync_service_module, "run_migrations", mock_migrations)
+    monkeypatch.setattr(sync_service_module, "sync_database", mock_sync)
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 

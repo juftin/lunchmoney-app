@@ -1,17 +1,14 @@
 """Synchronization API endpoints."""
 
-import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_mcp.app.sync import sync_database
-from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
-from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
-from lunchmoney_mcp.schemas import SyncDetails, SyncResponse
-
-logger = logging.getLogger(__name__)
+from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.database import LunchMoneyDatabase
+from lunchmoney_mcp.schemas import SyncResponse
+from lunchmoney_mcp.services import execute_sync
 
 router = APIRouter(tags=["Sync"])
 """FastAPI APIRouter for synchronization endpoints."""
@@ -43,18 +40,4 @@ async def sync(
     SyncResponse
         Status summary and record counts of synchronized objects.
     """
-    logger.info("Triggering database migrations and %s-day sync...", days)
-    await run_migrations()
-    summary: SyncSummary = await sync_database(db=db, client=client, days=days)
-    return SyncResponse(
-        message="Synchronization complete",
-        synced=SyncDetails(
-            user=summary.user,
-            plaid_accounts=summary.plaid_accounts,
-            manual_accounts=summary.manual_accounts,
-            categories=summary.categories,
-            tags=summary.tags,
-            transactions=summary.transactions,
-            total=summary.total,
-        ),
-    )
+    return await execute_sync(db=db, client=client, days=days)

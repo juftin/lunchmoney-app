@@ -1,15 +1,13 @@
 """Transactions data endpoints."""
 
-import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlmodel import col, select
 
 from lunchmoney_mcp.app.dependencies import get_database
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.database.models import Transaction
 from lunchmoney_mcp.schemas import TransactionInfo
+from lunchmoney_mcp.services import fetch_recent_transactions
 
 router = APIRouter(tags=["Transactions"])
 """FastAPI APIRouter for financial transactions endpoints."""
@@ -41,26 +39,4 @@ async def get_recent_transactions(
     list[TransactionInfo]
         Filtered list of matching transaction objects ordered by date descending.
     """
-    cutoff = datetime.date.today() - datetime.timedelta(days=days)
-    async with db.session() as session:
-        statement = (
-            select(Transaction)
-            .where(Transaction.var_date >= cutoff)
-            .order_by(col(Transaction.var_date).desc())
-            .limit(limit)
-        )
-        results = await session.exec(statement)
-        txns = results.all()
-        return [
-            TransactionInfo(
-                id=t.id,
-                date=t.var_date,
-                payee=t.payee,
-                amount=float(t.amount),
-                currency=t.currency,
-                category_id=t.category_id,
-                notes=t.notes,
-                status=t.status,
-            )
-            for t in txns
-        ]
+    return await fetch_recent_transactions(db=db, days=days, limit=limit)
