@@ -1,6 +1,12 @@
 """Model Context Protocol (MCP) server integration package."""
 
 from lunchmoney_mcp.mcp.server import (
+    AccountInfo,
+    AccountsSummary,
+    CategoryInfo,
+    SyncResult,
+    TransactionInfo,
+    UserInfo,
     get_recent_transactions,
     get_user_info,
     list_accounts,
@@ -10,6 +16,12 @@ from lunchmoney_mcp.mcp.server import (
 )
 
 __all__ = [
+    "AccountInfo",
+    "AccountsSummary",
+    "CategoryInfo",
+    "SyncResult",
+    "TransactionInfo",
+    "UserInfo",
     "get_recent_transactions",
     "get_user_info",
     "list_accounts",

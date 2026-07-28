@@ -1,9 +1,8 @@
-"""Tests for Model Context Protocol (MCP) tools and TOON encoding."""
+"""Tests for Model Context Protocol (MCP) tools and Pydantic response models."""
 
 import pytest
-import toons
 
-from lunchmoney_mcp.mcp import mcp
+from lunchmoney_mcp.mcp import CategoryInfo, UserInfo, mcp
 
 
 @pytest.mark.asyncio
@@ -19,11 +18,24 @@ async def test_mcp_tools_registration() -> None:
     assert "get_recent_transactions" in tool_names
 
 
-@pytest.mark.asyncio
-async def test_mcp_toons_serialization() -> None:
-    """Verify toons properly serializes structured objects."""
-    data = [{"id": 1, "name": "Groceries", "amount": 42.5}]
-    toon_output = toons.dumps(data)
+def test_pydantic_models() -> None:
+    """Verify Pydantic models instantiate and validate correctly."""
+    user = UserInfo(
+        id=1,
+        name="Test User",
+        email="test@example.com",
+        budget_name="My Budget",
+        primary_currency="usd",
+    )
+    assert user.id == 1
+    assert user.primary_currency == "usd"
 
-    assert "Groceries" in toon_output
-    assert "42.5" in toon_output
+    cat = CategoryInfo(
+        id=10,
+        name="Groceries",
+        is_income=False,
+        exclude_from_budget=False,
+        exclude_from_totals=False,
+        is_group=False,
+    )
+    assert cat.name == "Groceries"
