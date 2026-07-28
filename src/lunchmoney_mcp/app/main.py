@@ -19,6 +19,7 @@ from lunchmoney_mcp.app.sync import sync_database
 from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
 from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
 from lunchmoney_mcp.mcp import mcp
+from lunchmoney_mcp.schemas import RootResponse, SyncDetails, SyncResponse
 
 logger = logging.getLogger(__name__)
 
@@ -29,28 +30,34 @@ fastapi_app = FastAPI(
 )
 
 
-@fastapi_app.get(path="/")
-async def root() -> dict[str, object]:
-    """Root endpoint returning Hello World."""
-    return {
-        "message": "Hello World",
-    }
+@fastapi_app.get(path="/", response_model=RootResponse)
+async def root() -> RootResponse:
+    """Root endpoint returning status message."""
+    return RootResponse(message="Hello World")
 
 
-@fastapi_app.post(path="/sync")
+@fastapi_app.post(path="/sync", response_model=SyncResponse)
 async def sync(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     app: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     days: int = 30,
-) -> dict[str, object]:
+) -> SyncResponse:
     """Run database migrations and synchronize Lunch Money data for specified date window."""
     logger.info("Triggering database migrations and %s-day sync...", days)
     await run_migrations()
     summary: SyncSummary = await sync_database(db=db, client=app, days=days)
-    return {
-        "message": "Synchronization complete",
-        "synced": summary,
-    }
+    return SyncResponse(
+        message="Synchronization complete",
+        synced=SyncDetails(
+            user=summary.user,
+            plaid_accounts=summary.plaid_accounts,
+            manual_accounts=summary.manual_accounts,
+            categories=summary.categories,
+            tags=summary.tags,
+            transactions=summary.transactions,
+            total=summary.total,
+        ),
+    )
 
 
 mcp_app: StarletteWithLifespan = mcp.http_app(path="/mcp")

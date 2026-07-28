@@ -2,7 +2,14 @@
 
 import pytest
 
-from lunchmoney_mcp.mcp import CategoryInfo, UserInfo, mcp
+from lunchmoney_mcp.mcp import mcp
+from lunchmoney_mcp.schemas import (
+    CategoryInfo,
+    RootResponse,
+    SyncDetails,
+    SyncResponse,
+    UserInfo,
+)
 
 
 @pytest.mark.asyncio
@@ -39,3 +46,20 @@ def test_pydantic_models() -> None:
         is_group=False,
     )
     assert cat.name == "Groceries"
+
+    root_resp = RootResponse()
+    assert root_resp.message == "Hello World"
+
+    sync_resp = SyncResponse(
+        message="Synchronization complete",
+        synced=SyncDetails(
+            user=1,
+            plaid_accounts=2,
+            manual_accounts=3,
+            categories=4,
+            tags=5,
+            transactions=6,
+            total=21,
+        ),
+    )
+    assert sync_resp.synced.total == 21

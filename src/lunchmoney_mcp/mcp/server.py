@@ -5,7 +5,6 @@ FastMCP server instance and tool definitions for Lunch Money operations.
 import datetime
 
 from fastmcp import FastMCP
-from pydantic import BaseModel, Field
 from sqlmodel import col, select
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
@@ -18,74 +17,17 @@ from lunchmoney_mcp.database.models import (
     Transaction,
     User,
 )
+from lunchmoney_mcp.schemas import (
+    AccountInfo,
+    AccountsSummary,
+    CategoryInfo,
+    SyncDetails,
+    SyncResult,
+    TransactionInfo,
+    UserInfo,
+)
 
 mcp = FastMCP("Lunch Money MCP")
-
-
-class UserInfo(BaseModel):
-    """User profile details."""
-
-    id: int
-    name: str
-    email: str
-    budget_name: str
-    primary_currency: str
-
-
-class CategoryInfo(BaseModel):
-    """Budget category details."""
-
-    id: int
-    name: str
-    is_income: bool
-    exclude_from_budget: bool
-    exclude_from_totals: bool
-    is_group: bool
-    group_id: int | None = None
-
-
-class AccountInfo(BaseModel):
-    """Financial account details."""
-
-    id: int
-    name: str
-    balance: float
-    currency: str
-    type_or_status: str | None = None
-    institution_name: str | None = None
-
-
-class AccountsSummary(BaseModel):
-    """Connected Plaid and manual accounts."""
-
-    plaid_accounts: list[AccountInfo] = Field(default_factory=list)
-    manual_accounts: list[AccountInfo] = Field(default_factory=list)
-
-
-class TransactionInfo(BaseModel):
-    """Transaction summary item."""
-
-    id: int
-    date: datetime.date
-    payee: str
-    amount: float
-    currency: str
-    category_id: int | None = None
-    notes: str | None = None
-    status: str
-
-
-class SyncResult(BaseModel):
-    """Synchronization outcome details."""
-
-    status: str
-    user: int
-    plaid_accounts: int
-    manual_accounts: int
-    categories: int
-    tags: int
-    transactions: int
-    total: int
 
 
 @mcp.tool()
@@ -104,13 +46,15 @@ async def sync_data(days: int = 30) -> SyncResult:
     summary = await sync_database(db=db, client=client, days=days)
     return SyncResult(
         status="success",
-        user=summary.user,
-        plaid_accounts=summary.plaid_accounts,
-        manual_accounts=summary.manual_accounts,
-        categories=summary.categories,
-        tags=summary.tags,
-        transactions=summary.transactions,
-        total=summary.total,
+        synced_records=SyncDetails(
+            user=summary.user,
+            plaid_accounts=summary.plaid_accounts,
+            manual_accounts=summary.manual_accounts,
+            categories=summary.categories,
+            tags=summary.tags,
+            transactions=summary.transactions,
+            total=summary.total,
+        ),
     )
 
 
@@ -223,12 +167,6 @@ async def get_recent_transactions(
 
 
 __all__ = [
-    "AccountInfo",
-    "AccountsSummary",
-    "CategoryInfo",
-    "SyncResult",
-    "TransactionInfo",
-    "UserInfo",
     "get_recent_transactions",
     "get_user_info",
     "list_accounts",

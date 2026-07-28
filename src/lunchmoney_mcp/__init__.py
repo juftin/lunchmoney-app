@@ -13,9 +13,23 @@ from lunchmoney_mcp.locks import (
     Redis,
     RedisLock,
 )
+from lunchmoney_mcp.schemas import (
+    AccountInfo,
+    AccountsSummary,
+    CategoryInfo,
+    RootResponse,
+    SyncDetails,
+    SyncResponse,
+    SyncResult,
+    TransactionInfo,
+    UserInfo,
+)
 
 __all__ = [
     "DEFAULT_DATABASE_URL",
+    "AccountInfo",
+    "AccountsSummary",
+    "CategoryInfo",
     "FileLock",
     "Lock",
     "LockError",
@@ -25,8 +39,14 @@ __all__ = [
     "LunchMoneyDatabase",
     "Redis",
     "RedisLock",
+    "RootResponse",
     "Settings",
+    "SyncDetails",
+    "SyncResponse",
+    "SyncResult",
     "SyncSummary",
+    "TransactionInfo",
+    "UserInfo",
     "app",
     "get_settings",
 ]
