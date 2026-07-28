@@ -118,6 +118,25 @@ class Redis(Lock):
         return self._lock.locked()
 
 
+def get_migration_lock(
+    name: str = "lunchmoney_migration",
+    path: str = ".lunchmoney_migration.lock",
+    timeout: float | int = 0,
+) -> Lock:
+    """
+    Construct a migration lock instance.
+
+    Uses Redis if REDIS_URL environment variable is set, otherwise defaults to LockFile.
+    """
+    import os
+
+    redis_url = os.getenv("REDIS_URL")
+    if redis_url:
+        client = redis.Redis.from_url(redis_url)
+        return Redis(client=client, name=name)
+    return LockFile(path=path, timeout=timeout)
+
+
 # Aliases for convenience
 FileLock = LockFile
 RedisLock = Redis
@@ -130,4 +149,5 @@ __all__ = [
     "LockTimeoutError",
     "Redis",
     "RedisLock",
+    "get_migration_lock",
 ]

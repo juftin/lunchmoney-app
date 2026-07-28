@@ -10,7 +10,7 @@ from fastapi import FastAPI
 
 from lunchmoney_mcp.app.dependencies import get_database
 from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
-from lunchmoney_mcp.locks import LockFile, LockTimeoutError
+from lunchmoney_mcp.locks import LockTimeoutError, get_migration_lock
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """FastAPI application lifespan running single-worker database migrations."""
-    lock = LockFile(path=".lunchmoney_migration.lock", timeout=0)
+    lock = get_migration_lock()
     try:
         with lock:
             logger.info(
