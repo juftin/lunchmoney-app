@@ -1,0 +1,64 @@
+version: '3'
+
+vars:
+  PYTHON_SRC: src/
+  PYTHON_TESTS: tests/
+  IMAGE_NAME: lunchmoney-mcp
+
+tasks:
+  install:
+    desc: Install project and development dependencies
+    cmds:
+      - uv sync {{.CLI_ARGS}}
+
+  lock:
+    desc: Regenerate uv.lock
+    cmds:
+      - uv lock {{.CLI_ARGS}}
+
+  fix:
+    desc: Code quality auto-fix - formatting + linting
+    cmds:
+      - uv run ruff format {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.CLI_ARGS}}
+      - uv run ruff check --fix {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.CLI_ARGS}}
+
+  lint:
+    desc: Code quality check - formatting + linting
+    cmds:
+      - uv run ruff format --check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.CLI_ARGS}}
+      - uv run ruff check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.CLI_ARGS}}
+
+  check:
+    desc: Code quality check - type checking
+    cmds:
+      - uv run ty check {{.CLI_ARGS}}
+
+  test:
+    desc: Testing - PyTest
+    cmds:
+      - uv run pytest {{.CLI_ARGS}}
+
+  build:
+    desc: Artifact building - Docker image
+    cmds:
+      - docker build -t {{.IMAGE_NAME}}:latest . {{.CLI_ARGS}}
+
+  compose:
+    desc: Run application and infrastructure services with Docker Compose
+    cmds:
+      - docker compose up --build {{.CLI_ARGS}}
+
+  compose:down:
+    desc: Stop Docker Compose services
+    cmds:
+      - docker compose down {{.CLI_ARGS}}
+
+  dev:
+    desc: Run development server with Uvicorn auto-reload
+    cmds:
+      - uv run uvicorn lunchmoney_mcp.app:app --reload {{.CLI_ARGS}}
+
+  run:
+    desc: Run a command in the project environment
+    cmds:
+      - uv run {{.CLI_ARGS}}
