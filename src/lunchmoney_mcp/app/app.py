@@ -12,15 +12,26 @@ from fastmcp.utilities.lifespan import combine_lifespans
 
 from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
 from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
-from lunchmoney_mcp.dependencies import (
+from lunchmoney_mcp.app.dependencies import (
     get_database,
     get_db_session,
     get_lunchmoney_app,
 )
-from lunchmoney_mcp.lifespan import lifespan
-from lunchmoney_mcp.sync import sync_database
+from lunchmoney_mcp.app.lifespan import lifespan
+from lunchmoney_mcp.app.sync import sync_database
+
+import sys
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_sync_database() -> Any:
+    """Resolve sync_database function, respecting monkeypatches on lunchmoney_mcp.app."""
+    app_module = sys.modules.get("lunchmoney_mcp.app")
+    if app_module is not None and hasattr(app_module, "sync_database"):
+        return getattr(app_module, "sync_database")
+    return sync_database
+
 
 fastapi_app = FastAPI(
     title="Lunch Money MCP",
@@ -46,7 +57,8 @@ async def sync(
     """Run database migrations and synchronize Lunch Money data for specified date window."""
     logger.info("Triggering database migrations and %s-day sync...", days)
     await run_migrations()
-    summary: SyncSummary = await sync_database(db=db, client=app, days=days)
+    fn = _resolve_sync_database()
+    summary: SyncSummary = await fn(db=db, client=app, days=days)
     return {
         "message": "Synchronization complete",
         "synced": summary,

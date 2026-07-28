@@ -13,7 +13,7 @@ from filelock import FileLock, Timeout
 from filelock._soft import SoftFileLock
 
 from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
-from lunchmoney_mcp.dependencies import get_database
+from lunchmoney_mcp.app.dependencies import get_database
 
 logger = logging.getLogger(__name__)
 
