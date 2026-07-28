@@ -16,7 +16,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Sync"])
 
 
-@router.post(path="/sync", response_model=SyncResponse)
+@router.post(
+    path="/sync",
+    response_model=SyncResponse,
+    operation_id="sync_database",
+)
 async def sync(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],

@@ -12,7 +12,11 @@ from lunchmoney_mcp.schemas import CategoryInfo
 router = APIRouter(tags=["Categories"])
 
 
-@router.get(path="/categories", response_model=list[CategoryInfo])
+@router.get(
+    path="/categories",
+    response_model=list[CategoryInfo],
+    operation_id="list_categories",
+)
 async def list_categories(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> list[CategoryInfo]:

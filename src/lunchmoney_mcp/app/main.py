@@ -6,12 +6,10 @@ import logging
 
 from fastapi import FastAPI
 from fastmcp import FastMCP
+from fastmcp.server.http import StarletteWithLifespan
+from fastmcp.server.providers.openapi import MCPType, RouteMap
+from fastmcp.utilities.lifespan import combine_lifespans
 
-from lunchmoney_mcp.app.dependencies import (
-    get_database,
-    get_db_session,
-    get_lunchmoney_app,
-)
 from lunchmoney_mcp.app.lifespan import lifespan
 from lunchmoney_mcp.app.routers import (
     accounts_router,
@@ -20,11 +18,10 @@ from lunchmoney_mcp.app.routers import (
     transactions_router,
     user_router,
 )
-from lunchmoney_mcp.app.sync import sync_database
-from lunchmoney_mcp.database import run_migrations
+
 from lunchmoney_mcp.schemas import RootResponse
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 fastapi_app = FastAPI(
     title="Lunch Money MCP",
@@ -33,7 +30,12 @@ fastapi_app = FastAPI(
 )
 
 
-@fastapi_app.get(path="/", response_model=RootResponse, tags=["Health"])
+@fastapi_app.get(
+    path="/",
+    response_model=RootResponse,
+    tags=["Health"],
+    operation_id="get_root",
+)
 async def root() -> RootResponse:
     """Root endpoint returning status message."""
     return RootResponse(message="Hello World")
@@ -45,19 +47,30 @@ fastapi_app.include_router(categories_router)
 fastapi_app.include_router(accounts_router)
 fastapi_app.include_router(transactions_router)
 
-mcp: FastMCP[None] = FastMCP.from_fastapi(app=fastapi_app)
-app: FastAPI = fastapi_app
+mcp: FastMCP[None] = FastMCP.from_fastapi(
+    app=fastapi_app,
+    route_maps=[
+        # GET + Params → ResourceTemplates
+        RouteMap(
+            methods=["GET"], pattern=r".*\{.*\}.*", mcp_type=MCPType.RESOURCE_TEMPLATE
+        ),
+        # GET → Resources
+        RouteMap(methods=["GET"], pattern=r".*", mcp_type=MCPType.RESOURCE),
+        # POST/PUT/PATCH/DELETE → Tools
+    ],
+)
+mcp_app: StarletteWithLifespan = mcp.http_app(path="/mcp")
+app = FastAPI(
+    routes=[
+        *mcp_app.routes,
+        *fastapi_app.routes,
+    ],
+    lifespan=combine_lifespans(mcp_app.lifespan, lifespan),
+)
 
 __all__: list[str] = [
     "app",
-    "fastapi_app",
-    "get_database",
-    "get_db_session",
-    "get_lunchmoney_app",
-    "lifespan",
     "mcp",
-    "run_migrations",
-    "sync_database",
 ]
 
 if __name__ == "__main__":

@@ -14,7 +14,11 @@ from lunchmoney_mcp.schemas import TransactionInfo
 router = APIRouter(tags=["Transactions"])
 
 
-@router.get(path="/transactions", response_model=list[TransactionInfo])
+@router.get(
+    path="/transactions",
+    response_model=list[TransactionInfo],
+    operation_id="get_recent_transactions",
+)
 async def get_recent_transactions(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     days: int = 30,

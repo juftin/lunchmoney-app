@@ -12,7 +12,11 @@ from lunchmoney_mcp.schemas import AccountInfo, AccountsSummary
 router = APIRouter(tags=["Accounts"])
 
 
-@router.get(path="/accounts", response_model=AccountsSummary)
+@router.get(
+    path="/accounts",
+    response_model=AccountsSummary,
+    operation_id="list_accounts",
+)
 async def list_accounts(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> AccountsSummary:

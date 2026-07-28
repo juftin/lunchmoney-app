@@ -13,7 +13,11 @@ from lunchmoney_mcp.schemas import UserInfo
 router = APIRouter(tags=["User"])
 
 
-@router.get(path="/user", response_model=UserInfo | None)
+@router.get(
+    path="/user",
+    response_model=UserInfo | None,
+    operation_id="get_user_info",
+)
 async def get_user_info(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> UserInfo | None:
