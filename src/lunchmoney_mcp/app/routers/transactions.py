@@ -12,6 +12,7 @@ from lunchmoney_mcp.database.models import Transaction
 from lunchmoney_mcp.schemas import TransactionInfo
 
 router = APIRouter(tags=["Transactions"])
+"""FastAPI APIRouter for financial transactions endpoints."""
 
 
 @router.get(
@@ -24,7 +25,22 @@ async def get_recent_transactions(
     days: int = 30,
     limit: int = 50,
 ) -> list[TransactionInfo]:
-    """Fetch recent transactions from local database within specified date window."""
+    """Fetch recent transactions from local database within specified date window.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+    days : int
+        Number of days back from today to include. Default is 30.
+    limit : int
+        Maximum number of transactions to return. Default is 50.
+
+    Returns
+    -------
+    list[TransactionInfo]
+        Filtered list of matching transaction objects ordered by date descending.
+    """
     cutoff = datetime.date.today() - datetime.timedelta(days=days)
     async with db.session() as session:
         statement = (

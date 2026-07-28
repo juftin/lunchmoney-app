@@ -11,6 +11,7 @@ from lunchmoney_mcp.database.models import User
 from lunchmoney_mcp.schemas import UserInfo
 
 router = APIRouter(tags=["User"])
+"""FastAPI APIRouter for user profile endpoints."""
 
 
 @router.get(
@@ -21,7 +22,18 @@ router = APIRouter(tags=["User"])
 async def get_user_info(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> UserInfo | None:
-    """Fetch the authenticated user profile and budget details."""
+    """Fetch the authenticated user profile and budget details.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+
+    Returns
+    -------
+    UserInfo | None
+        User profile details or None if no user profile has been synced.
+    """
     async with db.session() as session:
         result = await session.exec(select(User))
         user = result.first()

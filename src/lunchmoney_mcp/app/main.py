@@ -1,6 +1,4 @@
-"""
-FastAPI application for Lunch Money MCP.
-"""
+"""FastAPI application for Lunch Money MCP."""
 
 import logging
 
@@ -18,7 +16,6 @@ from lunchmoney_mcp.app.routers import (
     transactions_router,
     user_router,
 )
-
 from lunchmoney_mcp.schemas import RootResponse
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -37,7 +34,13 @@ fastapi_app = FastAPI(
     operation_id="get_root",
 )
 async def root() -> RootResponse:
-    """Root endpoint returning status message."""
+    """Root endpoint returning status message.
+
+    Returns
+    -------
+    RootResponse
+        Health status message object.
+    """
     return RootResponse(message="Hello World")
 
 

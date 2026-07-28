@@ -14,6 +14,7 @@ from lunchmoney_mcp.schemas import SyncDetails, SyncResponse
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Sync"])
+"""FastAPI APIRouter for synchronization endpoints."""
 
 
 @router.post(
@@ -26,7 +27,22 @@ async def sync(
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     days: int = 30,
 ) -> SyncResponse:
-    """Run database migrations and synchronize Lunch Money data for specified date window."""
+    """Run database migrations and synchronize Lunch Money data for specified date window.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+    client : LunchMoneyApp
+        Lunch Money API client wrapper.
+    days : int
+        Number of past calendar days to pull transactions for. Default is 30.
+
+    Returns
+    -------
+    SyncResponse
+        Status summary and record counts of synchronized objects.
+    """
     logger.info("Triggering database migrations and %s-day sync...", days)
     await run_migrations()
     summary: SyncSummary = await sync_database(db=db, client=client, days=days)

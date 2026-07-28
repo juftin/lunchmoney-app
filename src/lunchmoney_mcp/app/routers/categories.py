@@ -10,6 +10,7 @@ from lunchmoney_mcp.database.models import Category
 from lunchmoney_mcp.schemas import CategoryInfo
 
 router = APIRouter(tags=["Categories"])
+"""FastAPI APIRouter for budget categories endpoints."""
 
 
 @router.get(
@@ -20,7 +21,18 @@ router = APIRouter(tags=["Categories"])
 async def list_categories(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> list[CategoryInfo]:
-    """List all budget categories and subcategories."""
+    """List all budget categories and subcategories.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+
+    Returns
+    -------
+    list[CategoryInfo]
+        List of all budget category objects in database.
+    """
     categories = await db.list(Category)
     return [
         CategoryInfo(

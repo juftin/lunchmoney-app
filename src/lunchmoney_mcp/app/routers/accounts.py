@@ -10,6 +10,7 @@ from lunchmoney_mcp.database.models import ManualAccount, PlaidAccount
 from lunchmoney_mcp.schemas import AccountInfo, AccountsSummary
 
 router = APIRouter(tags=["Accounts"])
+"""FastAPI APIRouter for financial accounts endpoints."""
 
 
 @router.get(
@@ -20,7 +21,18 @@ router = APIRouter(tags=["Accounts"])
 async def list_accounts(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> AccountsSummary:
-    """List all connected Plaid and manual accounts with current balances."""
+    """List all connected Plaid and manual accounts with current balances.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+
+    Returns
+    -------
+    AccountsSummary
+        Combined summary of connected Plaid and manual accounts.
+    """
     plaid_accs = await db.list(PlaidAccount)
     manual_accs = await db.list(ManualAccount)
     return AccountsSummary(
