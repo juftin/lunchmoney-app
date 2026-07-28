@@ -1,5 +1,19 @@
 """Model Context Protocol (MCP) server integration package."""
 
-from lunchmoney_mcp.mcp.tools import register_mcp_tools
+from lunchmoney_mcp.mcp.tools import (
+    get_recent_transactions,
+    get_user_info,
+    list_accounts,
+    list_categories,
+    mcp,
+    sync_data,
+)
 
-__all__ = ["register_mcp_tools"]
+__all__ = [
+    "get_recent_transactions",
+    "get_user_info",
+    "list_accounts",
+    "list_categories",
+    "mcp",
+    "sync_data",
+]

@@ -3,10 +3,9 @@ FastAPI application for Lunch Money MCP.
 """
 
 import logging
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import Depends, FastAPI
-from fastmcp import FastMCP
 from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.utilities.lifespan import combine_lifespans
 
@@ -19,8 +18,7 @@ from lunchmoney_mcp.app.lifespan import lifespan
 from lunchmoney_mcp.app.sync import sync_database
 from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
 from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
-
-from lunchmoney_mcp.mcp import register_mcp_tools
+from lunchmoney_mcp.mcp import mcp
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +53,6 @@ async def sync(
     }
 
 
-mcp: FastMCP[Any] = FastMCP.from_fastapi(app=fastapi_app)
-register_mcp_tools(mcp)
 mcp_app: StarletteWithLifespan = mcp.http_app(path="/mcp")
 app = FastAPI(
     routes=[

@@ -1,24 +1,15 @@
 """Tests for Model Context Protocol (MCP) tools and TOON encoding."""
 
 import pytest
-from fastmcp import FastMCP
 import toons
 
-from lunchmoney_mcp.mcp import register_mcp_tools
-
-
-@pytest.fixture
-def mcp_server() -> FastMCP[None]:
-    """Provide a FastMCP server instance with registered tools."""
-    server = FastMCP(name="Test MCP")
-    register_mcp_tools(server)
-    return server
+from lunchmoney_mcp.mcp import mcp
 
 
 @pytest.mark.asyncio
-async def test_mcp_tools_registration(mcp_server: FastMCP[None]) -> None:
-    """Verify all expected Lunch Money tools are registered on FastMCP server."""
-    tools = await mcp_server.list_tools()
+async def test_mcp_tools_registration() -> None:
+    """Verify all expected Lunch Money tools are registered on top-level FastMCP server."""
+    tools = await mcp.list_tools()
     tool_names = {t.name for t in tools}
 
     assert "sync_data" in tool_names
