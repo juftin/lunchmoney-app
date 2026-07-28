@@ -1,5 +1,5 @@
 """
-MCP Tools and Resources registration for Lunch Money operations.
+MCP Tools and Resources registration for Lunch Money operations using TOON (Token-Oriented Object Notation).
 """
 
 import datetime
@@ -7,6 +7,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 from sqlmodel import col, select
+import toons
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.app.sync import sync_database
@@ -21,12 +22,13 @@ from lunchmoney_mcp.database.models import (
 
 
 def register_mcp_tools(mcp: FastMCP[Any]) -> None:
-    """Register Lunch Money MCP tools and resources on FastMCP server instance."""
+    """Register Lunch Money MCP tools and resources on FastMCP server instance using TOON encoding."""
 
     @mcp.tool()
-    async def sync_data(days: int = 30) -> dict[str, Any]:
+    async def sync_data(days: int = 30) -> str:
         """
         Synchronize transactions, accounts, categories, and tags from Lunch Money API.
+        Returns results encoded in Token-Oriented Object Notation (TOON).
 
         Parameters
         ----------
@@ -37,34 +39,44 @@ def register_mcp_tools(mcp: FastMCP[Any]) -> None:
         db = get_database()
         client = get_lunchmoney_app()
         summary = await sync_database(db=db, client=client, days=days)
-        return {
+        data = {
             "status": "success",
-            "synced_records": summary,
+            "synced_records": {
+                "user": summary.user,
+                "plaid_accounts": summary.plaid_accounts,
+                "manual_accounts": summary.manual_accounts,
+                "categories": summary.categories,
+                "tags": summary.tags,
+                "transactions": summary.transactions,
+                "total": summary.total,
+            },
         }
+        return toons.dumps(data)
 
     @mcp.tool()
-    async def get_user_info() -> dict[str, Any] | None:
-        """Fetch the authenticated user profile and budget details from database."""
+    async def get_user_info() -> str:
+        """Fetch the authenticated user profile and budget details encoded in TOON format."""
         db = get_database()
         async with db.session() as session:
             result = await session.exec(select(User))
             user = result.first()
             if user is None:
-                return None
-            return {
+                return toons.dumps({})
+            data = {
                 "id": user.id,
                 "name": user.name,
                 "email": user.email,
                 "budget_name": user.budget_name,
                 "primary_currency": user.primary_currency,
             }
+            return toons.dumps(data)
 
     @mcp.tool()
-    async def list_categories() -> list[dict[str, Any]]:
-        """List all budget categories and subcategories from database."""
+    async def list_categories() -> str:
+        """List all budget categories and subcategories encoded in TOON format."""
         db = get_database()
         categories = await db.list(Category)
-        return [
+        data = [
             {
                 "id": c.id,
                 "name": c.name,
@@ -72,24 +84,25 @@ def register_mcp_tools(mcp: FastMCP[Any]) -> None:
                 "exclude_from_budget": c.exclude_from_budget,
                 "exclude_from_totals": c.exclude_from_totals,
                 "is_group": c.is_group,
-                "group_id": c.group_id,
+                "group_id": c.group_id or 0,
             }
             for c in categories
         ]
+        return toons.dumps(data)
 
     @mcp.tool()
-    async def list_accounts() -> dict[str, Any]:
-        """List all connected Plaid and manual accounts with current balances."""
+    async def list_accounts() -> str:
+        """List all connected Plaid and manual accounts encoded in TOON format."""
         db = get_database()
         plaid_accs = await db.list(PlaidAccount)
         manual_accs = await db.list(ManualAccount)
-        return {
+        data = {
             "plaid_accounts": [
                 {
                     "id": a.id,
                     "name": a.name,
-                    "institution_name": a.institution_name,
-                    "balance": a.balance,
+                    "institution_name": a.institution_name or "",
+                    "balance": float(a.balance),
                     "currency": a.currency,
                     "status": a.status,
                 }
@@ -100,19 +113,18 @@ def register_mcp_tools(mcp: FastMCP[Any]) -> None:
                     "id": a.id,
                     "name": a.name,
                     "type": a.type,
-                    "balance": a.balance,
+                    "balance": float(a.balance),
                     "currency": a.currency,
                 }
                 for a in manual_accs
             ],
         }
+        return toons.dumps(data)
 
     @mcp.tool()
-    async def get_recent_transactions(
-        days: int = 30, limit: int = 50
-    ) -> list[dict[str, Any]]:
+    async def get_recent_transactions(days: int = 30, limit: int = 50) -> str:
         """
-        Fetch recent transactions from local database within specified date window.
+        Fetch recent transactions from local database encoded in TOON format.
 
         Parameters
         ----------
@@ -132,16 +144,17 @@ def register_mcp_tools(mcp: FastMCP[Any]) -> None:
             )
             results = await session.exec(statement)
             txns = results.all()
-            return [
+            data = [
                 {
                     "id": t.id,
                     "date": t.var_date.isoformat(),
                     "payee": t.payee,
                     "amount": float(t.amount),
                     "currency": t.currency,
-                    "category_id": t.category_id,
-                    "notes": t.notes,
+                    "category_id": t.category_id or 0,
+                    "notes": t.notes or "",
                     "status": t.status,
                 }
                 for t in txns
             ]
+            return toons.dumps(data)
