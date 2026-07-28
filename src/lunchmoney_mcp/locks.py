@@ -126,11 +126,13 @@ def get_migration_lock(
     """
     Construct a migration lock instance.
 
-    Uses Redis if REDIS_URL environment variable is set, otherwise defaults to LockFile.
+    Uses Redis if redis_url is configured in environment or Settings, otherwise defaults to LockFile.
     """
     import os
 
-    redis_url = os.getenv("REDIS_URL")
+    from lunchmoney_mcp.config import get_settings
+
+    redis_url = os.getenv("REDIS_URL") or get_settings().redis_url
     if redis_url:
         client = redis.Redis.from_url(redis_url)
         return Redis(client=client, name=name)

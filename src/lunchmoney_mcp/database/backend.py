@@ -47,7 +47,12 @@ def resolve_database_url(database_url: str | None = None) -> str:
     """Resolve an explicit, environment-provided, or default database URL."""
     if database_url is not None:
         return database_url
-    return os.getenv("LUNCHMONEY_DATABASE_URL", DEFAULT_DATABASE_URL)
+    env_url = os.getenv("LUNCHMONEY_DATABASE_URL")
+    if env_url:
+        return env_url
+    from lunchmoney_mcp.config import get_settings
+
+    return get_settings().lunchmoney_database_url
 
 
 async def run_migrations(

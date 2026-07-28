@@ -2,6 +2,7 @@
 
 from lunchmoney_mcp.app import app
 from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
+from lunchmoney_mcp.config import Settings, get_settings
 from lunchmoney_mcp.database import DEFAULT_DATABASE_URL, LunchMoneyDatabase
 from lunchmoney_mcp.locks import (
     FileLock,
@@ -24,6 +25,8 @@ __all__ = [
     "LunchMoneyDatabase",
     "Redis",
     "RedisLock",
+    "Settings",
     "SyncSummary",
     "app",
+    "get_settings",
 ]
