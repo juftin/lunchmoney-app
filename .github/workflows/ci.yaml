@@ -1,0 +1,59 @@
+# Continuous integration workflow for Lunch Money MCP.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Format, type check, and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+
+      - name: Set up Task
+        uses: go-task/setup-task@v2
+
+      - name: Install dependencies
+        run: task install --frozen
+
+      - name: Check formatting and linting
+        run: task lint
+
+      - name: Check types
+        run: task check
+
+      - name: Run tests
+        run: task test
+
+  build:
+    name: Build container image
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Task
+        uses: go-task/setup-task@v2
+
+      - name: Build image
+        run: task build

@@ -108,7 +108,7 @@ _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`
 - [ ] **MCP Multi-Transport**: Support `--sse` transport flag in `mcp.run()`.
 - [ ] **MCP Resources**: Register `lunchmoney://summary` and `lunchmoney://categories` resources in [`src/lunchmoney_mcp/mcp/server.py`](../src/lunchmoney_mcp/mcp/server.py).
 - [ ] **MCP Prompts**: Register `budget_health_check` and `uncategorized_transactions_audit` prompts.
-- [ ] **GitHub Actions CI**: Add `.github/workflows/ci.yaml` running `task lint`, `task check`, `task test`, and `docker build`.
+- [x] **GitHub Actions CI**: Add `.github/workflows/ci.yaml` running `task lint`, `task check`, `task test`, and `docker build`.
 
 ---
 
