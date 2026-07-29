@@ -53,7 +53,10 @@ def resolve_database_url(database_url: str | None = None) -> str:
     env_url = os.getenv("LUNCHMONEY_DATABASE_URL")
     if env_url:
         return env_url
-    if get_settings().stateless:
+    settings = get_settings()
+    if settings.lunchmoney_database_url != DEFAULT_DATABASE_URL:
+        return settings.lunchmoney_database_url
+    if settings.stateless:
         return IN_MEMORY_DATABASE_URL
     return DEFAULT_DATABASE_URL
 

@@ -1,5 +1,7 @@
 """Tests for application configuration and Pydantic Settings."""
 
+from pathlib import Path
+
 import pytest
 
 from lunchmoney_mcp.config import (
@@ -84,6 +86,22 @@ def test_database_url_overrides_stateless_mode(
 
     assert resolve_database_url() == environment_url
     assert resolve_database_url(explicit_url) == explicit_url
+    get_settings.cache_clear()
+
+
+def test_dotenv_database_url_overrides_stateless_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Preserve a database URL supplied through Pydantic's `.env` source."""
+    dotenv_url = "sqlite+aiosqlite:///dotenv.db"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
+    (tmp_path / ".env").write_text(f"LUNCHMONEY_DATABASE_URL={dotenv_url}\n")
+    get_settings.cache_clear()
+
+    assert resolve_database_url() == dotenv_url
     get_settings.cache_clear()
 
 
