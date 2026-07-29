@@ -13,13 +13,21 @@ if TYPE_CHECKING:
 
 
 @mcp.tool()
-async def sync_data(days: int = 30) -> SyncResult:
+async def sync_data(
+    days: int = 30,
+    incremental: bool = False,
+    safety_margin_minutes: int | None = None,
+) -> SyncResult:
     """Synchronize transactions, accounts, categories, and tags from Lunch Money API.
 
     Parameters
     ----------
     days : int
         Number of days back from today to synchronize. Default is 30.
+    incremental : bool
+        Whether to resume transaction sync from its successful watermark.
+    safety_margin_minutes : int | None
+        Optional overlap override for an incremental transaction sync.
 
     Returns
     -------
@@ -28,7 +36,13 @@ async def sync_data(days: int = 30) -> SyncResult:
     """
     db: LunchMoneyDatabase = get_database()
     client: LunchMoneyApp = get_lunchmoney_app()
-    return await execute_mcp_sync(db=db, client=client, days=days)
+    return await execute_mcp_sync(
+        db=db,
+        client=client,
+        days=days,
+        incremental=incremental,
+        safety_margin_minutes=safety_margin_minutes,
+    )
 
 
 __all__ = ["sync_data"]

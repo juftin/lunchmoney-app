@@ -1,5 +1,8 @@
 """Tests for Model Context Protocol (MCP) tools and Pydantic response models."""
 
+import sys
+from unittest.mock import ANY, AsyncMock
+
 import pytest
 
 from lunchmoney_mcp.mcp import mcp
@@ -8,6 +11,7 @@ from lunchmoney_mcp.schemas import (
     RootResponse,
     SyncDetails,
     SyncResponse,
+    SyncResult,
     UserInfo,
 )
 
@@ -23,6 +27,47 @@ async def test_mcp_tools_registration() -> None:
     assert "list_categories" in tool_names
     assert "list_accounts" in tool_names
     assert "get_recent_transactions" in tool_names
+
+
+@pytest.mark.asyncio
+async def test_mcp_sync_tool_forwards_incremental_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Forward incremental tool arguments unchanged to the sync service."""
+    sync_tool_module = sys.modules["lunchmoney_mcp.mcp.tools.sync"]
+    mock_execute_mcp_sync = AsyncMock(
+        return_value=SyncResult(
+            synced_records=SyncDetails(
+                user=0,
+                plaid_accounts=0,
+                manual_accounts=0,
+                categories=0,
+                tags=0,
+                transactions=0,
+                total=0,
+            )
+        )
+    )
+    monkeypatch.setattr(sync_tool_module, "execute_mcp_sync", mock_execute_mcp_sync)
+    monkeypatch.setattr(sync_tool_module, "get_database", object)
+    monkeypatch.setattr(sync_tool_module, "get_lunchmoney_app", object)
+
+    await mcp.call_tool(
+        "sync_data",
+        {
+            "days": 14,
+            "incremental": True,
+            "safety_margin_minutes": 9,
+        },
+    )
+
+    mock_execute_mcp_sync.assert_awaited_once_with(
+        db=ANY,
+        client=ANY,
+        days=14,
+        incremental=True,
+        safety_margin_minutes=9,
+    )
 
 
 def test_pydantic_models() -> None:

@@ -28,7 +28,7 @@ async def database(tmp_path: Path) -> AsyncIterator[LunchMoneyDatabase]:
 @pytest.fixture
 def client() -> AsyncMock:
     """Provide a client double with successful empty domain refreshes."""
-    from tests.database.factories import user_object
+    from database.factories import user_object
 
     test_client = AsyncMock(spec=LunchMoneyApp)
 
@@ -239,7 +239,11 @@ async def test_failed_incremental_sync_does_not_advance_watermark(
     database: LunchMoneyDatabase,
     client: AsyncMock,
 ) -> None:
-    """Leave the watermark absent when the upstream transaction refresh fails."""
+    """Preserve an existing watermark when the transaction refresh fails."""
+    watermark = datetime.datetime(2026, 7, 28, 12, 0, tzinfo=datetime.UTC)
+    await database.upsert_sync_metadata(
+        SyncMetadata(domain="transactions", last_synced_at=watermark)
+    )
     client.refresh_transactions.side_effect = RuntimeError("synthetic upstream failure")
 
     with pytest.raises(RuntimeError, match="synthetic upstream failure"):
@@ -249,7 +253,9 @@ async def test_failed_incremental_sync_does_not_advance_watermark(
             incremental=True,
         )
 
-    assert await database.get_sync_metadata("transactions") is None
+    stored = await database.get_sync_metadata("transactions")
+    assert stored is not None
+    assert stored.last_synced_at == watermark
 
 
 @pytest.mark.asyncio

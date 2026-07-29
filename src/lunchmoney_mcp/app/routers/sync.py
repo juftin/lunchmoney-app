@@ -23,6 +23,8 @@ async def sync(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     days: int = 30,
+    incremental: bool = False,
+    safety_margin_minutes: int | None = None,
 ) -> SyncResponse:
     """Run database migrations and synchronize Lunch Money data for specified date window.
 
@@ -34,10 +36,20 @@ async def sync(
         Lunch Money API client wrapper.
     days : int
         Number of past calendar days to pull transactions for. Default is 30.
+    incremental : bool
+        Whether to resume transaction sync from its successful watermark.
+    safety_margin_minutes : int | None
+        Optional overlap override for an incremental transaction sync.
 
     Returns
     -------
     SyncResponse
         Status summary and record counts of synchronized objects.
     """
-    return await execute_sync(db=db, client=client, days=days)
+    return await execute_sync(
+        db=db,
+        client=client,
+        days=days,
+        incremental=incremental,
+        safety_margin_minutes=safety_margin_minutes,
+    )

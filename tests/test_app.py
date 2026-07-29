@@ -3,7 +3,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock, create_autospec
+from unittest.mock import ANY, AsyncMock, create_autospec
 
 import sys
 import pytest
@@ -224,7 +224,7 @@ async def test_sync_database_populates_last_30_days(
     import datetime
     from lunchmoney_mcp.database import LunchMoneyDatabase
     from lunchmoney_mcp.database.models import Transaction, User
-    from tests.database.factories import (
+    from database.factories import (
         category_object,
         plaid_account_object,
         transaction_object,
@@ -342,6 +342,44 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
         assert data["synced"]["user"] == 1
         assert data["synced"]["transactions"] == 5
         assert migrations_ran is True
+
+
+def test_fastapi_sync_endpoint_forwards_incremental_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Forward incremental query controls unchanged to the sync service."""
+    from lunchmoney_mcp.schemas import SyncDetails, SyncResponse
+    from starlette.testclient import TestClient
+
+    sync_router_module = sys.modules["lunchmoney_mcp.app.routers.sync"]
+    mock_execute_sync = AsyncMock(
+        return_value=SyncResponse(
+            synced=SyncDetails(
+                user=0,
+                plaid_accounts=0,
+                manual_accounts=0,
+                categories=0,
+                tags=0,
+                transactions=0,
+                total=0,
+            )
+        )
+    )
+    monkeypatch.setattr(sync_router_module, "execute_sync", mock_execute_sync)
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+    monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
+
+    with TestClient(fastapi_app) as client:
+        response = client.post("/sync?days=14&incremental=true&safety_margin_minutes=9")
+
+    assert response.status_code == 200
+    mock_execute_sync.assert_awaited_once_with(
+        db=ANY,
+        client=ANY,
+        days=14,
+        incremental=True,
+        safety_margin_minutes=9,
+    )
 
 
 @pytest.mark.asyncio

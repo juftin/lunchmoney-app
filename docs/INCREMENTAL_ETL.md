@@ -2,28 +2,37 @@
 
 ## 📋 Overview
 
-This document specifies the **Opt-in Incremental ETL Pipeline** for **Lunch Money MCP** using `updated_at` timestamps, domain-specific watermarks, parameterized safety margins, and stateless execution capabilities, while preserving the default rolling calendar date range sync (`days=30`) and persistent SQLite storage.
+This document describes the delivered Sprint 0 **opt-in incremental transaction pipeline** for **Lunch Money MCP**. Transaction synchronization can resume from a UTC watermark with a configurable overlap, while user, account, category, and tag data continue to refresh in full. The default rolling transaction date window (`days=30`) and persistent SQLite storage remain unchanged unless the caller explicitly opts in.
 
 ---
 
 ## 🏛️ Directives & Key Design Decisions
 
 > [!IMPORTANT]
-> **1. Incremental Sync is Opt-In**:
+> **1. Incremental Transaction Sync is Opt-In**:
 >
 > - Default behavior for `POST /sync` and `sync_data` FastMCP tool: `incremental: bool = False`.
-> - When `incremental=False`: Performs standard rolling date window fetch using `days: int = 30` (or explicit `start_date` / `end_date`).
-> - When `incremental=True`: Looks up `SyncMetadata` for the last successful sync timestamp and applies the parameterized safety buffer overlap (`updated_since = last_synced_at - timedelta(minutes=safety_margin)`).
+> - When `incremental=False`, transactions use the standard rolling date window from `days: int = 30` (or explicit service-layer `start_date` / `end_date`) and no watermark is written.
+> - When `incremental=True`, only transactions consult `SyncMetadata(domain="transactions")`. An existing watermark produces `updated_since = last_synced_at - timedelta(minutes=safety_margin)`; a missing watermark falls back to the standard date window.
+> - User, Plaid account, manual account, category, and tag refreshes are full refreshes in both modes.
 
 > [!IMPORTANT]
 > **2. Parameterized Safety Overlap Window**:
 >
-> - Configured via environment variable `LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES` in `Settings` (default `5` minutes).
+> - `safety_margin_minutes` is available on both transports and overrides the configured value for that request.
+> - When the override is omitted, `LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES` supplies the value (default `5` minutes).
+
+> [!IMPORTANT]
+> **3. Watermarks Advance Only After Successful Persistence**:
+>
+> - Incremental execution captures a UTC start time, refreshes upstream data, and persists the record graph before writing the transaction watermark.
+> - An upstream or record-persistence failure leaves an absent watermark absent and preserves an existing watermark at its exact prior timestamp.
 
 > [!NOTE]
-> **3. Upstream-First Mutation Write-Back Strategy**:
+> **4. Stateless Storage is Explicit and Override-Safe**:
 >
-> - Mutation operations (creating/updating categories or transactions) execute against the **Lunch Money API first**, then upsert the returned canonical entity into the local database graph.
+> - `STATELESS=true` selects a shared in-memory SQLite URL backed by `StaticPool` only when no explicit, environment, or dotenv database URL is configured.
+> - `LunchMoneyDatabase.create_tables()` initializes schemas for callers that do not use Alembic migrations.
 
 ---
 
@@ -37,28 +46,23 @@ sequenceDiagram
     participant DB as SQLModel State DB
     participant API as Lunch Money v2 API
 
-    Client->>Service: execute_sync(days=30, incremental=True, domain="all")
-    Service->>DB: Acquire Distributed Migration Lock
-    alt incremental == False (DEFAULT)
-        Service->>API: Fetch Metadata & Transactions for last N days
-    else incremental == True (OPT-IN)
-        Service->>DB: Query SyncMetadata for domain="all" last_synced_at
-        alt SyncMetadata Exists
-            DB-->>Service: Return last_synced_at
-            Service->>Service: Calculate updated_since = last_synced_at - config.sync_safety_margin_minutes
-            Service->>API: Fetch Metadata & Transactions (updated_since = timestamp)
-        else No Prior Sync Record
-            Service->>API: Fallback: Fetch Metadata & Transactions for last N days
-        end
+    Client->>Service: POST /sync or sync_data(incremental=True)
+    Service->>Service: Run migrations
+    Service->>API: Fully refresh user, accounts, categories, and tags
+    Service->>DB: Read SyncMetadata(domain="transactions")
+    alt Transaction watermark exists
+        DB-->>Service: Return last_synced_at
+        Service->>Service: Subtract request or configured safety margin
+        Service->>API: Refresh transactions(updated_since=timestamp)
+    else No transaction watermark
+        Service->>API: Refresh transactions(start_date, end_date)
     end
 
-    API-->>Service: Return entity objects
-    Service->>DB: execute db.upsert_many(records)
-    DB-->>Service: Graph Upsert Completed Idempotently
-
-    Service->>DB: Record new SyncMetadata(domain="all", last_synced_at=now, status="success")
-    Service->>DB: Release Distributed Lock
-    Service-->>Client: Return SyncResult (sync counts, mode, safety margin used)
+    API-->>Service: Return synchronized objects
+    Service->>DB: Upsert complete record graph
+    DB-->>Service: Persistence succeeds
+    Service->>DB: Upsert SyncMetadata("transactions", sync_started_at)
+    Service-->>Client: Return synchronized record counts
 ```
 
 ---
@@ -81,23 +85,32 @@ sequenceDiagram
     )
 ```
 
+An explicit constructor URL, `LUNCHMONEY_DATABASE_URL`, or a dotenv-provided database URL takes precedence over `STATELESS=true`.
+
+### Transport Interfaces
+
+```text
+POST /sync?days=30&incremental=true&safety_margin_minutes=5
+```
+
+```python
+sync_data(
+    days: int = 30,
+    incremental: bool = False,
+    safety_margin_minutes: int | None = None,
+) -> SyncResult
+```
+
+The FastAPI router and FastMCP tool are pure delegators: both forward all three controls unchanged to the shared synchronization services.
+
 ### Database Model (`src/lunchmoney_mcp/database/models/sync.py`)
 
 ```python
-class SyncStatus(str, enum.Enum):
-    SUCCESS = "success"
-    FAILED = "failed"
-    IN_PROGRESS = "in_progress"
-
 class SyncMetadata(SQLModel, table=True):
     __tablename__ = "sync_metadata"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    domain: str = Field(index=True, description="Sync domain (e.g., 'all', 'transactions', 'categories')")
-    last_synced_at: datetime = Field(description="UTC timestamp of the sync execution")
-    last_updated_at: Optional[datetime] = Field(default=None)
-    records_synced: int = Field(default=0)
-    safety_margin_minutes: int = Field(default=5)
-    status: SyncStatus = Field(default=SyncStatus.SUCCESS)
-    error_message: Optional[str] = Field(default=None)
+    domain: str = Field(primary_key=True)
+    last_synced_at: datetime = Field(sa_type=UTCDateTime())
 ```
+
+`domain` is the natural primary key, and timestamps are normalized to timezone-aware UTC during model initialization and database round trips. Sprint 0 creates and reads only the `transactions` domain; the schema remains domain-keyed for future incremental coverage without claiming that those domains are currently implemented.
