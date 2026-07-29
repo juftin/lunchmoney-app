@@ -33,7 +33,7 @@ jobs:
         uses: go-task/setup-task@v2
 
       - name: Install dependencies
-        run: task install --frozen
+        run: task install -- --frozen
 
       - name: Check formatting and linting
         run: task lint
