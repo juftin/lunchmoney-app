@@ -12,17 +12,20 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Format, type check, and test
+  ci:
+    name: ${{ matrix.task }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - lint
+          - check
+          - test
+          - build
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: "3.13"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v9.0.0
@@ -35,25 +38,5 @@ jobs:
       - name: Install dependencies
         run: task install -- --frozen
 
-      - name: Check formatting and linting
-        run: task lint
-
-      - name: Check types
-        run: task check
-
-      - name: Run tests
-        run: task test
-
-  build:
-    name: Build container image
-    needs: verify
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Task
-        uses: go-task/setup-task@v2
-
-      - name: Build image
-        run: task build
+      - name: Run ${{ matrix.task }}
+        run: task ${{ matrix.task }}
