@@ -1,5 +1,9 @@
 """Service logic for Transactions data operations."""
 
+from sqlalchemy.engine.result import ScalarResult
+from typing import Sequence
+from sqlmodel.sql._expression_select_cls import SelectOfScalar
+
 import datetime
 
 from sqlmodel import col, select
@@ -30,14 +34,14 @@ async def fetch_recent_transactions(
     """
     cutoff = datetime.date.today() - datetime.timedelta(days=days)
     async with db.session() as session:
-        statement = (
+        statement: SelectOfScalar[Transaction] = (
             select(Transaction)
             .where(Transaction.var_date >= cutoff)
             .order_by(col(Transaction.var_date).desc())
             .limit(limit)
         )
-        results = await session.exec(statement)
-        txns = results.all()
+        results: ScalarResult[Transaction] = await session.exec(statement)
+        txns: Sequence[Transaction] = results.all()
         return [
             TransactionInfo(
                 id=t.id,
