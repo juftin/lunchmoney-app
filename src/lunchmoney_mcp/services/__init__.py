@@ -25,8 +25,20 @@ from lunchmoney_mcp.services.summary import fetch_account_summary
 from lunchmoney_mcp.services.sync import execute_mcp_sync, execute_sync
 from lunchmoney_mcp.services.tags import fetch_tag_by_id, fetch_tags
 from lunchmoney_mcp.services.transactions import (
+    bulk_delete_transactions,
+    bulk_update_transactions,
+    create_transactions,
+    delete_transaction,
+    delete_transaction_attachment,
+    fetch_attachment_by_id,
     fetch_recent_transactions,
     fetch_transaction_by_id,
+    group_transactions,
+    split_transaction,
+    ungroup_transactions,
+    unsplit_transaction,
+    update_transaction,
+    upload_transaction_attachment,
 )
 from lunchmoney_mcp.services.user import fetch_user_info
 
@@ -50,6 +62,18 @@ __all__ = [
     "create_category",
     "update_category",
     "delete_category",
+    "bulk_delete_transactions",
+    "bulk_update_transactions",
+    "create_transactions",
+    "delete_transaction",
+    "delete_transaction_attachment",
+    "fetch_attachment_by_id",
+    "group_transactions",
+    "split_transaction",
+    "ungroup_transactions",
+    "unsplit_transaction",
+    "update_transaction",
+    "upload_transaction_attachment",
     "create_manual_account",
     "update_manual_account",
     "delete_manual_account",

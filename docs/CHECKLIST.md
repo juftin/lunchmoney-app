@@ -75,15 +75,15 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-2-category--
 
 _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-3-transaction-mutations-grouping-splitting--attachments)
 
-- [ ] **Single Transaction Insert**: Implement `create_transactions` (`POST /transactions`).
-- [ ] **Bulk Transaction Update**: Implement `bulk_update_transactions` (`PUT /transactions`).
-- [ ] **Bulk Transaction Delete**: Implement `bulk_delete_transactions` (`DELETE /transactions`).
-- [ ] **Single Transaction Update**: Implement `update_transaction` (`PUT /transactions/{id}`).
-- [ ] **Single Transaction Delete**: Implement `delete_transaction` (`DELETE /transactions/{id}`).
-- [ ] **Transaction Grouping**: Implement `group_transactions` (`POST /transactions/group`) and `ungroup_transactions` (`DELETE /transactions/group/{id}`).
-- [ ] **Transaction Splitting**: Implement `split_transaction` (`POST /transactions/split/{id}`) and `unsplit_transaction` (`DELETE /transactions/split/{id}`).
-- [ ] **Transaction Attachments**: Implement attachment upload (`POST /transactions/{id}/attachments`), download (`GET /transactions/attachments/{file_id}`), and delete (`DELETE /transactions/attachments/{file_id}`).
-- [ ] **Test Suite**: Add comprehensive test suite in `tests/test_transaction_mutations.py`.
+- [x] **Single Transaction Insert**: Implement `create_transactions` (`POST /transactions`).
+- [x] **Bulk Transaction Update**: Implement `bulk_update_transactions` (`PUT /transactions`).
+- [x] **Bulk Transaction Delete**: Implement `bulk_delete_transactions` (`DELETE /transactions`).
+- [x] **Single Transaction Update**: Implement `update_transaction` (`PUT /transactions/{id}`).
+- [x] **Single Transaction Delete**: Implement `delete_transaction` (`DELETE /transactions/{id}`).
+- [x] **Transaction Grouping**: Implement `group_transactions` (`POST /transactions/group`) and `ungroup_transactions` (`DELETE /transactions/group/{id}`).
+- [x] **Transaction Splitting**: Implement `split_transaction` (`POST /transactions/split/{id}`) and `unsplit_transaction` (`DELETE /transactions/split/{id}`).
+- [x] **Transaction Attachments**: Implement attachment upload (`POST /transactions/{id}/attachments`), download (`GET /transactions/attachments/{file_id}`), and delete (`DELETE /transactions/attachments/{file_id}`).
+- [x] **Test Suite**: Add comprehensive test suite in `tests/test_transaction_mutations.py`.
 
 ---
 
