@@ -6,14 +6,17 @@ from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.mcp.tools import (
     accounts,
     categories,
+    recurring,
     spending,
+    summary,
     sync,
+    tags,
     transactions,
     user,
 )
 
 # Explicitly reference imported tool modules to ensure registration
-_ = (accounts, categories, spending, sync, transactions, user)
+_ = (accounts, categories, recurring, spending, summary, sync, tags, transactions, user)
 
 
 def main() -> None:

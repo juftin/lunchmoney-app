@@ -3,8 +3,11 @@
 from lunchmoney_mcp.mcp.tools import (
     accounts,
     categories,
+    recurring,
     spending,
+    summary,
     sync,
+    tags,
     transactions,
     user,
 )
@@ -12,8 +15,11 @@ from lunchmoney_mcp.mcp.tools import (
 __all__ = [
     "accounts",
     "categories",
+    "recurring",
     "spending",
+    "summary",
     "sync",
+    "tags",
     "transactions",
     "user",
 ]

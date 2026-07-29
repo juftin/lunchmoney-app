@@ -27,6 +27,15 @@ async def test_mcp_tools_registration() -> None:
     assert "list_categories" in tool_names
     assert "list_accounts" in tool_names
     assert "get_recent_transactions" in tool_names
+    assert "get_account_summary" in tool_names
+    assert "list_tags" in tool_names
+    assert "get_tag" in tool_names
+    assert "list_recurring_items" in tool_names
+    assert "get_recurring_item" in tool_names
+    assert "get_category" in tool_names
+    assert "get_manual_account" in tool_names
+    assert "get_plaid_account" in tool_names
+    assert "get_transaction" in tool_names
 
 
 @pytest.mark.asyncio

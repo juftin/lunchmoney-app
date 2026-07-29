@@ -1,19 +1,38 @@
 """Model Context Protocol (MCP) server integration package."""
 
 from lunchmoney_mcp.mcp.app import mcp
-from lunchmoney_mcp.mcp.tools.accounts import list_accounts
-from lunchmoney_mcp.mcp.tools.categories import list_categories
+from lunchmoney_mcp.mcp.tools.accounts import (
+    get_manual_account,
+    get_plaid_account,
+    list_accounts,
+)
+from lunchmoney_mcp.mcp.tools.categories import get_category, list_categories
+from lunchmoney_mcp.mcp.tools.recurring import get_recurring_item, list_recurring_items
 from lunchmoney_mcp.mcp.tools.spending import get_category_spending
+from lunchmoney_mcp.mcp.tools.summary import get_account_summary
 from lunchmoney_mcp.mcp.tools.sync import sync_data
-from lunchmoney_mcp.mcp.tools.transactions import get_recent_transactions
+from lunchmoney_mcp.mcp.tools.tags import get_tag, list_tags
+from lunchmoney_mcp.mcp.tools.transactions import (
+    get_recent_transactions,
+    get_transaction,
+)
 from lunchmoney_mcp.mcp.tools.user import get_user_info
 
 __all__ = [
+    "get_account_summary",
     "get_category_spending",
+    "get_category",
+    "get_manual_account",
+    "get_plaid_account",
     "get_recent_transactions",
+    "get_recurring_item",
+    "get_tag",
+    "get_transaction",
     "get_user_info",
     "list_accounts",
     "list_categories",
+    "list_recurring_items",
+    "list_tags",
     "mcp",
     "sync_data",
 ]

@@ -55,3 +55,36 @@ async def fetch_recent_transactions(
             )
             for t in txns
         ]
+
+
+async def fetch_transaction_by_id(
+    db: LunchMoneyDatabase,
+    transaction_id: int,
+) -> TransactionInfo | None:
+    """Fetch one synchronized transaction by identifier.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+    transaction_id : int
+        Identifier of the transaction to retrieve.
+
+    Returns
+    -------
+    TransactionInfo | None
+        Matching transaction, or ``None`` when it has not been synchronized.
+    """
+    transaction = await db.get(Transaction, transaction_id)
+    if transaction is None:
+        return None
+    return TransactionInfo(
+        id=transaction.id,
+        date=transaction.var_date,
+        payee=transaction.payee,
+        amount=float(transaction.amount),
+        currency=transaction.currency,
+        category_id=transaction.category_id,
+        notes=transaction.notes,
+        status=transaction.status,
+    )
