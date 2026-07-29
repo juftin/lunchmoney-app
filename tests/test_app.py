@@ -3,7 +3,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, create_autospec
 
 import sys
 import pytest
@@ -316,7 +316,15 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
         nonlocal migrations_ran
         migrations_ran = True
 
-    async def mock_sync(client: Any, db: Any, days: int = 30) -> app_module.SyncSummary:
+    async def mock_sync(
+        client: Any,
+        db: Any,
+        days: int = 30,
+        incremental: bool = False,
+        safety_margin_minutes: int | None = None,
+    ) -> app_module.SyncSummary:
+        assert incremental is False
+        assert safety_margin_minutes is None
         return app_module.SyncSummary(user=1, transactions=5)
 
     import lunchmoney_mcp.services.sync as sync_service_module
@@ -334,6 +342,83 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
         assert data["synced"]["user"] == 1
         assert data["synced"]["transactions"] == 5
         assert migrations_ran is True
+
+
+@pytest.mark.asyncio
+async def test_execute_sync_forwards_incremental_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Forward incremental controls from the shared service to sync policy."""
+    from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
+    from lunchmoney_mcp.database import LunchMoneyDatabase
+    import lunchmoney_mcp.services.sync as sync_service_module
+
+    database = create_autospec(LunchMoneyDatabase, instance=True)
+    client = create_autospec(LunchMoneyApp, instance=True)
+    sync_database_mock = AsyncMock(return_value=SyncSummary())
+    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    monkeypatch.setattr(sync_service_module, "sync_database", sync_database_mock)
+
+    await sync_service_module.execute_sync(
+        db=database,
+        client=client,
+        days=45,
+        incremental=True,
+        safety_margin_minutes=7,
+    )
+
+    sync_database_mock.assert_awaited_once_with(
+        db=database,
+        client=client,
+        days=45,
+        incremental=True,
+        safety_margin_minutes=7,
+    )
+
+
+@pytest.mark.asyncio
+async def test_execute_mcp_sync_forwards_incremental_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Forward incremental controls through the MCP-facing shared service."""
+    from lunchmoney_mcp.client import LunchMoneyApp
+    from lunchmoney_mcp.database import LunchMoneyDatabase
+    from lunchmoney_mcp.schemas import SyncDetails, SyncResponse
+    import lunchmoney_mcp.services.sync as sync_service_module
+
+    database = create_autospec(LunchMoneyDatabase, instance=True)
+    client = create_autospec(LunchMoneyApp, instance=True)
+    execute_sync_mock = AsyncMock(
+        return_value=SyncResponse(
+            message="Synchronization complete",
+            synced=SyncDetails(
+                user=0,
+                plaid_accounts=0,
+                manual_accounts=0,
+                categories=0,
+                tags=0,
+                transactions=0,
+                total=0,
+            ),
+        )
+    )
+    monkeypatch.setattr(sync_service_module, "execute_sync", execute_sync_mock)
+
+    await sync_service_module.execute_mcp_sync(
+        db=database,
+        client=client,
+        days=45,
+        incremental=True,
+        safety_margin_minutes=7,
+    )
+
+    execute_sync_mock.assert_awaited_once_with(
+        db=database,
+        client=client,
+        days=45,
+        incremental=True,
+        safety_margin_minutes=7,
+    )
 
 
 @pytest.mark.asyncio

@@ -11,7 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 async def execute_sync(
-    db: LunchMoneyDatabase, client: LunchMoneyApp, days: int = 30
+    db: LunchMoneyDatabase,
+    client: LunchMoneyApp,
+    days: int = 30,
+    incremental: bool = False,
+    safety_margin_minutes: int | None = None,
 ) -> SyncResponse:
     """Run database migrations and synchronize Lunch Money data.
 
@@ -23,6 +27,10 @@ async def execute_sync(
         Lunch Money API client wrapper.
     days : int
         Number of past calendar days to pull transactions for. Default is 30.
+    incremental : bool
+        Whether to resume transaction sync from its successful watermark.
+    safety_margin_minutes : int | None
+        Optional overlap override for an incremental transaction sync.
 
     Returns
     -------
@@ -31,7 +39,13 @@ async def execute_sync(
     """
     logger.info("Triggering database migrations and %s-day sync...", days)
     await run_migrations()
-    summary: SyncSummary = await sync_database(db=db, client=client, days=days)
+    summary: SyncSummary = await sync_database(
+        db=db,
+        client=client,
+        days=days,
+        incremental=incremental,
+        safety_margin_minutes=safety_margin_minutes,
+    )
     details = SyncDetails(
         user=summary.user,
         plaid_accounts=summary.plaid_accounts,
@@ -45,7 +59,11 @@ async def execute_sync(
 
 
 async def execute_mcp_sync(
-    db: LunchMoneyDatabase, client: LunchMoneyApp, days: int = 30
+    db: LunchMoneyDatabase,
+    client: LunchMoneyApp,
+    days: int = 30,
+    incremental: bool = False,
+    safety_margin_minutes: int | None = None,
 ) -> SyncResult:
     """Execute sync for MCP tool returning SyncResult schema.
 
@@ -57,11 +75,21 @@ async def execute_mcp_sync(
         Lunch Money API client wrapper.
     days : int
         Number of past calendar days to pull transactions for. Default is 30.
+    incremental : bool
+        Whether to resume transaction sync from its successful watermark.
+    safety_margin_minutes : int | None
+        Optional overlap override for an incremental transaction sync.
 
     Returns
     -------
     SyncResult
         MCP tool result format.
     """
-    response = await execute_sync(db=db, client=client, days=days)
+    response = await execute_sync(
+        db=db,
+        client=client,
+        days=days,
+        incremental=incremental,
+        safety_margin_minutes=safety_margin_minutes,
+    )
     return SyncResult(status="success", synced_records=response.synced)
