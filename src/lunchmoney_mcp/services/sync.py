@@ -17,7 +17,7 @@ async def execute_sync(
     incremental: bool = False,
     safety_margin_minutes: int | None = None,
 ) -> SyncResponse:
-    """Run database migrations and synchronize Lunch Money data.
+    """Initialize the database schema and synchronize Lunch Money data.
 
     Parameters
     ----------
@@ -37,8 +37,12 @@ async def execute_sync(
     SyncResponse
         Status summary and record counts of synchronized objects.
     """
-    logger.info("Triggering database migrations and %s-day sync...", days)
-    await run_migrations()
+    if db.is_stateless:
+        logger.info("Initializing stateless schema and triggering %s-day sync...", days)
+        await db.create_tables()
+    else:
+        logger.info("Triggering database migrations and %s-day sync...", days)
+        await run_migrations()
     summary: SyncSummary = await sync_database(
         db=db,
         client=client,

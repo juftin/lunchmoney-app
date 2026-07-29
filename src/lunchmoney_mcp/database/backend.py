@@ -588,8 +588,9 @@ class LunchMoneyDatabase:
     def __init__(self, database_url: str | None = None) -> None:
         """Create database resources for the resolved connection URL."""
         resolved_url = resolve_database_url(database_url)
+        self._is_stateless = resolved_url == IN_MEMORY_DATABASE_URL
         engine_kwargs: dict[str, Any] = {}
-        if resolved_url == IN_MEMORY_DATABASE_URL:
+        if self._is_stateless:
             engine_kwargs["poolclass"] = StaticPool
         self.engine = create_async_engine(resolved_url, **engine_kwargs)
         if self.engine.dialect.name == "sqlite":
@@ -603,6 +604,11 @@ class LunchMoneyDatabase:
             class_=AsyncSession,
             expire_on_commit=False,
         )
+
+    @property
+    def is_stateless(self) -> bool:
+        """Return whether this instance owns the shared in-memory database."""
+        return self._is_stateless
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:

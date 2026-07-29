@@ -26,7 +26,7 @@ async def sync(
     incremental: bool = False,
     safety_margin_minutes: int | None = None,
 ) -> SyncResponse:
-    """Run database migrations and synchronize Lunch Money data for specified date window.
+    """Initialize the schema and synchronize Lunch Money data for a date window.
 
     Parameters
     ----------

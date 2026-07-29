@@ -32,7 +32,7 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > **4. Stateless Storage is Explicit and Override-Safe**:
 >
 > - `STATELESS=true` selects a shared in-memory SQLite URL backed by `StaticPool` only when no explicit, environment, or dotenv database URL is configured.
-> - `LunchMoneyDatabase.create_tables()` initializes schemas for callers that do not use Alembic migrations.
+> - Startup and explicit synchronization call `LunchMoneyDatabase.create_tables()` on the cached database instance in stateless mode; persistent databases continue to use Alembic migrations.
 
 ---
 
@@ -47,7 +47,11 @@ sequenceDiagram
     participant API as Lunch Money v2 API
 
     Client->>Service: POST /sync or sync_data(incremental=True)
-    Service->>Service: Run migrations
+    alt Stateless in-memory storage
+        Service->>DB: Create tables on cached database instance
+    else Persistent storage
+        Service->>Service: Run migrations
+    end
     Service->>API: Fully refresh user, accounts, categories, and tags
     Service->>DB: Read SyncMetadata(domain="transactions")
     alt Transaction watermark exists

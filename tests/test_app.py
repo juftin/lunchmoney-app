@@ -392,6 +392,7 @@ async def test_execute_sync_forwards_incremental_options(
     import lunchmoney_mcp.services.sync as sync_service_module
 
     database = create_autospec(LunchMoneyDatabase, instance=True)
+    database.is_stateless = False
     client = create_autospec(LunchMoneyApp, instance=True)
     sync_database_mock = AsyncMock(return_value=SyncSummary())
     monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
@@ -412,6 +413,58 @@ async def test_execute_sync_forwards_incremental_options(
         incremental=True,
         safety_margin_minutes=7,
     )
+
+
+@pytest.mark.asyncio
+async def test_explicit_sync_initializes_and_persists_to_stateless_database(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Create the in-memory schema during sync when startup has not run."""
+    from database.factories import user_object
+    from lunchmoney_mcp.client import (
+        CategoryObject,
+        LunchMoneyApp,
+        ManualAccountObject,
+        PlaidAccountObject,
+        TagObject,
+        UserObject,
+    )
+    from lunchmoney_mcp.config import get_settings
+    from lunchmoney_mcp.database import LunchMoneyDatabase, User
+    from lunchmoney_mcp.services.sync import execute_sync
+
+    async def refresh(model: type[Any]) -> Any:
+        """Return a synthetic user and empty collections for other domains."""
+        if model is UserObject:
+            return user_object()
+        if model in {
+            PlaidAccountObject,
+            ManualAccountObject,
+            CategoryObject,
+            TagObject,
+        }:
+            return {}
+        raise AssertionError(f"Unexpected model refresh: {model}")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
+    get_settings.cache_clear()
+    client = AsyncMock(spec=LunchMoneyApp)
+    client.refresh.side_effect = refresh
+    client.refresh_transactions.return_value = {}
+
+    try:
+        async with LunchMoneyDatabase() as database:
+            response = await execute_sync(db=database, client=client)
+            persisted_user = await database.get(User, 1)
+
+        assert response.synced.user == 1
+        assert persisted_user is not None
+        assert persisted_user.name == "Synthetic User"
+    finally:
+        get_settings.cache_clear()
 
 
 @pytest.mark.asyncio
@@ -499,3 +552,74 @@ def test_fastapi_lifespan_migration_single_worker(
         response = client.get("/")
         assert response.status_code == 200
         assert migrations_ran is True
+
+
+def test_stateless_startup_syncs_and_persists_without_manual_schema_setup(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Initialize the cached stateless schema before real sync persistence."""
+    from lunchmoney_mcp.app.dependencies import get_database
+    from lunchmoney_mcp.client import (
+        CategoryObject,
+        ManualAccountObject,
+        PlaidAccountObject,
+        TagObject,
+        UserObject,
+    )
+    from lunchmoney_mcp.config import get_settings
+    from starlette.testclient import TestClient
+    from database.factories import user_object
+
+    async def mock_refresh(
+        self: app_module.LunchMoneyApp,
+        model: type[Any],
+    ) -> Any:
+        """Return a synthetic user and empty collections for other domains."""
+        if model is UserObject:
+            return user_object()
+        if model in {
+            PlaidAccountObject,
+            ManualAccountObject,
+            CategoryObject,
+            TagObject,
+        }:
+            return {}
+        raise AssertionError(f"Unexpected model refresh: {model}")
+
+    async def mock_refresh_transactions(
+        self: app_module.LunchMoneyApp,
+        **kwargs: Any,
+    ) -> dict[int, Any]:
+        """Return no transactions while exercising the real sync service."""
+        return {}
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
+    monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+    monkeypatch.setattr(app_module.LunchMoneyApp, "refresh", mock_refresh)
+    monkeypatch.setattr(
+        app_module.LunchMoneyApp,
+        "refresh_transactions",
+        mock_refresh_transactions,
+    )
+    get_settings.cache_clear()
+    get_database.cache_clear()
+
+    try:
+        with TestClient(fastapi_app) as client:
+            empty_user = client.get("/user")
+            sync_response = client.post("/sync?days=30")
+            persisted_user = client.get("/user")
+
+        assert empty_user.status_code == 200
+        assert empty_user.json() is None
+        assert sync_response.status_code == 200
+        assert sync_response.json()["synced"]["user"] == 1
+        assert persisted_user.status_code == 200
+        assert persisted_user.json()["name"] == "Synthetic User"
+    finally:
+        get_settings.cache_clear()
+        get_database.cache_clear()

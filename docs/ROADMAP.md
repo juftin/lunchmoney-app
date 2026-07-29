@@ -174,10 +174,10 @@ graph TD
 
 ### Sprint 0: Incremental ETL Engine Architecture
 
-- [ ] Add `STATELESS=true` setting & `IN_MEMORY_DATABASE_URL` resolution in `config.py`.
-- [ ] Add `StaticPool` in-memory SQLite initialization in `LunchMoneyDatabase`.
-- [ ] Add `db.create_tables()` schema initialization helper.
-- [ ] Add `SyncMetadata` table and opt-in incremental sync timestamp filtering.
+- [x] Add `STATELESS=true` setting & `IN_MEMORY_DATABASE_URL` resolution in `config.py`.
+- [x] Add `StaticPool` in-memory SQLite initialization in `LunchMoneyDatabase`.
+- [x] Add `db.create_tables()` schema initialization helper.
+- [x] Add `SyncMetadata` table and opt-in incremental sync timestamp filtering.
 
 ### Sprint 1: Read-Only Complete Coverage (Tags, Recurring, Summary, Single-ID Lookups)
 

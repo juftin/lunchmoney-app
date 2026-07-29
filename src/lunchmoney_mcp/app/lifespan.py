@@ -17,22 +17,28 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """FastAPI application lifespan running single-worker database migrations."""
-    lock = get_migration_lock()
-    try:
-        with lock:
-            logger.info(
-                "Worker acquired startup lock. Executing database migrations..."
+    """Initialize the configured database schema for the application lifespan."""
+    db: LunchMoneyDatabase = get_database()
+    if db.is_stateless:
+        logger.info("Initializing stateless in-memory database schema...")
+        await db.create_tables()
+    else:
+        lock = get_migration_lock()
+        try:
+            with lock:
+                logger.info(
+                    "Worker acquired startup lock. Executing database migrations..."
+                )
+                await run_migrations()
+        except LockTimeoutError:
+            logger.debug(
+                "Worker process skipped startup database migrations "
+                "(lock held by another worker)."
             )
-            await run_migrations()
-    except LockTimeoutError:
-        logger.debug(
-            "Worker process skipped startup database migrations (lock held by another worker)."
-        )
 
     yield
     if get_database.cache_info().currsize > 0:
-        db: LunchMoneyDatabase = get_database()
+        db = get_database()
         await db.dispose()
         get_database.cache_clear()
 
