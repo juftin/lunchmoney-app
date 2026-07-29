@@ -1,11 +1,21 @@
 """Services package containing reusable domain business logic."""
 
 from lunchmoney_mcp.services.accounts import (
+    create_manual_account,
+    delete_manual_account,
     fetch_accounts,
     fetch_manual_account_by_id,
     fetch_plaid_account_by_id,
+    trigger_plaid_fetch,
+    update_manual_account,
 )
-from lunchmoney_mcp.services.categories import fetch_categories, fetch_category_by_id
+from lunchmoney_mcp.services.categories import (
+    create_category,
+    delete_category,
+    fetch_categories,
+    fetch_category_by_id,
+    update_category,
+)
 from lunchmoney_mcp.services.recurring import (
     fetch_recurring_item_by_id,
     fetch_recurring_items,
@@ -37,4 +47,11 @@ __all__ = [
     "fetch_tags",
     "fetch_transaction_by_id",
     "fetch_user_info",
+    "create_category",
+    "update_category",
+    "delete_category",
+    "create_manual_account",
+    "update_manual_account",
+    "delete_manual_account",
+    "trigger_plaid_fetch",
 ]

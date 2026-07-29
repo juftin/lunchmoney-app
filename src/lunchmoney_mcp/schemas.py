@@ -3,7 +3,18 @@ Pydantic schemas and response models for FastAPI endpoints and MCP tools.
 """
 
 import datetime
+from typing import Any
 
+from lunchmoney.models import (
+    AccountTypeEnum,
+    CreateManualAccountRequestObject,
+    CreateManualAccountRequestObjectBalance,
+    CreateManualAccountRequestObjectClosedOn,
+    CurrencyEnum,
+    UpdateManualAccountRequestObject,
+    UpdateManualAccountRequestObjectBalance,
+    UpdateManualAccountRequestObjectClosedOn,
+)
 from pydantic import BaseModel, Field
 
 
@@ -117,6 +128,97 @@ class AccountsSummary(BaseModel):
     """List of connected Plaid accounts."""
     manual_accounts: list[AccountInfo] = Field(default_factory=list)
     """List of user-managed manual accounts."""
+
+
+class ManualAccountCreateRequest(BaseModel):
+    """User-facing fields accepted when creating a manual account."""
+
+    name: str
+    """User-defined account name."""
+    type: AccountTypeEnum
+    """Manual account type recognized by Lunch Money."""
+    balance: float | str
+    """Current numeric balance, represented as a number or decimal string."""
+    institution_name: str | None = None
+    """Optional financial institution name."""
+    display_name: str | None = None
+    """Optional name displayed to the user."""
+    subtype: str | None = None
+    """Optional manual account subtype."""
+    balance_as_of: str | None = None
+    """Optional ISO-8601 timestamp at which the balance was measured."""
+    currency: CurrencyEnum | None = None
+    """Optional balance currency."""
+    status: str | None = "active"
+    """Initial account lifecycle status."""
+    closed_on: datetime.date | None = None
+    """Optional date on which the account was closed."""
+    external_id: str | None = None
+    """Optional caller-defined external identifier."""
+    custom_metadata: dict[str, Any] | None = None
+    """Optional arbitrary JSON metadata stored with the account."""
+    exclude_from_transactions: bool | None = False
+    """Whether the account is excluded from transaction assignment."""
+
+    def to_api(self) -> CreateManualAccountRequestObject:
+        """Convert this HTTP/MCP request into the generated client model."""
+        values = self.model_dump(exclude_none=True)
+        values["balance"] = CreateManualAccountRequestObjectBalance.model_construct(
+            actual_instance=self.balance,
+        )
+        if self.closed_on is not None:
+            values["closed_on"] = (
+                CreateManualAccountRequestObjectClosedOn.model_construct(
+                    actual_instance=self.closed_on,
+                )
+            )
+        return CreateManualAccountRequestObject(**values)
+
+
+class ManualAccountUpdateRequest(BaseModel):
+    """User-facing fields accepted when updating a manual account."""
+
+    name: str | None = None
+    """Updated user-defined account name."""
+    institution_name: str | None = None
+    """Updated financial institution name."""
+    display_name: str | None = None
+    """Updated name displayed to the user."""
+    type: AccountTypeEnum | None = None
+    """Updated manual account type."""
+    subtype: str | None = None
+    """Updated manual account subtype."""
+    balance: float | str | None = None
+    """Updated numeric balance, represented as a number or decimal string."""
+    currency: CurrencyEnum | None = None
+    """Updated balance currency."""
+    balance_as_of: str | None = None
+    """Updated ISO-8601 timestamp at which the balance was measured."""
+    status: str | None = None
+    """Updated account lifecycle status."""
+    closed_on: datetime.date | None = None
+    """Updated closure date; explicitly set null clears it upstream."""
+    external_id: str | None = None
+    """Updated caller-defined external identifier."""
+    custom_metadata: dict[str, Any] | None = None
+    """Updated arbitrary JSON metadata."""
+    exclude_from_transactions: bool | None = None
+    """Updated transaction assignment exclusion policy."""
+
+    def to_api(self) -> UpdateManualAccountRequestObject:
+        """Convert this HTTP/MCP request into the generated client model."""
+        values = self.model_dump(exclude_unset=True)
+        if "balance" in values:
+            values["balance"] = UpdateManualAccountRequestObjectBalance.model_construct(
+                actual_instance=self.balance,
+            )
+        if "closed_on" in values:
+            values["closed_on"] = (
+                UpdateManualAccountRequestObjectClosedOn.model_construct(
+                    actual_instance=self.closed_on,
+                )
+            )
+        return UpdateManualAccountRequestObject(**values)
 
 
 class TransactionInfo(BaseModel):
