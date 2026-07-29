@@ -25,25 +25,25 @@ When starting a task, use this directory map to locate specific documentation:
 ### System Topology
 
 ```
-                  ┌─────────────────────────────────────┐
-                  │            Client Layer             │
-                  │  (MCP Client / FastAPI REST Client) │
-                  └──────────────────┬──────────────────┘
-                                     │
-                  ┌──────────────────┴──────────────────┐
-                  │            Server Layer             │
-                  │  FastAPI Routers  │  FastMCP Server │
-                  └──────────────────┬──────────────────┘
-                                     │
-                  ┌──────────────────┴──────────────────┐
-                  │            Service Layer            │
-                  │  src/lunchmoney_mcp/services/       │
-                  └──────────────────┬──────────────────┘
-                                     │
-                  ┌──────────────────┴──────────────────┐
-                  │         Persistence Layer           │
-                  │ SQLModel DB (SQLite/PG) │ Upstream  │
-                  └─────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│            Client Layer             │
+│  (MCP Client / FastAPI REST Client) │
+└──────────────────┬──────────────────┘
+                   │
+┌──────────────────┴──────────────────┐
+│            Server Layer             │
+│  FastAPI Routers  │  FastMCP Server │
+└──────────────────┬──────────────────┘
+                   │
+┌──────────────────┴──────────────────┐
+│            Service Layer            │
+│  src/lunchmoney_mcp/services/       │
+└──────────────────┬──────────────────┘
+                   │
+┌──────────────────┴──────────────────┐
+│         Persistence Layer           │
+│ SQLModel DB (SQLite/PG) │ Upstream  │
+└─────────────────────────────────────┘
 ```
 
 ### 1-to-1 Parallel Domain Layering Matrix
@@ -83,6 +83,11 @@ For every Lunch Money domain (e.g. `categories`, `transactions`, `accounts`, `us
 5. **Opt-In Incremental ETL**:
    - Default sync (`incremental=False`) uses rolling date window (`days=30`).
    - Incremental sync (`incremental=True`) queries `SyncMetadata` for domain watermarks with a safety overlap buffer (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`, default 5 mins).
+
+6. **Distributed Locking & Zero-Infrastructure Fallback**:
+   - Migration and synchronization operations MUST acquire a distributed lock (`get_migration_lock()`) to guarantee single-worker execution across multi-container environments.
+   - When `REDIS_URL` is set, `RedisLock` is used for distributed coordination across instances.
+   - When `REDIS_URL` is omitted, the app gracefully falls back to local file-based `LockFile` (`.lunchmoney_*.lock`), requiring zero external infrastructure setup for desktop/CLI usage.
 
 ---
 
