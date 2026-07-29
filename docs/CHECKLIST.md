@@ -28,6 +28,7 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 ### 🏁 Sprint 0: Incremental ETL & Stateless Engine
 *Reference Spec*: [`docs/INCREMENTAL_ETL.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/INCREMENTAL_ETL.md) & [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-0-incremental-etl--stateless-engine)
 
+- [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_mcp/mcp/tools/`](file:///Users/juftin/git/lunchmoney-mcp/src/lunchmoney_mcp/mcp/tools/).
 - [ ] **Config Additions**: Add `stateless: bool` (`STATELESS`) and `sync_safety_margin_minutes: int` (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`) in [`src/lunchmoney_mcp/config.py`](file:///Users/juftin/git/lunchmoney-mcp/src/lunchmoney_mcp/config.py).
 - [ ] **SyncMetadata Model**: Create `SyncMetadata` table in [`src/lunchmoney_mcp/database/models/sync.py`](file:///Users/juftin/git/lunchmoney-mcp/src/lunchmoney_mcp/database/models/sync.py).
 - [ ] **Alembic Migration**: Add migration `0002_add_sync_metadata_table.py` for `sync_metadata`.

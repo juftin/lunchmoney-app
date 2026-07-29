@@ -46,16 +46,31 @@ When starting a task, use this directory map to locate specific documentation:
                   └─────────────────────────────────────┘
 ```
 
+### 1-to-1 Parallel Domain Layering Matrix
+
+For every Lunch Money domain (e.g. `categories`, `transactions`, `accounts`, `user`, `spending`, `sync`), there MUST be a matching 1-to-1 module file across all application layers:
+
+| Domain Area | DB Model (`database/models/`) | Service (`services/`) | FastAPI Router (`app/routers/`) | FastMCP Tool Module (`mcp/tools/`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **User & Profile** | `user.py` | `user.py` | `user.py` | `user.py` |
+| **Categories** | `categories.py` | `categories.py` | `categories.py` | `categories.py` |
+| **Accounts** | `accounts.py` | `accounts.py` | `accounts.py` | `accounts.py` |
+| **Transactions** | `transactions.py` | `transactions.py` | `transactions.py` | `transactions.py` |
+| **Spending Analytics** | `transactions.py` | `spending.py` | `spending.py` | `spending.py` |
+| **Sync & Watermarks** | `sync.py` | `sync.py` | `sync.py` | `sync.py` |
+| **Tags (Planned)** | `tags.py` | `tags.py` | `tags.py` | `tags.py` |
+| **Recurring (Planned)** | `recurring.py` | `recurring.py` | `recurring.py` | `recurring.py` |
+| **Budgets (Planned)** | `budgets.py` | `budgets.py` | `budgets.py` | `budgets.py` |
+
 ### Architectural Principles
 
 1. **Service Layer Isolation**:
    - All business logic, DB queries, API calls, and domain rollups MUST reside in `src/lunchmoney_mcp/services/`.
-   - FastAPI routers (`src/lunchmoney_mcp/app/routers/`) and FastMCP tools (`src/lunchmoney_mcp/mcp/server.py`) MUST be clean 1-to-2 line delegators calling service functions.
+   - FastAPI routers (`src/lunchmoney_mcp/app/routers/`) and FastMCP tools (`src/lunchmoney_mcp/mcp/tools/`) MUST be clean 1-to-2 line delegators calling service functions.
 
-2. **Decoupled FastAPI and FastMCP Interfaces**:
-   - FastAPI routers (`src/lunchmoney_mcp/app/routers/`) and FastMCP tools (`src/lunchmoney_mcp/mcp/server.py`) are independent interfaces.
-   - Both delegate directly to clean service functions in `src/lunchmoney_mcp/services/`.
-   - FastMCP tools are registered explicitly via `@mcp.tool()`, so FastAPI route `operation_id` alignment is no longer required.
+2. **Modular MCP Tool Organization**:
+   - FastMCP tools MUST be defined in dedicated domain files under `src/lunchmoney_mcp/mcp/tools/` and imported into `src/lunchmoney_mcp/mcp/server.py`.
+   - FastMCP tools and FastAPI routers delegate directly to clean service functions in `src/lunchmoney_mcp/services/`.
 
 3. **Upstream-First Write-Back Strategy**:
    - All write operations (create/update/delete) MUST call the Lunch Money v2 API first.
