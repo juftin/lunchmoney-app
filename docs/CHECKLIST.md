@@ -60,14 +60,14 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#1-user--account-summary-me-summ
 
 _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-2-category--manual-account-mutations)
 
-- [ ] **Category Creation**: Implement Upstream-First `create_category` service, `POST /categories`, and FastMCP tool.
-- [ ] **Category Update**: Implement Upstream-First `update_category` service, `PUT /categories/{id}`, and FastMCP tool.
-- [ ] **Category Deletion**: Implement Upstream-First `delete_category` service, `DELETE /categories/{id}`, and FastMCP tool.
-- [ ] **Manual Account Creation**: Implement Upstream-First `create_manual_account` service, `POST /accounts/manual`, and FastMCP tool.
-- [ ] **Manual Account Update**: Implement Upstream-First `update_manual_account` service, `PUT /accounts/manual/{id}`, and FastMCP tool.
-- [ ] **Manual Account Deletion**: Implement Upstream-First `delete_manual_account` service, `DELETE /accounts/manual/{id}`, and FastMCP tool.
-- [ ] **Plaid Fetch Trigger**: Implement `trigger_plaid_fetch` service, `POST /accounts/plaid/sync`, and FastMCP tool.
-- [ ] **Test Suite**: Add unit and integration tests in `tests/test_category_account_mutations.py`.
+- [x] **Category Creation**: Implement Upstream-First `create_category` service, `POST /categories`, and FastMCP tool.
+- [x] **Category Update**: Implement Upstream-First `update_category` service, `PUT /categories/{id}`, and FastMCP tool.
+- [x] **Category Deletion**: Implement Upstream-First `delete_category` service, `DELETE /categories/{id}`, and FastMCP tool.
+- [x] **Manual Account Creation**: Implement Upstream-First `create_manual_account` service, `POST /accounts/manual`, and FastMCP tool.
+- [x] **Manual Account Update**: Implement Upstream-First `update_manual_account` service, `PUT /accounts/manual/{id}`, and FastMCP tool.
+- [x] **Manual Account Deletion**: Implement Upstream-First `delete_manual_account` service, `DELETE /accounts/manual/{id}`, and FastMCP tool.
+- [x] **Plaid Fetch Trigger**: Implement `trigger_plaid_fetch` service, `POST /accounts/plaid/sync`, and FastMCP tool.
+- [x] **Test Suite**: Add unit and integration tests in `tests/test_category_account_mutations.py`.
 
 ---
 

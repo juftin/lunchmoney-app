@@ -3,11 +3,19 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from lunchmoney.models import CreateCategoryRequestObject, UpdateCategoryRequestObject
 
-from lunchmoney_mcp.app.dependencies import get_database
+from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
+from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.schemas import CategoryInfo
-from lunchmoney_mcp.services import fetch_categories, fetch_category_by_id
+from lunchmoney_mcp.services import (
+    create_category as create_category_service,
+    delete_category as delete_category_service,
+    fetch_categories,
+    fetch_category_by_id,
+    update_category as update_category_service,
+)
 
 router = APIRouter(tags=["Categories"])
 """FastAPI APIRouter for budget categories endpoints."""
@@ -60,3 +68,57 @@ async def get_category(
         Matching category, or ``None`` when it has not been synchronized.
     """
     return await fetch_category_by_id(db=db, category_id=category_id)
+
+
+@router.post(
+    path="/categories",
+    response_model=CategoryInfo,
+    operation_id="create_category",
+)
+async def create_category(
+    request: CreateCategoryRequestObject,
+    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+) -> CategoryInfo:
+    """Create a budget category and store Lunch Money's canonical response."""
+    return await create_category_service(client=client, db=db, request=request)
+
+
+@router.put(
+    path="/categories/{category_id}",
+    response_model=CategoryInfo,
+    operation_id="update_category",
+)
+async def update_category(
+    category_id: int,
+    request: UpdateCategoryRequestObject,
+    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+) -> CategoryInfo:
+    """Update a budget category and store Lunch Money's canonical response."""
+    return await update_category_service(
+        client=client,
+        db=db,
+        category_id=category_id,
+        request=request,
+    )
+
+
+@router.delete(
+    path="/categories/{category_id}",
+    status_code=204,
+    operation_id="delete_category",
+)
+async def delete_category(
+    category_id: int,
+    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    force: bool | None = None,
+) -> None:
+    """Delete a budget category upstream and then remove its cached row."""
+    await delete_category_service(
+        client=client,
+        db=db,
+        category_id=category_id,
+        force=force,
+    )

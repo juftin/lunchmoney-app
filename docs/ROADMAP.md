@@ -74,10 +74,10 @@ graph TD
 | Upstream v2 Endpoint |  Method  | Local Route               | FastMCP Tool      | Service Function       |   Status   |
 | :------------------- | :------: | :------------------------ | :---------------- | :--------------------- | :--------: |
 | `/categories`        |  `GET`   | `GET /categories`         | `list_categories` | `fetch_categories`     |  ✅ Done   |
-| `/categories`        |  `POST`  | `POST /categories`        | `create_category` | `create_category`      | ⏳ Planned |
+| `/categories`        |  `POST`  | `POST /categories`        | `create_category` | `create_category`      |  ✅ Done   |
 | `/categories/{id}`   |  `GET`   | `GET /categories/{id}`    | `get_category`    | `fetch_category_by_id` |  ✅ Done   |
-| `/categories/{id}`   |  `PUT`   | `PUT /categories/{id}`    | `update_category` | `update_category`      | ⏳ Planned |
-| `/categories/{id}`   | `DELETE` | `DELETE /categories/{id}` | `delete_category` | `delete_category`      | ⏳ Planned |
+| `/categories/{id}`   |  `PUT`   | `PUT /categories/{id}`    | `update_category` | `update_category`      |  ✅ Done   |
+| `/categories/{id}`   | `DELETE` | `DELETE /categories/{id}` | `delete_category` | `delete_category`      |  ✅ Done   |
 
 ---
 
@@ -86,10 +86,10 @@ graph TD
 | Upstream v2 Endpoint    |  Method  | Local Route                    | FastMCP Tool            | Service Function             |   Status   |
 | :---------------------- | :------: | :----------------------------- | :---------------------- | :--------------------------- | :--------: |
 | `/manual_accounts`      |  `GET`   | `GET /accounts/manual`         | `list_manual_accounts`  | `fetch_manual_accounts`      |  ✅ Done   |
-| `/manual_accounts`      |  `POST`  | `POST /accounts/manual`        | `create_manual_account` | `create_manual_account`      | ⏳ Planned |
+| `/manual_accounts`      |  `POST`  | `POST /accounts/manual`        | `create_manual_account` | `create_manual_account`      |  ✅ Done   |
 | `/manual_accounts/{id}` |  `GET`   | `GET /accounts/manual/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` |  ✅ Done   |
-| `/manual_accounts/{id}` |  `PUT`   | `PUT /accounts/manual/{id}`    | `update_manual_account` | `update_manual_account`      | ⏳ Planned |
-| `/manual_accounts/{id}` | `DELETE` | `DELETE /accounts/manual/{id}` | `delete_manual_account` | `delete_manual_account`      | ⏳ Planned |
+| `/manual_accounts/{id}` |  `PUT`   | `PUT /accounts/manual/{id}`    | `update_manual_account` | `update_manual_account`      |  ✅ Done   |
+| `/manual_accounts/{id}` | `DELETE` | `DELETE /accounts/manual/{id}` | `delete_manual_account` | `delete_manual_account`      |  ✅ Done   |
 
 ---
 
@@ -99,7 +99,7 @@ graph TD
 | :---------------------- | :----: | :-------------------------- | :-------------------- | :-------------------------- | :--------: |
 | `/plaid_accounts`       | `GET`  | `GET /accounts/plaid`       | `list_plaid_accounts` | `fetch_plaid_accounts`      |  ✅ Done   |
 | `/plaid_accounts/{id}`  | `GET`  | `GET /accounts/plaid/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` |  ✅ Done   |
-| `/plaid_accounts/fetch` | `POST` | `POST /accounts/plaid/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       | ⏳ Planned |
+| `/plaid_accounts/fetch` | `POST` | `POST /accounts/plaid/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       |  ✅ Done   |
 
 ---
 
@@ -188,9 +188,9 @@ graph TD
 
 ### Sprint 2: Category & Account Mutations (Write Operations)
 
-- [ ] Implement Category mutations (`POST`, `PUT`, `DELETE` `/categories`)
-- [ ] Implement Manual Account mutations (`POST`, `PUT`, `DELETE` `/manual_accounts`)
-- [ ] Implement Plaid sync trigger (`POST /plaid_accounts/fetch`)
+- [x] Implement Category mutations (`POST`, `PUT`, `DELETE` `/categories`)
+- [x] Implement Manual Account mutations (`POST`, `PUT`, `DELETE` `/manual_accounts`)
+- [x] Implement Plaid sync trigger (`POST /plaid_accounts/fetch`)
 
 ### Sprint 3: Transaction Mutations & Advanced Operations
 
