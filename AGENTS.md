@@ -38,9 +38,10 @@ Welcome, AI Coding Assistant! This document provides authoritative instructions,
    - All business logic, DB queries, API calls, and domain rollups MUST reside in `src/lunchmoney_mcp/services/`.
    - FastAPI routers (`src/lunchmoney_mcp/app/routers/`) and FastMCP tools (`src/lunchmoney_mcp/mcp/server.py`) MUST be clean 1-to-2 line delegators calling service functions.
 
-2. **Operation ID & Tool Name Alignment**:
-   - Every FastAPI endpoint MUST define an explicit `operation_id="..."` on its route decorator.
-   - The corresponding FastMCP tool MUST use the exact same name as the FastAPI operation ID.
+2. **Decoupled FastAPI and FastMCP Interfaces**:
+   - FastAPI routers (`src/lunchmoney_mcp/app/routers/`) and FastMCP tools (`src/lunchmoney_mcp/mcp/server.py`) are independent interfaces.
+   - Both delegate directly to clean service functions in `src/lunchmoney_mcp/services/`.
+   - FastMCP tools are registered explicitly via `@mcp.tool()`, so FastAPI route `operation_id` alignment is no longer required.
 
 3. **Upstream-First Write-Back Strategy**:
    - All write operations (create/update/delete) MUST call the Lunch Money v2 API first.
