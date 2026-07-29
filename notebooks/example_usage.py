@@ -23,13 +23,11 @@ def _(mo):
 
 @app.cell
 def _():
-    import asyncio
     from lunchmoney_mcp.client import LunchMoneyApp
-    from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
+    from lunchmoney_mcp.database import LunchMoneyDatabase
     from lunchmoney_mcp.services import (
         execute_sync,
         fetch_accounts,
-        fetch_categories,
         fetch_recent_transactions,
         fetch_user_info,
     )
@@ -115,7 +113,6 @@ async def _(db, fetch_accounts):
 @app.cell(hide_code=True)
 def _(accounts, mo):
     plaid_data = [a.model_dump() for a in accounts.plaid_accounts]
-    manual_data = [a.model_dump() for a in accounts.manual_accounts]
 
     mo.md(
         f"""
