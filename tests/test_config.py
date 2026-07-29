@@ -105,6 +105,21 @@ def test_dotenv_database_url_overrides_stateless_mode(
     get_settings.cache_clear()
 
 
+def test_dotenv_default_database_url_overrides_stateless_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Preserve an explicitly configured default URL over stateless mode."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
+    (tmp_path / ".env").write_text(f"LUNCHMONEY_DATABASE_URL={DEFAULT_DATABASE_URL}\n")
+    get_settings.cache_clear()
+
+    assert resolve_database_url() == DEFAULT_DATABASE_URL
+    get_settings.cache_clear()
+
+
 def test_get_settings_cached() -> None:
     """Return a cached Settings instance."""
     settings_1 = get_settings()

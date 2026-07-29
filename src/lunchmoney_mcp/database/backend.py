@@ -54,7 +54,7 @@ def resolve_database_url(database_url: str | None = None) -> str:
     if env_url:
         return env_url
     settings = get_settings()
-    if settings.lunchmoney_database_url != DEFAULT_DATABASE_URL:
+    if "lunchmoney_database_url" in settings.model_fields_set:
         return settings.lunchmoney_database_url
     if settings.stateless:
         return IN_MEMORY_DATABASE_URL
