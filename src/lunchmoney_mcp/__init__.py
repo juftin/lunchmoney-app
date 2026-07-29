@@ -17,6 +17,9 @@ from lunchmoney_mcp.schemas import (
     AccountInfo,
     AccountsSummary,
     CategoryInfo,
+    CategorySpending,
+    ChildCategorySpending,
+    GroupedSpendingResponse,
     RootResponse,
     SyncDetails,
     SyncResponse,
@@ -24,13 +27,17 @@ from lunchmoney_mcp.schemas import (
     TransactionInfo,
     UserInfo,
 )
+from lunchmoney_mcp.services import fetch_category_spending
 
 __all__ = [
     "DEFAULT_DATABASE_URL",
     "AccountInfo",
     "AccountsSummary",
     "CategoryInfo",
+    "CategorySpending",
+    "ChildCategorySpending",
     "FileLock",
+    "GroupedSpendingResponse",
     "Lock",
     "LockError",
     "LockFile",
@@ -48,5 +55,6 @@ __all__ = [
     "TransactionInfo",
     "UserInfo",
     "app",
+    "fetch_category_spending",
     "get_settings",
 ]

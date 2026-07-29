@@ -16,6 +16,7 @@ ENV/
 .superpowers/
 .idea/
 .vscode/
+__marimo__/
 
 # Application runtime databases & lockfiles
 *.db

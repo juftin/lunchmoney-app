@@ -13,13 +13,11 @@ def _():
 
 @app.cell
 def _(mo):
-    mo.md(
-        r"""
-        # 💰 Lunch Money MCP - Example Usage Notebook
+    mo.md(r"""
+    # 💰 Lunch Money MCP - Example Usage Notebook
 
-        This notebook demonstrates how to interact with **Lunch Money MCP** service functions, database records, and FastMCP tools.
-        """
-    )
+    This notebook demonstrates how to interact with **Lunch Money MCP** service functions, database records, and FastMCP tools.
+    """)
     return
 
 
@@ -39,13 +37,10 @@ def _():
     return (
         LunchMoneyApp,
         LunchMoneyDatabase,
-        asyncio,
         execute_sync,
         fetch_accounts,
-        fetch_categories,
         fetch_recent_transactions,
         fetch_user_info,
-        run_migrations,
     )
 
 
@@ -71,21 +66,19 @@ async def _(client, days_slider, db, execute_sync):
     return (sync_result,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo, sync_result):
-    mo.md(
-        f"""
-        ### 🔄 Database Sync Summary
+    mo.md(f"""
+    ### 🔄 Database Sync Summary
 
-        - **Status:** `{sync_result.message}`
-        - **Total Records Synced:** `{sync_result.synced.total}`
-        - **User Records:** `{sync_result.synced.user}`
-        - **Plaid Accounts:** `{sync_result.synced.plaid_accounts}`
-        - **Manual Accounts:** `{sync_result.synced.manual_accounts}`
-        - **Categories:** `{sync_result.synced.categories}`
-        - **Transactions:** `{sync_result.synced.transactions}`
-        """
-    )
+    - **Status:** `{sync_result.message}`
+    - **Total Records Synced:** `{sync_result.synced.total}`
+    - **User Records:** `{sync_result.synced.user}`
+    - **Plaid Accounts:** `{sync_result.synced.plaid_accounts}`
+    - **Manual Accounts:** `{sync_result.synced.manual_accounts}`
+    - **Categories:** `{sync_result.synced.categories}`
+    - **Transactions:** `{sync_result.synced.transactions}`
+    """)
     return
 
 
@@ -95,7 +88,7 @@ async def _(db, fetch_user_info):
     return (user_info,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo, user_info):
     if user_info:
         user_md = mo.md(
@@ -110,7 +103,7 @@ def _(mo, user_info):
     else:
         user_md = mo.md("_No user profile synced yet._")
     user_md
-    return (user_md,)
+    return
 
 
 @app.cell
@@ -119,7 +112,7 @@ async def _(db, fetch_accounts):
     return (accounts,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(accounts, mo):
     plaid_data = [a.model_dump() for a in accounts.plaid_accounts]
     manual_data = [a.model_dump() for a in accounts.manual_accounts]
@@ -130,7 +123,7 @@ def _(accounts, mo):
         **Plaid Accounts ({len(plaid_data)}):**
         """
     )
-    return manual_data, plaid_data
+    return (plaid_data,)
 
 
 @app.cell
@@ -145,7 +138,7 @@ async def _(days_slider, db, fetch_recent_transactions):
     return (txns,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo, txns):
     txn_data = [t.model_dump() for t in txns]
     mo.md(
@@ -159,6 +152,21 @@ def _(mo, txns):
 @app.cell
 def _(mo, txn_data):
     mo.ui.table(txn_data)
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
+def _():
     return
 
 
