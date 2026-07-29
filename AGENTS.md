@@ -4,6 +4,20 @@ Welcome, AI Coding Assistant! This document provides authoritative instructions,
 
 ---
 
+## 🗺️ Documentation Sitemap & Navigation Guide
+
+When starting a task, use this directory map to locate specific documentation:
+
+| Document | Path | Purpose |
+| :--- | :--- | :--- |
+| **Active Checklist** | [`docs/CHECKLIST.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/CHECKLIST.md) | Task execution tracker. Check off items here when completed. |
+| **API Roadmap** | [`docs/ROADMAP.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/ROADMAP.md) | 100% Lunch Money v2 API coverage matrix (39 endpoints) & sprint overview. |
+| **Incremental ETL Spec** | [`docs/INCREMENTAL_ETL.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/INCREMENTAL_ETL.md) | Stateful sync, `SyncMetadata` watermark tracking & safety margin design. |
+| **Technical Handoff** | [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md) | Step-by-step code snippets, schema definitions, and sprint hand-off specs. |
+| **MCP Integration Guide** | [`docs/MCP_GUIDE.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/MCP_GUIDE.md) | stdio/SSE transports, `uvx` packaging, Resources, Prompts & OAuth. |
+
+---
+
 ## 🏛️ Project Overview & Architecture
 
 **`lunchmoney-mcp`** is a high-performance Model Context Protocol (MCP) server and REST API for personal financial management with [Lunch Money](https://lunchmoney.app).
@@ -57,6 +71,27 @@ Welcome, AI Coding Assistant! This document provides authoritative instructions,
 
 ---
 
+## ⚡ Subagent Creation & Task Parallelization Protocol
+
+When executing tasks that contain independent sub-components (e.g. implementing multiple read-only service functions, writing unit test files, or creating documentation pages):
+
+1. **Define Specialized Subagents (`define_subagent`)**:
+   - Create focused subagent types (e.g., `EndpointBuilder`, `TestWriter`, `DocUpdater`) with minimal required tool permissions.
+2. **Invoke Subagents Concurrently (`invoke_subagent`)**:
+   - Launch subagents with clear, explicit target file paths and acceptance criteria.
+3. **Reactive Execution (No Polling)**:
+   - Do NOT poll or check status in a loop. Stop tool execution or proceed with other work; the environment will automatically notify you when subagents finish.
+
+---
+
+## 📝 Documentation Auto-Improvement & Checklist Updates
+
+1. **Checkoff Protocol**: When completing a task, immediately edit [`docs/CHECKLIST.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/CHECKLIST.md) to check off the item (`- [x]`).
+2. **Auto-Improvement Rule**: Whenever you modify code signatures, add configuration options, or resolve subtle bugs, update the relevant specification in `docs/` (`ROADMAP.md`, `INCREMENTAL_ETL.md`, `AGENT_HANDOFF.md`, or `MCP_GUIDE.md`).
+3. **New Tasks**: If a task reveals additional requirements, add new `- [ ]` checklist items to `docs/CHECKLIST.md`.
+
+---
+
 ## 🛠️ Development Workflows & Tooling
 
 Most workflows are orchestrated via [`go-task`](https://taskfile.dev). ALWAYS use `task` commands rather than invoking underlying tools directly.
@@ -103,8 +138,3 @@ Use Gitmoji commit conventions:
 - 🧪 (`:test_tube:`): Adding tests
 - 📝 (`:memo:`): Documentation update
 - 🔧 (`:wrench:`): Configuration change
-
-Example:
-```bash
-git commit -m "✨ (spending): Add grouped category spending endpoint and FastMCP tool"
-```
