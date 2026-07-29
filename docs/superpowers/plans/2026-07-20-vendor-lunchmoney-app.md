@@ -20,10 +20,12 @@
 ### Task 1: Vendor the upstream application module
 
 **Files:**
+
 - Create: `src/lunchmoney_mcp/app.py`
 - Test: `tests/test_app.py`
 
 **Interfaces:**
+
 - Produces: `LunchMoneyApp`, `LunchableData`, and `LunchableClient` exported from `lunchmoney_mcp.app`.
 
 - [ ] **Step 1: Write the failing import test**
@@ -52,10 +54,12 @@ Expected: PASS.
 ### Task 2: Support non-caching refreshes
 
 **Files:**
+
 - Modify: `src/lunchmoney_mcp/app.py`
 - Modify: `tests/test_app.py`
 
 **Interfaces:**
+
 - Consumes: `LunchMoneyApp.refresh`, `LunchMoneyApp.refresh_data`, and `LunchMoneyApp.refresh_transactions`.
 - Produces: `cache: bool = True` on each refresh API.
 

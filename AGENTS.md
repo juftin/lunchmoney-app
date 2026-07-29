@@ -8,13 +8,13 @@ Welcome, AI Coding Assistant! This document provides authoritative instructions,
 
 When starting a task, use this directory map to locate specific documentation:
 
-| Document | Path | Purpose |
-| :--- | :--- | :--- |
-| **Active Checklist** | [`docs/CHECKLIST.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/CHECKLIST.md) | Task execution tracker. Check off items here when completed. |
-| **API Roadmap** | [`docs/ROADMAP.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/ROADMAP.md) | 100% Lunch Money v2 API coverage matrix (39 endpoints) & sprint overview. |
-| **Incremental ETL Spec** | [`docs/INCREMENTAL_ETL.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/INCREMENTAL_ETL.md) | Stateful sync, `SyncMetadata` watermark tracking & safety margin design. |
-| **Technical Handoff** | [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md) | Step-by-step code snippets, schema definitions, and sprint hand-off specs. |
-| **MCP Integration Guide** | [`docs/MCP_GUIDE.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/MCP_GUIDE.md) | stdio/SSE transports, `uvx` packaging, Resources, Prompts & OAuth. |
+| Document                  | Path                                                                                         | Purpose                                                                    |
+| :------------------------ | :------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
+| **Active Checklist**      | [`docs/CHECKLIST.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/CHECKLIST.md)             | Task execution tracker. Check off items here when completed.               |
+| **API Roadmap**           | [`docs/ROADMAP.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/ROADMAP.md)                 | 100% Lunch Money v2 API coverage matrix (39 endpoints) & sprint overview.  |
+| **Incremental ETL Spec**  | [`docs/INCREMENTAL_ETL.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/INCREMENTAL_ETL.md) | Stateful sync, `SyncMetadata` watermark tracking & safety margin design.   |
+| **Technical Handoff**     | [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md)     | Step-by-step code snippets, schema definitions, and sprint hand-off specs. |
+| **MCP Integration Guide** | [`docs/MCP_GUIDE.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/MCP_GUIDE.md)             | stdio/SSE transports, `uvx` packaging, Resources, Prompts & OAuth.         |
 
 ---
 
@@ -50,17 +50,17 @@ When starting a task, use this directory map to locate specific documentation:
 
 For every Lunch Money domain (e.g. `categories`, `transactions`, `accounts`, `user`, `spending`, `sync`), there MUST be a matching 1-to-1 module file across all application layers:
 
-| Domain Area | DB Model (`database/models/`) | Service (`services/`) | FastAPI Router (`app/routers/`) | FastMCP Tool Module (`mcp/tools/`) |
-| :--- | :--- | :--- | :--- | :--- |
-| **User & Profile** | `user.py` | `user.py` | `user.py` | `user.py` |
-| **Categories** | `categories.py` | `categories.py` | `categories.py` | `categories.py` |
-| **Accounts** | `accounts.py` | `accounts.py` | `accounts.py` | `accounts.py` |
-| **Transactions** | `transactions.py` | `transactions.py` | `transactions.py` | `transactions.py` |
-| **Spending Analytics** | `transactions.py` | `spending.py` | `spending.py` | `spending.py` |
-| **Sync & Watermarks** | `sync.py` | `sync.py` | `sync.py` | `sync.py` |
-| **Tags (Planned)** | `tags.py` | `tags.py` | `tags.py` | `tags.py` |
-| **Recurring (Planned)** | `recurring.py` | `recurring.py` | `recurring.py` | `recurring.py` |
-| **Budgets (Planned)** | `budgets.py` | `budgets.py` | `budgets.py` | `budgets.py` |
+| Domain Area             | DB Model (`database/models/`) | Service (`services/`) | FastAPI Router (`app/routers/`) | FastMCP Tool Module (`mcp/tools/`) |
+| :---------------------- | :---------------------------- | :-------------------- | :------------------------------ | :--------------------------------- |
+| **User & Profile**      | `user.py`                     | `user.py`             | `user.py`                       | `user.py`                          |
+| **Categories**          | `categories.py`               | `categories.py`       | `categories.py`                 | `categories.py`                    |
+| **Accounts**            | `accounts.py`                 | `accounts.py`         | `accounts.py`                   | `accounts.py`                      |
+| **Transactions**        | `transactions.py`             | `transactions.py`     | `transactions.py`               | `transactions.py`                  |
+| **Spending Analytics**  | `transactions.py`             | `spending.py`         | `spending.py`                   | `spending.py`                      |
+| **Sync & Watermarks**   | `sync.py`                     | `sync.py`             | `sync.py`                       | `sync.py`                          |
+| **Tags (Planned)**      | `tags.py`                     | `tags.py`             | `tags.py`                       | `tags.py`                          |
+| **Recurring (Planned)** | `recurring.py`                | `recurring.py`        | `recurring.py`                  | `recurring.py`                     |
+| **Budgets (Planned)**   | `budgets.py`                  | `budgets.py`          | `budgets.py`                    | `budgets.py`                       |
 
 ### Architectural Principles
 
@@ -118,14 +118,14 @@ Most workflows are orchestrated via [`go-task`](https://taskfile.dev). ALWAYS us
 
 ### Standard Entrypoints
 
-| Command | Action |
-| :--- | :--- |
-| `task install` | Install project and development dependencies (`uv sync`) |
-| `task fix` | Auto-fix code formatting and lint issues (`ruff format` & `ruff check --fix`) |
-| `task lint` | Check formatting and linting rules (`ruff`) |
-| `task check` | Perform static type checking (`ty check`) |
-| `task test` | Execute Pytest test suite (`pytest`) |
-| `task dev` | Run local FastAPI dev server (`uv run fastapi dev src/lunchmoney_mcp/app/main.py`) |
+| Command         | Action                                                                              |
+| :-------------- | :---------------------------------------------------------------------------------- |
+| `task install`  | Install project and development dependencies (`uv sync`)                            |
+| `task fix`      | Auto-fix code formatting and lint issues (`ruff format` & `ruff check --fix`)       |
+| `task lint`     | Check formatting and linting rules (`ruff`)                                         |
+| `task check`    | Perform static type checking (`ty check`)                                           |
+| `task test`     | Execute Pytest test suite (`pytest`)                                                |
+| `task dev`      | Run local FastAPI dev server (`uv run fastapi dev src/lunchmoney_mcp/app/main.py`)  |
 | `task notebook` | Launch interactive marimo usage notebook (`marimo edit notebooks/example_usage.py`) |
 
 ---
@@ -133,24 +133,31 @@ Most workflows are orchestrated via [`go-task`](https://taskfile.dev). ALWAYS us
 ## 📋 Code Quality & Style Guidelines
 
 ### Python Style & Docstrings
+
 - **Type Hints**: Annotate every function and method parameters and return types (`def test_foo() -> None:`). Use modern Python 3.10+ union types (`int | None`).
 - **Docstrings**: NumPy style docstrings (`Parameters`, `Returns`, `Raises`, `Notes`) on all modules, classes, and functions. Use `AttributeDocStrings` for class fields.
 - **Imports**: Group imports cleanly. Avoid unused imports.
 
 ### Verification Protocol
+
 Before committing code, ALWAYS run:
+
 ```bash
 task fix && task lint && task check && task test
 ```
+
 All four tasks must exit with code `0`.
 
 ### Git Commitment Protocol
+
 Use Gitmoji commit conventions:
+
 ```
 <intention> [scope?][:?] <message>
 ```
 
 **Common Intention Emojis**:
+
 - ✨ (`:sparkles:`): New feature
 - 🐛 (`:bug:`): Bug fix
 - ⚡️ (`:zap:`): Performance improvement

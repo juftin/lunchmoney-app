@@ -7,11 +7,13 @@ This document serves as the **operational task tracker** for **`lunchmoney-mcp`*
 ## 🤖 Agent Operating Rules & Parallelization
 
 ### 1. How to Claim and Update Checklist Items
+
 - Before starting a task, read the referenced specification in [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md) or [`docs/ROADMAP.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/ROADMAP.md).
 - When a task is fully verified (`task fix && task lint && task check && task test`), update this document by changing `- [ ]` to `- [x]`.
 - If your work discovers new requirements, edge cases, or sub-tasks, immediately add new checklist items under the appropriate sprint section.
 
 ### 2. Subagent Creation & Parallelization Protocol
+
 When a sprint contains independent, non-overlapping tasks (e.g. creating parallel service functions, adding independent endpoints, or writing unit tests), invoke subagents to execute them concurrently:
 
 1. **Define Subagents (`define_subagent`)**:
@@ -26,7 +28,8 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 ## 🎯 Master Implementation Checklist
 
 ### 🏁 Sprint 0: Incremental ETL & Stateless Engine
-*Reference Spec*: [`docs/INCREMENTAL_ETL.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/INCREMENTAL_ETL.md) & [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-0-incremental-etl--stateless-engine)
+
+_Reference Spec_: [`docs/INCREMENTAL_ETL.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/INCREMENTAL_ETL.md) & [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-0-incremental-etl--stateless-engine)
 
 - [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_mcp/mcp/tools/`](file:///Users/juftin/git/lunchmoney-mcp/src/lunchmoney_mcp/mcp/tools/).
 - [ ] **Config Additions**: Add `stateless: bool` (`STATELESS`) and `sync_safety_margin_minutes: int` (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`) in [`src/lunchmoney_mcp/config.py`](file:///Users/juftin/git/lunchmoney-mcp/src/lunchmoney_mcp/config.py).
@@ -40,7 +43,8 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 ---
 
 ### 📖 Sprint 1: Read-Only 100% v2 API Coverage
-*Reference Spec*: [`docs/ROADMAP.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/ROADMAP.md#1-user--account-summary-me-summary) & [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-1-complete-read-only-100-v2-api-coverage)
+
+_Reference Spec_: [`docs/ROADMAP.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/ROADMAP.md#1-user--account-summary-me-summary) & [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-1-complete-read-only-100-v2-api-coverage)
 
 - [ ] **Account Summary**: Implement `fetch_account_summary`, `GET /summary`, and `get_account_summary` FastMCP tool.
 - [ ] **Tags Queries**: Implement `fetch_tags`, `fetch_tag_by_id`, `GET /tags`, `GET /tags/{id}`, `list_tags`, and `get_tag` tools.
@@ -53,7 +57,8 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 ---
 
 ### ✍️ Sprint 2: Category & Manual Account Mutations
-*Reference Spec*: [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-2-category--manual-account-mutations)
+
+_Reference Spec_: [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-2-category--manual-account-mutations)
 
 - [ ] **Category Creation**: Implement Upstream-First `create_category` service, `POST /categories`, and FastMCP tool.
 - [ ] **Category Update**: Implement Upstream-First `update_category` service, `PUT /categories/{id}`, and FastMCP tool.
@@ -67,7 +72,8 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 ---
 
 ### 💳 Sprint 3: Transaction Mutations, Grouping, Splitting & Attachments
-*Reference Spec*: [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-3-transaction-mutations-grouping-splitting--attachments)
+
+_Reference Spec_: [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-3-transaction-mutations-grouping-splitting--attachments)
 
 - [ ] **Single Transaction Insert**: Implement `create_transactions` (`POST /transactions`).
 - [ ] **Bulk Transaction Update**: Implement `bulk_update_transactions` (`PUT /transactions`).
@@ -82,7 +88,8 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 ---
 
 ### 📊 Sprint 4: Budgets & Time-Series Spending Trends
-*Reference Spec*: [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-4-budgets--spending-trends)
+
+_Reference Spec_: [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-4-budgets--spending-trends)
 
 - [ ] **Budget Settings**: Implement `fetch_budget_settings`, `GET /budgets/settings`, and `get_budget_settings` tool.
 - [ ] **Budget Upsert**: Implement `set_budget_value`, `PUT /budgets`, and `upsert_budget` tool.
@@ -93,7 +100,8 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 ---
 
 ### 🛡️ Sprint 5: Production Security, MCP Primitives & CI/CD
-*Reference Spec*: [`docs/MCP_GUIDE.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-5-production-security--cicd)
+
+_Reference Spec_: [`docs/MCP_GUIDE.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`](file:///Users/juftin/git/lunchmoney-mcp/docs/AGENT_HANDOFF.md#sprint-5-production-security--cicd)
 
 - [ ] **API Key Guard**: Implement `verify_api_key` middleware in [`src/lunchmoney_mcp/app/auth.py`](file:///Users/juftin/git/lunchmoney-mcp/src/lunchmoney_mcp/app/auth.py).
 - [ ] **MCP Executable Entrypoint**: Add `lunchmoney-mcp = "lunchmoney_mcp.mcp.server:main"` script in `pyproject.toml`.
@@ -105,7 +113,9 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 ---
 
 ## 📝 Documentation Auto-Improvement Protocol
+
 Whenever an agent completes a task, refactors code, or modifies a signature:
+
 1. Update docstrings on touched functions, classes, and modules (NumPy format).
 2. Check off completed items in this document (`docs/CHECKLIST.md`).
 3. If new APIs, parameters, or edge cases are added, update the relevant specification in `docs/ROADMAP.md` or `docs/AGENT_HANDOFF.md`.

@@ -29,6 +29,7 @@
 ### Task 1: Dependencies and async database configuration
 
 **Files:**
+
 - Modify: `pyproject.toml`
 - Modify: `uv.lock`
 - Create: `src/lunchmoney_mcp/database/__init__.py`
@@ -36,6 +37,7 @@
 - Create: `tests/database/test_backend.py`
 
 **Interfaces:**
+
 - Produces: `DEFAULT_DATABASE_URL: str`, `resolve_database_url(database_url: str | None = None) -> str`, and `LunchMoneyDatabase` with `engine`, `session_factory`, `session()`, async context-manager support, and `dispose()`.
 
 - [ ] **Step 1: Add the runtime dependencies using uv**
@@ -114,6 +116,7 @@ git commit -m "✨ Add async SQLModel database lifecycle"
 ### Task 2: Scalar SQLModel records and API conversions
 
 **Files:**
+
 - Create: `src/lunchmoney_mcp/database/models/__init__.py`
 - Create: `src/lunchmoney_mcp/database/models/users.py`
 - Create: `src/lunchmoney_mcp/database/models/accounts.py`
@@ -122,6 +125,7 @@ git commit -m "✨ Add async SQLModel database lifecycle"
 - Create: `tests/database/test_scalar_models.py`
 
 **Interfaces:**
+
 - Produces: `User`, `PlaidAccount`, `ManualAccount`, and `Tag`, each with `from_api()` and `to_api()`.
 - Consumes: generated `UserObject`, `PlaidAccountObject`, `ManualAccountObject`, and `TagObject`.
 
@@ -168,12 +172,14 @@ git commit -m "✨ Add scalar Lunch Money SQLModel records"
 ### Task 3: Normalized category graphs
 
 **Files:**
+
 - Create: `src/lunchmoney_mcp/database/models/categories.py`
 - Modify: `src/lunchmoney_mcp/database/models/__init__.py`
 - Modify: `tests/database/factories.py`
 - Create: `tests/database/test_categories.py`
 
 **Interfaces:**
+
 - Produces: `CategoryKind` string enum and self-referencing `Category` SQLModel with `parent`, `children`, `from_api()`, `to_api()`, and `to_child_api()`.
 
 - [ ] **Step 1: Add parent and child API factories**
@@ -210,12 +216,14 @@ git commit -m "✨ Add normalized category records"
 ### Task 4: Normalized transaction graphs
 
 **Files:**
+
 - Create: `src/lunchmoney_mcp/database/models/transactions.py`
 - Modify: `src/lunchmoney_mcp/database/models/__init__.py`
 - Modify: `tests/database/factories.py`
 - Create: `tests/database/test_transactions.py`
 
 **Interfaces:**
+
 - Produces: `TransactionKind`, `Transaction`, `TransactionTagLink`, and `TransactionAttachment` with native relationships and API conversion.
 - Consumes: `Tag`, account tables, `Category`, `TransactionObject`, `ChildTransactionObject`, and `TransactionAttachmentObject`.
 
@@ -263,12 +271,14 @@ git commit -m "✨ Add normalized transaction records"
 ### Task 5: Relationship-aware async persistence
 
 **Files:**
+
 - Modify: `src/lunchmoney_mcp/database/backend.py`
 - Modify: `src/lunchmoney_mcp/database/__init__.py`
 - Create: `tests/database/conftest.py`
 - Create: `tests/database/test_persistence.py`
 
 **Interfaces:**
+
 - Produces:
 
 ```python
@@ -313,6 +323,7 @@ git commit -m "✨ Add async SQLModel persistence operations"
 ### Task 6: Alembic async migrations and Postgres contract
 
 **Files:**
+
 - Create: `alembic.ini`
 - Create: `alembic/env.py`
 - Create: `alembic/script.py.mako`
@@ -321,6 +332,7 @@ git commit -m "✨ Add async SQLModel persistence operations"
 - Create: `tests/database/test_migrations.py`
 
 **Interfaces:**
+
 - Produces: a reversible `0001` schema migration and async Alembic URL resolution consistent with `resolve_database_url()`.
 
 - [ ] **Step 1: Write failing migration tests**
@@ -361,11 +373,13 @@ git commit -m "✨ Add async SQLite and Postgres migrations"
 ### Task 7: Public API, documentation, and full verification
 
 **Files:**
+
 - Modify: `src/lunchmoney_mcp/database/__init__.py`
 - Modify: `README.md`
 - Modify: `tests/database/test_backend.py`
 
 **Interfaces:**
+
 - Produces documented imports for `LunchMoneyDatabase`, all record types, `DEFAULT_DATABASE_URL`, and native SQLModel usage.
 
 - [ ] **Step 1: Write a failing public-export test**

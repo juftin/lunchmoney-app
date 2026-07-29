@@ -1,6 +1,7 @@
 # 🔄 Incremental ETL Architecture & Sync Specification
 
 ## 📋 Overview
+
 This document specifies the **Opt-in Incremental ETL Pipeline** for **Lunch Money MCP** using `updated_at` timestamps, domain-specific watermarks, parameterized safety margins, and stateless execution capabilities, while preserving the default rolling calendar date range sync (`days=30`) and persistent SQLite storage.
 
 ---
@@ -9,16 +10,19 @@ This document specifies the **Opt-in Incremental ETL Pipeline** for **Lunch Mone
 
 > [!IMPORTANT]
 > **1. Incremental Sync is Opt-In**:
+>
 > - Default behavior for `POST /sync` and `sync_data` FastMCP tool: `incremental: bool = False`.
 > - When `incremental=False`: Performs standard rolling date window fetch using `days: int = 30` (or explicit `start_date` / `end_date`).
 > - When `incremental=True`: Looks up `SyncMetadata` for the last successful sync timestamp and applies the parameterized safety buffer overlap (`updated_since = last_synced_at - timedelta(minutes=safety_margin)`).
 
 > [!IMPORTANT]
 > **2. Parameterized Safety Overlap Window**:
+>
 > - Configured via environment variable `LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES` in `Settings` (default `5` minutes).
 
 > [!NOTE]
 > **3. Upstream-First Mutation Write-Back Strategy**:
+>
 > - Mutation operations (creating/updating categories or transactions) execute against the **Lunch Money API first**, then upsert the returned canonical entity into the local database graph.
 
 ---
@@ -62,6 +66,7 @@ sequenceDiagram
 ## 🛠️ Code Specifications
 
 ### Configuration (`src/lunchmoney_mcp/config.py`)
+
 ```python
     stateless: bool = Field(
         default=False,
@@ -77,6 +82,7 @@ sequenceDiagram
 ```
 
 ### Database Model (`src/lunchmoney_mcp/database/models/sync.py`)
+
 ```python
 class SyncStatus(str, enum.Enum):
     SUCCESS = "success"
