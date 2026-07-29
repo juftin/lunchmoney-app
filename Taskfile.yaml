@@ -3,6 +3,7 @@ version: '3'
 vars:
   PYTHON_SRC: src/
   PYTHON_TESTS: tests/
+  PYTHON_NOTEBOOKS: notebooks/
   IMAGE_NAME: lunchmoney-mcp
 
 tasks:
@@ -19,14 +20,14 @@ tasks:
   fix:
     desc: Code quality auto-fix - formatting + linting
     cmds:
-      - uv run ruff format {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.CLI_ARGS}}
-      - uv run ruff check --fix {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.CLI_ARGS}}
+      - uv run ruff format {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.CLI_ARGS}}
+      - uv run ruff check --fix {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.CLI_ARGS}}
 
   lint:
     desc: Code quality check - formatting + linting
     cmds:
-      - uv run ruff format --check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.CLI_ARGS}}
-      - uv run ruff check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.CLI_ARGS}}
+      - uv run ruff format --check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.CLI_ARGS}}
+      - uv run ruff check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.CLI_ARGS}}
 
   check:
     desc: Code quality check - type checking
@@ -57,6 +58,11 @@ tasks:
     desc: Run development server with FastAPI CLI
     cmds:
       - uv run fastapi dev src/lunchmoney_mcp/app/main.py {{.CLI_ARGS}}
+
+  notebook:
+    desc: Run interactive marimo notebook
+    cmds:
+      - uv run marimo edit notebooks/example_usage.py {{.CLI_ARGS}}
 
   run:
     desc: Run a command in the project environment
