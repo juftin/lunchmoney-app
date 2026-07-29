@@ -15,9 +15,15 @@ from alembic.config import Config
 from sqlalchemy import event, update
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
+from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from lunchmoney_mcp.config import (
+    DEFAULT_DATABASE_URL,
+    IN_MEMORY_DATABASE_URL,
+    get_settings,
+)
 from lunchmoney_mcp.database.models import (
     Category,
     ManualAccount,
@@ -29,9 +35,6 @@ from lunchmoney_mcp.database.models import (
     TransactionTagLink,
     User,
 )
-
-DEFAULT_DATABASE_URL: str = "sqlite+aiosqlite:///lunchmoney.db"
-"""Persistent SQLite database URL used when no URL is configured."""
 
 _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
     {User, PlaidAccount, ManualAccount, Category, Tag, Transaction}
@@ -50,9 +53,9 @@ def resolve_database_url(database_url: str | None = None) -> str:
     env_url = os.getenv("LUNCHMONEY_DATABASE_URL")
     if env_url:
         return env_url
-    from lunchmoney_mcp.config import get_settings
-
-    return get_settings().lunchmoney_database_url
+    if get_settings().stateless:
+        return IN_MEMORY_DATABASE_URL
+    return DEFAULT_DATABASE_URL
 
 
 async def run_migrations(
@@ -580,7 +583,11 @@ class LunchMoneyDatabase:
 
     def __init__(self, database_url: str | None = None) -> None:
         """Create database resources for the resolved connection URL."""
-        self.engine = create_async_engine(resolve_database_url(database_url))
+        resolved_url = resolve_database_url(database_url)
+        engine_kwargs: dict[str, Any] = {}
+        if resolved_url == IN_MEMORY_DATABASE_URL:
+            engine_kwargs["poolclass"] = StaticPool
+        self.engine = create_async_engine(resolved_url, **engine_kwargs)
         if self.engine.dialect.name == "sqlite":
             event.listen(
                 self.engine.sync_engine,
@@ -598,6 +605,11 @@ class LunchMoneyDatabase:
         """Yield a session and close it without committing caller operations."""
         async with self.session_factory() as session:
             yield session
+
+    async def create_tables(self) -> None:
+        """Create all SQLModel tables for databases without migrations."""
+        async with self.engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.create_all)
 
     async def upsert[RecordT: SQLModel](self, record: RecordT) -> RecordT:
         """Atomically insert or update one supported record and its owned graph."""

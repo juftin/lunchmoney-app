@@ -8,7 +8,12 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import lunchmoney_mcp.database as database_package
-from lunchmoney_mcp.database import DEFAULT_DATABASE_URL, LunchMoneyDatabase
+from lunchmoney_mcp.database import (
+    DEFAULT_DATABASE_URL,
+    IN_MEMORY_DATABASE_URL,
+    LunchMoneyDatabase,
+    User,
+)
 from lunchmoney_mcp.database.backend import resolve_database_url
 
 
@@ -76,6 +81,26 @@ async def test_database_exposes_native_async_session(tmp_path: Path) -> None:
         assert isinstance(database.engine, AsyncEngine)
         async with database.session() as session:
             assert isinstance(session, AsyncSession)
+
+
+@pytest.mark.asyncio
+async def test_stateless_database_create_tables_persists_across_sessions() -> None:
+    """Initialize and use the shared in-memory schema across database sessions."""
+    user = User(
+        id=1,
+        name="Synthetic User",
+        email="synthetic-user@example.invalid",
+        account_id=100,
+        budget_name="Synthetic Budget",
+        primary_currency="usd",
+        api_key_label="Synthetic key",
+    )
+
+    async with LunchMoneyDatabase(IN_MEMORY_DATABASE_URL) as database:
+        await database.create_tables()
+        await database.upsert(user)
+
+        assert (await database.get(User, 1)) is not None
 
 
 @pytest.mark.asyncio

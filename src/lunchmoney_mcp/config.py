@@ -8,6 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 DEFAULT_DATABASE_URL: str = "sqlite+aiosqlite:///lunchmoney.db"
 """Default persistent SQLite connection URL used when omitted."""
 
+IN_MEMORY_DATABASE_URL: str = (
+    "sqlite+aiosqlite:///file:memdb?mode=memory&cache=shared&uri=true"
+)
+"""Shared in-memory SQLite connection URL used by stateless mode."""
+
 
 class Settings(BaseSettings):
     """Lunch Money MCP application settings.
@@ -22,6 +27,10 @@ class Settings(BaseSettings):
         Redis connection URL for distributed locking.
     environment : str
         Application deployment environment name.
+    stateless : bool
+        Whether to use the shared in-memory database.
+    sync_safety_margin_minutes : int
+        Safety overlap margin for incremental ETL queries.
     """
 
     model_config = SettingsConfigDict(
@@ -57,6 +66,20 @@ class Settings(BaseSettings):
         description="Application deployment environment",
     )
     """Application deployment environment name."""
+
+    stateless: bool = Field(
+        default=False,
+        validation_alias="STATELESS",
+        description="Run in stateless mode using in-memory SQLite database refreshed from API",
+    )
+    """Whether to use the shared in-memory database."""
+
+    sync_safety_margin_minutes: int = Field(
+        default=5,
+        validation_alias="LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES",
+        description="Safety overlap margin in minutes for incremental ETL queries",
+    )
+    """Safety overlap margin for incremental ETL queries."""
 
 
 @cache

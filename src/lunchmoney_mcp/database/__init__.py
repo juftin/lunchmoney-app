@@ -2,6 +2,7 @@
 
 from lunchmoney_mcp.database.backend import (
     DEFAULT_DATABASE_URL,
+    IN_MEMORY_DATABASE_URL,
     LunchMoneyDatabase,
     resolve_database_url,
     run_migrations,
@@ -23,6 +24,7 @@ __all__ = [
     "Category",
     "CategoryKind",
     "DEFAULT_DATABASE_URL",
+    "IN_MEMORY_DATABASE_URL",
     "LunchMoneyDatabase",
     "ManualAccount",
     "PlaidAccount",
