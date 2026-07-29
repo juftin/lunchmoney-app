@@ -51,3 +51,42 @@ async def test_sync_metadata_upsert_replaces_domain_watermark(
 
     assert stored.last_synced_at == replacement.last_synced_at
     assert (await database.get_sync_metadata("transactions")) == replacement
+
+
+@pytest.mark.parametrize(
+    ("timestamp", "expected"),
+    [
+        (
+            datetime.datetime(2026, 7, 28, 10, 0),
+            datetime.datetime(2026, 7, 28, 10, 0, tzinfo=datetime.UTC),
+        ),
+        (
+            datetime.datetime(
+                2026,
+                7,
+                28,
+                10,
+                0,
+                tzinfo=datetime.timezone(datetime.timedelta(hours=-6)),
+            ),
+            datetime.datetime(2026, 7, 28, 16, 0, tzinfo=datetime.UTC),
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_sync_metadata_normalizes_watermarks_to_utc(
+    database: LunchMoneyDatabase,
+    timestamp: datetime.datetime,
+    expected: datetime.datetime,
+) -> None:
+    """Normalize naive and offset-aware watermarks before persistence."""
+    metadata = SyncMetadata(domain="transactions", last_synced_at=timestamp)
+
+    assert metadata.last_synced_at == expected
+    assert metadata.last_synced_at.tzinfo is datetime.UTC
+
+    stored = await database.upsert_sync_metadata(metadata)
+
+    assert stored.last_synced_at == expected
+    assert stored.last_synced_at.tzinfo is datetime.UTC
+    assert (await database.get_sync_metadata("transactions")) == stored

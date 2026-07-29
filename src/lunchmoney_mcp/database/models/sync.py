@@ -1,7 +1,7 @@
 """SQLModel record for incremental synchronization watermarks."""
 
-from datetime import datetime
 from builtins import type as builtin_type
+from datetime import UTC, datetime
 from typing import Any, ClassVar, cast
 
 from sqlmodel import Field, SQLModel
@@ -18,3 +18,11 @@ class SyncMetadata(SQLModel, table=True):
     """Synchronization domain uniquely identified by this watermark."""
     last_synced_at: datetime = Field(sa_type=cast(builtin_type[Any], UTCDateTime()))
     """UTC timestamp of the domain's latest successful synchronization."""
+
+    def model_post_init(self, context: Any, /) -> None:
+        """Normalize synchronization watermarks after SQLModel construction."""
+        del context
+        if self.last_synced_at.tzinfo is None:
+            self.last_synced_at = self.last_synced_at.replace(tzinfo=UTC)
+        else:
+            self.last_synced_at = self.last_synced_at.astimezone(UTC)
