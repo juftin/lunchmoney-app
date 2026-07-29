@@ -8,9 +8,10 @@ vars:
 
 tasks:
   install:
-    desc: Install project and development dependencies
+    desc: Install project and development dependencies and git hooks
     cmds:
       - uv sync {{.CLI_ARGS}}
+      - uv run pre-commit install
 
   lock:
     desc: Regenerate uv.lock
