@@ -28,6 +28,7 @@ from lunchmoney_mcp.database.models import (
     Category,
     ManualAccount,
     PlaidAccount,
+    SyncMetadata,
     Tag,
     Transaction,
     TransactionAttachment,
@@ -613,6 +614,28 @@ class LunchMoneyDatabase:
         """Create all SQLModel tables for databases without migrations."""
         async with self.engine.begin() as connection:
             await connection.run_sync(SQLModel.metadata.create_all)
+
+    async def get_sync_metadata(self, domain: str) -> SyncMetadata | None:
+        """Return the synchronization watermark for one domain, if present."""
+        async with self.session_factory() as session:
+            return await session.get(SyncMetadata, domain)
+
+    async def upsert_sync_metadata(
+        self,
+        metadata: SyncMetadata,
+    ) -> SyncMetadata:
+        """Atomically insert or replace one domain synchronization watermark."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                stored = await session.get(SyncMetadata, metadata.domain)
+                if stored is None:
+                    stored = metadata
+                    session.add(stored)
+                else:
+                    stored.sqlmodel_update(metadata)
+                await session.flush()
+                session.expunge(stored)
+            return stored
 
     async def upsert[RecordT: SQLModel](self, record: RecordT) -> RecordT:
         """Atomically insert or update one supported record and its owned graph."""

@@ -2,6 +2,7 @@
 
 from lunchmoney_mcp.database.models.accounts import ManualAccount, PlaidAccount
 from lunchmoney_mcp.database.models.categories import Category, CategoryKind
+from lunchmoney_mcp.database.models.sync import SyncMetadata
 from lunchmoney_mcp.database.models.tags import Tag
 from lunchmoney_mcp.database.models.transactions import (
     Transaction,
@@ -16,6 +17,7 @@ __all__ = [
     "CategoryKind",
     "ManualAccount",
     "PlaidAccount",
+    "SyncMetadata",
     "Tag",
     "Transaction",
     "TransactionAttachment",

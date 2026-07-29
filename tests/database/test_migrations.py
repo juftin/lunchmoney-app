@@ -19,6 +19,7 @@ from lunchmoney_mcp.database.models import (  # noqa: F401
     Category,
     ManualAccount,
     PlaidAccount,
+    SyncMetadata,
     Tag,
     Transaction,
     TransactionAttachment,
@@ -287,6 +288,18 @@ def test_initial_migration_matches_metadata_and_downgrades(
 
     remaining_tables = asyncio.run(_table_names(migration_database_url))
     assert set(SQLModel.metadata.tables).isdisjoint(remaining_tables)
+
+
+def test_head_migration_creates_sync_metadata_table(tmp_path: Path) -> None:
+    """Create the incremental-sync watermark table on a fresh database."""
+    database_url = f"sqlite+aiosqlite:///{tmp_path / 'sync-metadata.db'}"
+    config = _migration_config(database_url)
+
+    command.upgrade(config, "head")
+    try:
+        assert "sync_metadata" in asyncio.run(_table_names(database_url))
+    finally:
+        command.downgrade(config, "base")
 
 
 def test_migration_contract_downgrades_after_contract_assertion_failure(
