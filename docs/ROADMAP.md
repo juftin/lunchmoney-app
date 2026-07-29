@@ -65,7 +65,7 @@ graph TD
 | Upstream v2 Endpoint | Method | Local Route    | FastMCP Tool          | Service Function        |   Status   |
 | :------------------- | :----: | :------------- | :-------------------- | :---------------------- | :--------: |
 | `/me`                | `GET`  | `GET /user`    | `get_user_info`       | `fetch_user_info`       |  ✅ Done   |
-| `/summary`           | `GET`  | `GET /summary` | `get_account_summary` | `fetch_account_summary` | ⏳ Planned |
+| `/summary`           | `GET`  | `GET /summary` | `get_account_summary` | `fetch_account_summary` |  ✅ Done   |
 
 ---
 
@@ -75,7 +75,7 @@ graph TD
 | :------------------- | :------: | :------------------------ | :---------------- | :--------------------- | :--------: |
 | `/categories`        |  `GET`   | `GET /categories`         | `list_categories` | `fetch_categories`     |  ✅ Done   |
 | `/categories`        |  `POST`  | `POST /categories`        | `create_category` | `create_category`      | ⏳ Planned |
-| `/categories/{id}`   |  `GET`   | `GET /categories/{id}`    | `get_category`    | `fetch_category_by_id` | ⏳ Planned |
+| `/categories/{id}`   |  `GET`   | `GET /categories/{id}`    | `get_category`    | `fetch_category_by_id` |  ✅ Done   |
 | `/categories/{id}`   |  `PUT`   | `PUT /categories/{id}`    | `update_category` | `update_category`      | ⏳ Planned |
 | `/categories/{id}`   | `DELETE` | `DELETE /categories/{id}` | `delete_category` | `delete_category`      | ⏳ Planned |
 
@@ -87,7 +87,7 @@ graph TD
 | :---------------------- | :------: | :----------------------------- | :---------------------- | :--------------------------- | :--------: |
 | `/manual_accounts`      |  `GET`   | `GET /accounts/manual`         | `list_manual_accounts`  | `fetch_manual_accounts`      |  ✅ Done   |
 | `/manual_accounts`      |  `POST`  | `POST /accounts/manual`        | `create_manual_account` | `create_manual_account`      | ⏳ Planned |
-| `/manual_accounts/{id}` |  `GET`   | `GET /accounts/manual/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` | ⏳ Planned |
+| `/manual_accounts/{id}` |  `GET`   | `GET /accounts/manual/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` |  ✅ Done   |
 | `/manual_accounts/{id}` |  `PUT`   | `PUT /accounts/manual/{id}`    | `update_manual_account` | `update_manual_account`      | ⏳ Planned |
 | `/manual_accounts/{id}` | `DELETE` | `DELETE /accounts/manual/{id}` | `delete_manual_account` | `delete_manual_account`      | ⏳ Planned |
 
@@ -98,7 +98,7 @@ graph TD
 | Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool          | Service Function            |   Status   |
 | :---------------------- | :----: | :-------------------------- | :-------------------- | :-------------------------- | :--------: |
 | `/plaid_accounts`       | `GET`  | `GET /accounts/plaid`       | `list_plaid_accounts` | `fetch_plaid_accounts`      |  ✅ Done   |
-| `/plaid_accounts/{id}`  | `GET`  | `GET /accounts/plaid/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` | ⏳ Planned |
+| `/plaid_accounts/{id}`  | `GET`  | `GET /accounts/plaid/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` |  ✅ Done   |
 | `/plaid_accounts/fetch` | `POST` | `POST /accounts/plaid/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       | ⏳ Planned |
 
 ---
@@ -111,7 +111,7 @@ graph TD
 | `/transactions`      |  `POST`  | `POST /transactions`        | `create_transactions`      | `create_transactions`       | ⏳ Planned |
 | `/transactions`      |  `PUT`   | `PUT /transactions`         | `bulk_update_transactions` | `bulk_update_transactions`  | ⏳ Planned |
 | `/transactions`      | `DELETE` | `DELETE /transactions`      | `bulk_delete_transactions` | `bulk_delete_transactions`  | ⏳ Planned |
-| `/transactions/{id}` |  `GET`   | `GET /transactions/{id}`    | `get_transaction`          | `fetch_transaction_by_id`   | ⏳ Planned |
+| `/transactions/{id}` |  `GET`   | `GET /transactions/{id}`    | `get_transaction`          | `fetch_transaction_by_id`   |  ✅ Done   |
 | `/transactions/{id}` |  `PUT`   | `PUT /transactions/{id}`    | `update_transaction`       | `update_transaction`        | ⏳ Planned |
 | `/transactions/{id}` | `DELETE` | `DELETE /transactions/{id}` | `delete_transaction`       | `delete_transaction`        | ⏳ Planned |
 
@@ -142,9 +142,9 @@ graph TD
 
 | Upstream v2 Endpoint |  Method  | Local Route         | FastMCP Tool | Service Function  |   Status   |
 | :------------------- | :------: | :------------------ | :----------- | :---------------- | :--------: |
-| `/tags`              |  `GET`   | `GET /tags`         | `list_tags`  | `fetch_tags`      | ⏳ Planned |
+| `/tags`              |  `GET`   | `GET /tags`         | `list_tags`  | `fetch_tags`      |  ✅ Done   |
 | `/tags`              |  `POST`  | `POST /tags`        | `create_tag` | `create_tag`      | ⏳ Planned |
-| `/tags/{id}`         |  `GET`   | `GET /tags/{id}`    | `get_tag`    | `fetch_tag_by_id` | ⏳ Planned |
+| `/tags/{id}`         |  `GET`   | `GET /tags/{id}`    | `get_tag`    | `fetch_tag_by_id` |  ✅ Done   |
 | `/tags/{id}`         |  `PUT`   | `PUT /tags/{id}`    | `update_tag` | `update_tag`      | ⏳ Planned |
 | `/tags/{id}`         | `DELETE` | `DELETE /tags/{id}` | `delete_tag` | `delete_tag`      | ⏳ Planned |
 
@@ -154,8 +154,8 @@ graph TD
 
 | Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool           | Service Function             |   Status   |
 | :---------------------- | :----: | :-------------------------- | :--------------------- | :--------------------------- | :--------: |
-| `/recurring_items`      | `GET`  | `GET /recurring_items`      | `list_recurring_items` | `fetch_recurring_items`      | ⏳ Planned |
-| `/recurring_items/{id}` | `GET`  | `GET /recurring_items/{id}` | `get_recurring_item`   | `fetch_recurring_item_by_id` | ⏳ Planned |
+| `/recurring_items`      | `GET`  | `GET /recurring_items`      | `list_recurring_items` | `fetch_recurring_items`      |  ✅ Done   |
+| `/recurring_items/{id}` | `GET`  | `GET /recurring_items/{id}` | `get_recurring_item`   | `fetch_recurring_item_by_id` |  ✅ Done   |
 
 ---
 
@@ -181,10 +181,10 @@ graph TD
 
 ### Sprint 1: Read-Only Complete Coverage (Tags, Recurring, Summary, Single-ID Lookups)
 
-- [ ] Implement `GET /summary` (`get_account_summary`)
-- [ ] Implement `GET /tags` & `GET /tags/{id}`
-- [ ] Implement `GET /recurring_items` & `GET /recurring_items/{id}`
-- [ ] Implement Single-ID GET routes (`/categories/{id}`, `/accounts/manual/{id}`, `/accounts/plaid/{id}`, `/transactions/{id}`)
+- [x] Implement `GET /summary` (`get_account_summary`)
+- [x] Implement `GET /tags` & `GET /tags/{id}`
+- [x] Implement `GET /recurring_items` & `GET /recurring_items/{id}`
+- [x] Implement Single-ID GET routes (`/categories/{id}`, `/accounts/manual/{id}`, `/accounts/plaid/{id}`, `/transactions/{id}`)
 
 ### Sprint 2: Category & Account Mutations (Write Operations)
 

@@ -24,6 +24,7 @@ from lunchmoney_mcp.schemas import (
     SyncDetails,
     SyncResponse,
     SyncResult,
+    TagInfo,
     TransactionInfo,
     UserInfo,
 )
@@ -52,6 +53,7 @@ __all__ = [
     "SyncResponse",
     "SyncResult",
     "SyncSummary",
+    "TagInfo",
     "TransactionInfo",
     "UserInfo",
     "app",

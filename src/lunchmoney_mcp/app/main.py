@@ -10,8 +10,11 @@ from lunchmoney_mcp.app.lifespan import lifespan
 from lunchmoney_mcp.app.routers import (
     accounts_router,
     categories_router,
+    recurring_router,
     spending_router,
+    summary_router,
     sync_router,
+    tags_router,
     transactions_router,
     user_router,
 )
@@ -46,9 +49,12 @@ async def root() -> RootResponse:
 
 fastapi_app.include_router(sync_router)
 fastapi_app.include_router(user_router)
+fastapi_app.include_router(summary_router)
 fastapi_app.include_router(categories_router)
 fastapi_app.include_router(accounts_router)
 fastapi_app.include_router(transactions_router)
+fastapi_app.include_router(tags_router)
+fastapi_app.include_router(recurring_router)
 fastapi_app.include_router(spending_router)
 
 mcp_app: StarletteWithLifespan = mcp.http_app(path="/mcp")

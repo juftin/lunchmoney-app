@@ -46,13 +46,13 @@ _Reference Spec_: [`docs/INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`docs/AGENT
 
 _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#1-user--account-summary-me-summary) & [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-1-complete-read-only-100-v2-api-coverage)
 
-- [ ] **Account Summary**: Implement `fetch_account_summary`, `GET /summary`, and `get_account_summary` FastMCP tool.
-- [ ] **Tags Queries**: Implement `fetch_tags`, `fetch_tag_by_id`, `GET /tags`, `GET /tags/{id}`, `list_tags`, and `get_tag` tools.
-- [ ] **Recurring Items Queries**: Implement `fetch_recurring_items`, `fetch_recurring_item_by_id`, `GET /recurring_items`, `GET /recurring_items/{id}`, `list_recurring_items`, and `get_recurring_item` tools.
-- [ ] **Single-ID Category Lookup**: Implement `GET /categories/{id}` and `get_category` FastMCP tool.
-- [ ] **Single-ID Account Lookups**: Implement `GET /accounts/manual/{id}` (`get_manual_account`) and `GET /accounts/plaid/{id}` (`get_plaid_account`).
-- [ ] **Single-ID Transaction Lookup**: Implement `GET /transactions/{id}` and `get_transaction` FastMCP tool.
-- [ ] **Test Suite**: Add tests for all read-only endpoints in `tests/test_read_only.py`.
+- [x] **Account Summary**: Implement `fetch_account_summary`, `GET /summary`, and `get_account_summary` FastMCP tool.
+- [x] **Tags Queries**: Implement `fetch_tags`, `fetch_tag_by_id`, `GET /tags`, `GET /tags/{id}`, `list_tags`, and `get_tag` tools.
+- [x] **Recurring Items Queries**: Implement `fetch_recurring_items`, `fetch_recurring_item_by_id`, `GET /recurring_items`, `GET /recurring_items/{id}`, `list_recurring_items`, and `get_recurring_item` tools.
+- [x] **Single-ID Category Lookup**: Implement `GET /categories/{id}` and `get_category` FastMCP tool.
+- [x] **Single-ID Account Lookups**: Implement `GET /accounts/manual/{id}` (`get_manual_account`) and `GET /accounts/plaid/{id}` (`get_plaid_account`).
+- [x] **Single-ID Transaction Lookup**: Implement `GET /transactions/{id}` and `get_transaction` FastMCP tool.
+- [x] **Test Suite**: Add tests for all read-only endpoints in `tests/test_read_only.py`.
 
 ---
 

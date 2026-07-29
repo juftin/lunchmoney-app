@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from lunchmoney_mcp.app.dependencies import get_database
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.schemas import TransactionInfo
-from lunchmoney_mcp.services import fetch_recent_transactions
+from lunchmoney_mcp.services import fetch_recent_transactions, fetch_transaction_by_id
 
 if TYPE_CHECKING:
     from lunchmoney_mcp import LunchMoneyDatabase
@@ -33,4 +33,22 @@ async def get_recent_transactions(
     return await fetch_recent_transactions(db=db, days=days, limit=limit)
 
 
-__all__ = ["get_recent_transactions"]
+@mcp.tool()
+async def get_transaction(transaction_id: int) -> TransactionInfo | None:
+    """Fetch one synchronized transaction.
+
+    Parameters
+    ----------
+    transaction_id : int
+        Identifier of the transaction to retrieve.
+
+    Returns
+    -------
+    TransactionInfo | None
+        Matching transaction, or ``None`` when it has not been synchronized.
+    """
+    db: LunchMoneyDatabase = get_database()
+    return await fetch_transaction_by_id(db=db, transaction_id=transaction_id)
+
+
+__all__ = ["get_recent_transactions", "get_transaction"]

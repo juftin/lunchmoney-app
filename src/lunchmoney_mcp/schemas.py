@@ -76,6 +76,23 @@ class CategoryInfo(BaseModel):
     """Optional identifier of the parent category group."""
 
 
+class TagInfo(BaseModel):
+    """Transaction tag details."""
+
+    id: int
+    """Unique tag identifier."""
+    name: str
+    """Tag display name."""
+    description: str | None = None
+    """Optional tag description."""
+    text_color: str | None = None
+    """Optional text color used to display the tag."""
+    background_color: str | None = None
+    """Optional background color used to display the tag."""
+    archived: bool
+    """Whether the tag is archived."""
+
+
 class AccountInfo(BaseModel):
     """Financial account details."""
 
