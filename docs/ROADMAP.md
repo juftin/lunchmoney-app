@@ -6,7 +6,7 @@ This document serves as the master planning blueprint for **Lunch Money MCP**. I
 
 1. Dual **Deployment Architectures** (Persistent Cached Mode vs. Stateless In-Memory Mode).
 2. A **100% Granular Mapping** of all 39 endpoints across 10 domain areas in the [Lunch Money v2 OpenAPI Specification](https://alpha.lunchmoney.dev/v2/docs).
-3. A 5-Sprint Implementation Plan for full production readiness.
+3. An 8-sprint implementation history through complete v2 API coverage.
 
 ---
 
@@ -206,3 +206,21 @@ graph TD
 - [x] Implement Budget Values (`PUT /budgets`, `DELETE /budgets`)
 - [x] Implement Spending Trends time-series analysis (`GET /spending/trends`)
 - [x] API Key auth guard & GitHub Actions CI/CD workflows (`.github/workflows/ci.yaml`).
+
+### Sprint 5: MCP Primitives, Transports & CI/CD
+
+- [x] Add the executable entrypoint and mutually exclusive stdio, SSE, HTTP, and Streamable HTTP transports.
+- [x] Register MCP resources and prompts.
+- [x] Add GitHub Actions validation and document local and remote MCP deployment.
+
+### Sprint 6: Remote MCP OAuth & Roadmap Reconciliation
+
+- [x] Add optional OIDC OAuth protection for remote MCP HTTP transports.
+- [x] Document OAuth configuration, the public callback URL, and the local unauthenticated default.
+- [x] Reconcile all delivered operations with the coverage matrix.
+
+### Sprint 7: Tag Mutations & API Coverage Completion
+
+- [x] Implement upstream-first tag creation, update, and deletion through REST and MCP.
+- [x] Reconcile cached transaction-tag links before deleting a tag.
+- [x] Complete the documented 39-endpoint Lunch Money v2 API matrix.

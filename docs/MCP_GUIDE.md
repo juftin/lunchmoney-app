@@ -111,17 +111,18 @@ mutually exclusive.
 
 ---
 
-## 🔐 2. Authentication & Authorization (API Key vs. OAuth 2.0)
+## 🔐 2. Authentication & Authorization
 
 Set `LUNCHMONEY_MCP_API_KEY` to require an `X-API-Key` header on every REST API
 request. Leave it unset for local development. This differs from
 `LUNCHMONEY_ACCESS_TOKEN`, which is the server's credential for Lunch Money's
 upstream API; every MCP transport uses that upstream credential.
 
-| Auth Model                 | Topology                  | Target Deployment                          | Implementation Details                                                                   |
-| :------------------------- | :------------------------ | :----------------------------------------- | :--------------------------------------------------------------------------------------- |
-| **Static Token (Current)** | Single-Tenant / Local     | Desktop Apps (Claude, Antigravity, Cursor) | Injected via `LUNCHMONEY_ACCESS_TOKEN` environment variable.                             |
-| **Multi-Tenant OAuth 2.0** | Multi-User / Cloud Hosted | Web-Hosted MCP Servers / Remote SSE        | Lunch Money OAuth 2.0 PKCE flow. Per-session token resolution stored in context headers. |
+| Credential or guard                 | Scope                          | Target deployment                             | Implementation details                                                                                                                                                             |
+| :---------------------------------- | :----------------------------- | :-------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Upstream Lunch Money credential** | Server-to-Lunch-Money          | Every deployment                              | `LUNCHMONEY_ACCESS_TOKEN` is required by the server to call Lunch Money. It is not passed by MCP or REST clients.                                                                  |
+| **REST API key**                    | Client-to-project REST API     | Optional, local or hosted REST API            | `LUNCHMONEY_MCP_API_KEY` requires the matching `X-API-Key` header on REST requests. It does not guard MCP endpoints.                                                               |
+| **Remote MCP OIDC OAuth**           | Client-to-project MCP endpoint | Optional, hosted HTTP/SSE/Streamable HTTP MCP | FastMCP's OAuth proxy delegates client authentication to a configured OIDC identity provider. The server continues to use its single configured Lunch Money access token upstream. |
 
 ### 2.1 Remote MCP OAuth
 

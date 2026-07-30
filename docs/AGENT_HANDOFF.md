@@ -2,7 +2,7 @@
 
 ## 📋 Executive Overview & Purpose
 
-This document is an **exhaustive hand-off guide** for AI coding agents and human engineers implementing **Lunch Money MCP**. It contains architectural conventions, schema definitions, service specifications, explicit file modification targets, and step-by-step implementation instructions for all 6 development sprints.
+This document is an **exhaustive hand-off guide** for AI coding agents and human engineers maintaining **Lunch Money MCP**. It records architectural conventions and the completed implementation history through Sprint 7, when the Lunch Money v2 API coverage matrix was completed.
 
 ---
 
@@ -44,6 +44,8 @@ graph LR
     S2 --> S3[Sprint 3: Transaction Mutations & Splits]
     S3 --> S4[Sprint 4: Budgets & Spending Trends]
     S4 --> S5[Sprint 5: Production Security & CI/CD]
+    S5 --> S6[Sprint 6: Remote MCP OAuth]
+    S6 --> S7[Sprint 7: Tag Mutations & v2 Completion]
 ```
 
 ---
@@ -52,24 +54,32 @@ graph LR
 
 ### Sprint 0: Incremental ETL & Stateless Engine
 
-Implement `SyncMetadata` watermark tracking, opt-in incremental sync (`incremental=True`), configurable safety overlap margins (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`), and in-memory SQLite support (`STATELESS=true`).
+Completed: `SyncMetadata` watermark tracking, opt-in incremental sync (`incremental=True`), configurable safety overlap margins (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`), and in-memory SQLite support (`STATELESS=true`).
 
 ### Sprint 1: Complete Read-Only 100% v2 API Coverage
 
-Implement `/summary`, `/tags`, `/recurring_items`, `/categories/{id}`, `/manual_accounts/{id}`, `/plaid_accounts/{id}`, `/transactions/{id}`.
+Completed: `/summary`, `/tags`, `/recurring_items`, `/categories/{id}`, `/manual_accounts/{id}`, `/plaid_accounts/{id}`, and `/transactions/{id}` read operations.
 
 ### Sprint 2: Category & Manual Account Mutations
 
-Implement `POST`, `PUT`, `DELETE` for categories and manual accounts using Upstream-First write-back pattern.
+Completed: `POST`, `PUT`, and `DELETE` for categories and manual accounts using the upstream-first write-back pattern.
 
 ### Sprint 3: Transaction Mutations, Grouping, Splitting & Attachments
 
-Implement single and bulk transaction CRUD, transaction grouping, transaction splitting, and file attachment operations.
+Completed: single and bulk transaction CRUD, transaction grouping, transaction splitting, and file attachment operations.
 
 ### Sprint 4: Budgets & Spending Trends
 
-Implement `GET /budgets/settings`, `PUT /budgets`, `DELETE /budgets`, and `GET /spending/trends`.
+Completed: `GET /budgets/settings`, `PUT /budgets`, `DELETE /budgets`, and `GET /spending/trends`.
 
 ### Sprint 5: Production Security & CI/CD
 
-Implement API Key authorization middleware (`src/lunchmoney_mcp/app/auth.py`) and GitHub Actions workflows (`.github/workflows/ci.yaml`).
+Completed: REST API-key authorization, the MCP executable with mutually exclusive stdio/SSE/HTTP/Streamable HTTP transports, MCP resources and prompts, and GitHub Actions validation.
+
+### Sprint 6: Remote MCP OAuth & Roadmap Reconciliation
+
+Completed: optional OIDC OAuth protection for remote MCP HTTP transports, OAuth deployment guidance, and roadmap reconciliation.
+
+### Sprint 7: Tag Mutations & API Coverage Completion
+
+Completed: upstream-first tag `POST`, `PUT`, and `DELETE` operations through REST and MCP, including cached transaction-tag link cleanup. The documented Lunch Money v2 API matrix is now complete.
