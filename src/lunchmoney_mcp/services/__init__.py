@@ -9,6 +9,7 @@ from lunchmoney_mcp.services.accounts import (
     trigger_plaid_fetch,
     update_manual_account,
 )
+from lunchmoney_mcp.services.budgets import fetch_budget_settings
 from lunchmoney_mcp.services.categories import (
     create_category,
     delete_category,
@@ -46,6 +47,7 @@ __all__ = [
     "execute_mcp_sync",
     "execute_sync",
     "fetch_account_summary",
+    "fetch_budget_settings",
     "fetch_accounts",
     "fetch_categories",
     "fetch_category_by_id",

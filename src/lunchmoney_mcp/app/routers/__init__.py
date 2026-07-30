@@ -1,6 +1,7 @@
 """FastAPI router package containing domain-specific API endpoints."""
 
 from lunchmoney_mcp.app.routers.accounts import router as accounts_router
+from lunchmoney_mcp.app.routers.budgets import router as budgets_router
 from lunchmoney_mcp.app.routers.categories import router as categories_router
 from lunchmoney_mcp.app.routers.recurring import router as recurring_router
 from lunchmoney_mcp.app.routers.spending import router as spending_router
@@ -12,6 +13,7 @@ from lunchmoney_mcp.app.routers.user import router as user_router
 
 __all__ = [
     "accounts_router",
+    "budgets_router",
     "categories_router",
     "recurring_router",
     "spending_router",

@@ -2,6 +2,7 @@
 
 from lunchmoney_mcp.mcp.tools import (
     accounts,
+    budgets,
     categories,
     recurring,
     spending,
@@ -14,6 +15,7 @@ from lunchmoney_mcp.mcp.tools import (
 
 __all__ = [
     "accounts",
+    "budgets",
     "categories",
     "recurring",
     "spending",
