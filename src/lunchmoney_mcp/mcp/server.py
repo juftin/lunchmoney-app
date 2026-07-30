@@ -94,6 +94,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Launch the Lunch Money MCP server.")
     transport_group = parser.add_mutually_exclusive_group()
     transport_group.add_argument(
+        "--stdio",
+        action="store_const",
+        const="stdio",
+        dest="transport",
+    )
+    transport_group.add_argument(
         "--sse", action="store_const", const="sse", dest="transport"
     )
     transport_group.add_argument(

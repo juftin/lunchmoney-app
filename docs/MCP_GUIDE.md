@@ -51,6 +51,7 @@ local desktop clients; use the HTTP flags for remote server deployments:
 
 ```bash
 lunchmoney-mcp                    # stdio
+lunchmoney-mcp --stdio            # stdio (explicit)
 lunchmoney-mcp --sse              # Server-Sent Events
 lunchmoney-mcp --http             # HTTP
 lunchmoney-mcp --streamable-http  # Streamable HTTP

@@ -54,6 +54,7 @@ async def test_mcp_resources_and_prompts_registration() -> None:
     ("arguments", "transport"),
     [
         ([], "stdio"),
+        (["--stdio"], "stdio"),
         (["--sse"], "sse"),
         (["--http"], "http"),
         (["--streamable-http"], "streamable-http"),
@@ -74,6 +75,22 @@ def test_mcp_main_selects_requested_transport(
     server.main()
 
     mock_run.assert_called_once_with(transport=transport)
+
+
+def test_mcp_main_rejects_multiple_transport_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject ambiguous CLI invocations with more than one transport flag."""
+    from lunchmoney_mcp.mcp import server
+
+    mock_run = Mock()
+    monkeypatch.setattr(server.mcp, "run", mock_run)
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--stdio", "--sse"])
+
+    with pytest.raises(SystemExit):
+        server.main()
+
+    mock_run.assert_not_called()
 
 
 @pytest.mark.asyncio
