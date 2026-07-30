@@ -1,7 +1,7 @@
 """Tests for Model Context Protocol (MCP) tools and Pydantic response models."""
 
 import sys
-from unittest.mock import ANY, AsyncMock
+from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 
@@ -36,6 +36,103 @@ async def test_mcp_tools_registration() -> None:
     assert "get_manual_account" in tool_names
     assert "get_plaid_account" in tool_names
     assert "get_transaction" in tool_names
+
+
+@pytest.mark.asyncio
+async def test_mcp_resources_and_prompts_registration() -> None:
+    """Publish Sprint 5 resources and prompts on the shared MCP server."""
+    resource_uris = {str(resource.uri) for resource in await mcp.list_resources()}
+    prompt_names = {prompt.name for prompt in await mcp.list_prompts()}
+
+    assert "lunchmoney://summary" in resource_uris
+    assert "lunchmoney://categories" in resource_uris
+    assert "budget_health_check" in prompt_names
+    assert "uncategorized_transactions_audit" in prompt_names
+
+
+@pytest.mark.parametrize(
+    ("arguments", "transport", "run_arguments"),
+    [
+        ([], "stdio", {"transport": "stdio"}),
+        (["--stdio"], "stdio", {"transport": "stdio"}),
+        (["--sse"], "sse", {"transport": "sse", "host": None, "port": None}),
+        (["--http"], "http", {"transport": "http", "host": None, "port": None}),
+        (
+            ["--streamable-http"],
+            "streamable-http",
+            {"transport": "streamable-http", "host": None, "port": None},
+        ),
+    ],
+)
+def test_mcp_main_selects_requested_transport(
+    monkeypatch: pytest.MonkeyPatch,
+    arguments: list[str],
+    transport: str,
+    run_arguments: dict[str, str | int | None],
+) -> None:
+    """Launch the MCP server using each supported CLI transport selection."""
+    from lunchmoney_mcp.mcp import server
+
+    mock_run = Mock()
+    monkeypatch.setattr(server.mcp, "run", mock_run)
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", *arguments])
+
+    server.main()
+
+    mock_run.assert_called_once_with(**run_arguments)
+
+
+def test_mcp_main_forwards_http_host_and_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Forward HTTP bind options only to HTTP-based MCP transports."""
+    from lunchmoney_mcp.mcp import server
+
+    mock_run = Mock()
+    monkeypatch.setattr(server.mcp, "run", mock_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["lunchmoney-mcp", "--streamable-http", "--host", "0.0.0.0", "--port", "9000"],
+    )
+
+    server.main()
+
+    mock_run.assert_called_once_with(
+        transport="streamable-http", host="0.0.0.0", port=9000
+    )
+
+
+def test_mcp_main_rejects_multiple_transport_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject ambiguous CLI invocations with more than one transport flag."""
+    from lunchmoney_mcp.mcp import server
+
+    mock_run = Mock()
+    monkeypatch.setattr(server.mcp, "run", mock_run)
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--stdio", "--sse"])
+
+    with pytest.raises(SystemExit):
+        server.main()
+
+    mock_run.assert_not_called()
+
+
+def test_mcp_main_rejects_http_bind_options_for_stdio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject HTTP bind options when the process-pipe transport is selected."""
+    from lunchmoney_mcp.mcp import server
+
+    mock_run = Mock()
+    monkeypatch.setattr(server.mcp, "run", mock_run)
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--stdio", "--port", "9000"])
+
+    with pytest.raises(SystemExit):
+        server.main()
+
+    mock_run.assert_not_called()
 
 
 @pytest.mark.asyncio

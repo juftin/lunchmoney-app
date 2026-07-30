@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     ----------
     lunchmoney_access_token : str | None
         Lunch Money API access token.
+    lunchmoney_mcp_api_key : str | None
+        Optional key required by this project's REST API.
     lunchmoney_database_url : str
         Database connection URL (sqlite+aiosqlite or postgresql+asyncpg).
     redis_url : str | None
@@ -45,6 +47,13 @@ class Settings(BaseSettings):
         description="Lunch Money API access token",
     )
     """Lunch Money API access token."""
+
+    lunchmoney_mcp_api_key: str | None = Field(
+        default=None,
+        validation_alias="LUNCHMONEY_MCP_API_KEY",
+        description="Optional API key required by the Lunch Money MCP REST API",
+    )
+    """Optional API key required by the Lunch Money MCP REST API."""
 
     lunchmoney_database_url: str = Field(
         default=DEFAULT_DATABASE_URL,
