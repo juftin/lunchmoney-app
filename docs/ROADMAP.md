@@ -140,13 +140,13 @@ graph TD
 
 ### 8. Tags Management (`/tags`)
 
-| Upstream v2 Endpoint |  Method  | Local Route         | FastMCP Tool | Service Function  |   Status   |
-| :------------------- | :------: | :------------------ | :----------- | :---------------- | :--------: |
-| `/tags`              |  `GET`   | `GET /tags`         | `list_tags`  | `fetch_tags`      |  ✅ Done   |
-| `/tags`              |  `POST`  | `POST /tags`        | `create_tag` | `create_tag`      | ⏳ Planned |
-| `/tags/{id}`         |  `GET`   | `GET /tags/{id}`    | `get_tag`    | `fetch_tag_by_id` |  ✅ Done   |
-| `/tags/{id}`         |  `PUT`   | `PUT /tags/{id}`    | `update_tag` | `update_tag`      | ⏳ Planned |
-| `/tags/{id}`         | `DELETE` | `DELETE /tags/{id}` | `delete_tag` | `delete_tag`      | ⏳ Planned |
+| Upstream v2 Endpoint |  Method  | Local Route         | FastMCP Tool | Service Function  | Status  |
+| :------------------- | :------: | :------------------ | :----------- | :---------------- | :-----: |
+| `/tags`              |  `GET`   | `GET /tags`         | `list_tags`  | `fetch_tags`      | ✅ Done |
+| `/tags`              |  `POST`  | `POST /tags`        | `create_tag` | `create_tag`      | ✅ Done |
+| `/tags/{id}`         |  `GET`   | `GET /tags/{id}`    | `get_tag`    | `fetch_tag_by_id` | ✅ Done |
+| `/tags/{id}`         |  `PUT`   | `PUT /tags/{id}`    | `update_tag` | `update_tag`      | ✅ Done |
+| `/tags/{id}`         | `DELETE` | `DELETE /tags/{id}` | `delete_tag` | `delete_tag`      | ✅ Done |
 
 ---
 

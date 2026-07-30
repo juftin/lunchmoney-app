@@ -31,7 +31,13 @@ from lunchmoney_mcp.services.spending import (
 )
 from lunchmoney_mcp.services.summary import fetch_account_summary
 from lunchmoney_mcp.services.sync import execute_mcp_sync, execute_sync
-from lunchmoney_mcp.services.tags import fetch_tag_by_id, fetch_tags
+from lunchmoney_mcp.services.tags import (
+    create_tag,
+    delete_tag,
+    fetch_tag_by_id,
+    fetch_tags,
+    update_tag,
+)
 from lunchmoney_mcp.services.transactions import (
     bulk_delete_transactions,
     bulk_update_transactions,
@@ -68,6 +74,9 @@ __all__ = [
     "fetch_recurring_items",
     "fetch_tag_by_id",
     "fetch_tags",
+    "create_tag",
+    "update_tag",
+    "delete_tag",
     "fetch_transaction_by_id",
     "fetch_user_info",
     "create_category",
