@@ -37,7 +37,7 @@ _ = (
 
 @mcp.resource(
     "lunchmoney://summary",
-    description="Current-month account net worth and budget summary.",
+    description="Current-month budget summary with totals.",
     mime_type="text/markdown",
 )
 async def account_summary_resource() -> str:
@@ -54,7 +54,7 @@ async def account_summary_resource() -> str:
 
 @mcp.resource(
     "lunchmoney://categories",
-    description="Complete synchronized category hierarchy and budget settings.",
+    description="Complete synchronized category hierarchy.",
     mime_type="application/json",
 )
 async def categories_resource() -> str:
@@ -111,9 +111,17 @@ def main() -> None:
         const="streamable-http",
         dest="transport",
     )
+    parser.add_argument("--host", help="Host to bind for an HTTP transport.")
+    parser.add_argument("--port", type=int, help="Port to bind for an HTTP transport.")
     args = parser.parse_args()
     transport = args.transport or "stdio"
-    mcp.run(transport=transport)
+    if transport == "stdio":
+        if args.host is not None or args.port is not None:
+            parser.error("--host and --port require an HTTP transport")
+        mcp.run(transport=transport)
+        return
+
+    mcp.run(transport=transport, host=args.host, port=args.port)
 
 
 __all__ = ["main", "mcp"]

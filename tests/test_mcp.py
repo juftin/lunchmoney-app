@@ -51,19 +51,24 @@ async def test_mcp_resources_and_prompts_registration() -> None:
 
 
 @pytest.mark.parametrize(
-    ("arguments", "transport"),
+    ("arguments", "transport", "run_arguments"),
     [
-        ([], "stdio"),
-        (["--stdio"], "stdio"),
-        (["--sse"], "sse"),
-        (["--http"], "http"),
-        (["--streamable-http"], "streamable-http"),
+        ([], "stdio", {"transport": "stdio"}),
+        (["--stdio"], "stdio", {"transport": "stdio"}),
+        (["--sse"], "sse", {"transport": "sse", "host": None, "port": None}),
+        (["--http"], "http", {"transport": "http", "host": None, "port": None}),
+        (
+            ["--streamable-http"],
+            "streamable-http",
+            {"transport": "streamable-http", "host": None, "port": None},
+        ),
     ],
 )
 def test_mcp_main_selects_requested_transport(
     monkeypatch: pytest.MonkeyPatch,
     arguments: list[str],
     transport: str,
+    run_arguments: dict[str, str | int | None],
 ) -> None:
     """Launch the MCP server using each supported CLI transport selection."""
     from lunchmoney_mcp.mcp import server
@@ -74,7 +79,28 @@ def test_mcp_main_selects_requested_transport(
 
     server.main()
 
-    mock_run.assert_called_once_with(transport=transport)
+    mock_run.assert_called_once_with(**run_arguments)
+
+
+def test_mcp_main_forwards_http_host_and_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Forward HTTP bind options only to HTTP-based MCP transports."""
+    from lunchmoney_mcp.mcp import server
+
+    mock_run = Mock()
+    monkeypatch.setattr(server.mcp, "run", mock_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["lunchmoney-mcp", "--streamable-http", "--host", "0.0.0.0", "--port", "9000"],
+    )
+
+    server.main()
+
+    mock_run.assert_called_once_with(
+        transport="streamable-http", host="0.0.0.0", port=9000
+    )
 
 
 def test_mcp_main_rejects_multiple_transport_flags(
@@ -86,6 +112,22 @@ def test_mcp_main_rejects_multiple_transport_flags(
     mock_run = Mock()
     monkeypatch.setattr(server.mcp, "run", mock_run)
     monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--stdio", "--sse"])
+
+    with pytest.raises(SystemExit):
+        server.main()
+
+    mock_run.assert_not_called()
+
+
+def test_mcp_main_rejects_http_bind_options_for_stdio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject HTTP bind options when the process-pipe transport is selected."""
+    from lunchmoney_mcp.mcp import server
+
+    mock_run = Mock()
+    monkeypatch.setattr(server.mcp, "run", mock_run)
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--stdio", "--port", "9000"])
 
     with pytest.raises(SystemExit):
         server.main()

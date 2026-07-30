@@ -4,6 +4,42 @@ Async Lunch Money persistence built on SQLModel, SQLAlchemy, and Alembic. The pa
 includes `aiosqlite` for SQLite and `asyncpg` for PostgreSQL; connection URLs must use
 their asynchronous driver names.
 
+## Quickstart
+
+`LUNCHMONEY_ACCESS_TOKEN` authorizes this server to call the Lunch Money API.
+For a local MCP client, set it and start the default stdio transport:
+
+```bash
+export LUNCHMONEY_ACCESS_TOKEN="your-lunch-money-token"
+task run -- lunchmoney-mcp --stdio
+```
+
+For a remote MCP client, choose one HTTP transport. Streamable HTTP and HTTP
+use `/mcp`; SSE uses `/sse`.
+
+```bash
+task run -- lunchmoney-mcp --streamable-http --host 127.0.0.1 --port 8000
+# Connect at http://127.0.0.1:8000/mcp
+```
+
+The available transports are mutually exclusive: `--stdio` (also the default),
+`--sse`, `--http`, and `--streamable-http`. `--host` and `--port` apply only to
+the HTTP transports.
+
+### REST API authentication
+
+The REST API is open by default for local development. Set
+`LUNCHMONEY_MCP_API_KEY` to require callers to provide the same value in the
+`X-API-Key` request header:
+
+```bash
+export LUNCHMONEY_MCP_API_KEY="your-server-key"
+task dev
+```
+
+`LUNCHMONEY_MCP_API_KEY` authenticates clients of this project; it is distinct
+from `LUNCHMONEY_ACCESS_TOKEN`, the server's upstream Lunch Money credential.
+
 ## Database configuration
 
 With no configuration, `LunchMoneyDatabase` uses the persistent SQLite file

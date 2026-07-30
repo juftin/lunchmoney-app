@@ -20,6 +20,7 @@ graph TD
     subgraph Transports
         STDIO[stdio Transport / Process Pipe]
         SSE[SSE Transport / Server-Sent Events]
+        HTTP[HTTP / Streamable HTTP]
     end
 
     subgraph Executable Bundles
@@ -30,8 +31,9 @@ graph TD
     ClaudeDesktop -->|stdio| UVX
     AGY_IDE -->|stdio| UVX
     Cursor -->|stdio| UVX
-    WebClient -->|HTTP / SSE| SSE
-    Docker --> SSE
+    WebClient -->|SSE| SSE
+    WebClient -->|HTTP / Streamable HTTP| HTTP
+    Docker --> HTTP
 ```
 
 ### 1.1 Executable Entrypoint & PyPI `uvx` Bundling
@@ -56,6 +58,17 @@ lunchmoney-mcp --sse              # Server-Sent Events
 lunchmoney-mcp --http             # HTTP
 lunchmoney-mcp --streamable-http  # Streamable HTTP
 ```
+
+For HTTP transports, the default bind address is `127.0.0.1:8000`. The MCP
+endpoints are `http://127.0.0.1:8000/mcp` for HTTP and Streamable HTTP, and
+`http://127.0.0.1:8000/sse` for SSE. Override the bind address as needed:
+
+```bash
+lunchmoney-mcp --streamable-http --host 0.0.0.0 --port 9000
+```
+
+`--host` and `--port` are invalid with `--stdio`. The four transport flags are
+mutually exclusive.
 
 ### 1.3 Client Configuration Snippets
 
@@ -103,7 +116,7 @@ lunchmoney-mcp --streamable-http  # Streamable HTTP
 Set `LUNCHMONEY_MCP_API_KEY` to require an `X-API-Key` header on every REST API
 request. Leave it unset for local development. This differs from
 `LUNCHMONEY_ACCESS_TOKEN`, which is the server's credential for Lunch Money's
-upstream API; MCP stdio and SSE transports use that upstream credential.
+upstream API; every MCP transport uses that upstream credential.
 
 | Auth Model                 | Topology                  | Target Deployment                          | Implementation Details                                                                   |
 | :------------------------- | :------------------------ | :----------------------------------------- | :--------------------------------------------------------------------------------------- |
@@ -118,11 +131,10 @@ Beyond function-calling **Tools**, MCP defines **Resources** (read-only context 
 
 ### 3.1 MCP Resources (`lunchmoney://...`)
 
-| Resource URI                       | Description                                           | Mime Type          |
-| :--------------------------------- | :---------------------------------------------------- | :----------------- |
-| `lunchmoney://summary`             | Instant account net worth & account balance breakdown | `text/markdown`    |
-| `lunchmoney://categories`          | Complete category hierarchy and budget settings       | `application/json` |
-| `lunchmoney://transactions/recent` | Stream of recent 30-day transactions                  | `application/json` |
+| Resource URI              | Description                              | Mime Type          |
+| :------------------------ | :--------------------------------------- | :----------------- |
+| `lunchmoney://summary`    | Current-month budget summary with totals | `text/markdown`    |
+| `lunchmoney://categories` | Complete synchronized category hierarchy | `application/json` |
 
 ### 3.2 MCP Prompts (Built-in Assistant Workflows)
 
