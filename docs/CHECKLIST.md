@@ -112,6 +112,14 @@ _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`
 
 ---
 
+### 🔐 Sprint 6: Remote MCP OAuth & Roadmap Reconciliation
+
+- [x] **OIDC OAuth Proxy**: Add optional OAuth 2.1 protection for remote MCP HTTP transports using an OIDC discovery URL.
+- [x] **OAuth Configuration**: Document the public base URL, identity-provider settings, and local unauthenticated default.
+- [x] **Roadmap Reconciliation**: Mark delivered transaction operations and Sprint 4 production work as complete in `docs/ROADMAP.md`.
+
+---
+
 ## 📝 Documentation Auto-Improvement Protocol
 
 Whenever an agent completes a task, refactor code, or modify a signature:

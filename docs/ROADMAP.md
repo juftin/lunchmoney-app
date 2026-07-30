@@ -62,79 +62,79 @@ graph TD
 
 ### 1. User & Account Summary (`/me`, `/summary`)
 
-| Upstream v2 Endpoint | Method | Local Route    | FastMCP Tool          | Service Function        |   Status   |
-| :------------------- | :----: | :------------- | :-------------------- | :---------------------- | :--------: |
-| `/me`                | `GET`  | `GET /user`    | `get_user_info`       | `fetch_user_info`       |  ✅ Done   |
-| `/summary`           | `GET`  | `GET /summary` | `get_account_summary` | `fetch_account_summary` |  ✅ Done   |
+| Upstream v2 Endpoint | Method | Local Route    | FastMCP Tool          | Service Function        | Status  |
+| :------------------- | :----: | :------------- | :-------------------- | :---------------------- | :-----: |
+| `/me`                | `GET`  | `GET /user`    | `get_user_info`       | `fetch_user_info`       | ✅ Done |
+| `/summary`           | `GET`  | `GET /summary` | `get_account_summary` | `fetch_account_summary` | ✅ Done |
 
 ---
 
 ### 2. Categories Management (`/categories`)
 
-| Upstream v2 Endpoint |  Method  | Local Route               | FastMCP Tool      | Service Function       |   Status   |
-| :------------------- | :------: | :------------------------ | :---------------- | :--------------------- | :--------: |
-| `/categories`        |  `GET`   | `GET /categories`         | `list_categories` | `fetch_categories`     |  ✅ Done   |
-| `/categories`        |  `POST`  | `POST /categories`        | `create_category` | `create_category`      |  ✅ Done   |
-| `/categories/{id}`   |  `GET`   | `GET /categories/{id}`    | `get_category`    | `fetch_category_by_id` |  ✅ Done   |
-| `/categories/{id}`   |  `PUT`   | `PUT /categories/{id}`    | `update_category` | `update_category`      |  ✅ Done   |
-| `/categories/{id}`   | `DELETE` | `DELETE /categories/{id}` | `delete_category` | `delete_category`      |  ✅ Done   |
+| Upstream v2 Endpoint |  Method  | Local Route               | FastMCP Tool      | Service Function       | Status  |
+| :------------------- | :------: | :------------------------ | :---------------- | :--------------------- | :-----: |
+| `/categories`        |  `GET`   | `GET /categories`         | `list_categories` | `fetch_categories`     | ✅ Done |
+| `/categories`        |  `POST`  | `POST /categories`        | `create_category` | `create_category`      | ✅ Done |
+| `/categories/{id}`   |  `GET`   | `GET /categories/{id}`    | `get_category`    | `fetch_category_by_id` | ✅ Done |
+| `/categories/{id}`   |  `PUT`   | `PUT /categories/{id}`    | `update_category` | `update_category`      | ✅ Done |
+| `/categories/{id}`   | `DELETE` | `DELETE /categories/{id}` | `delete_category` | `delete_category`      | ✅ Done |
 
 ---
 
 ### 3. Manual Accounts (`/manual_accounts`)
 
-| Upstream v2 Endpoint    |  Method  | Local Route                    | FastMCP Tool            | Service Function             |   Status   |
-| :---------------------- | :------: | :----------------------------- | :---------------------- | :--------------------------- | :--------: |
-| `/manual_accounts`      |  `GET`   | `GET /accounts/manual`         | `list_manual_accounts`  | `fetch_manual_accounts`      |  ✅ Done   |
-| `/manual_accounts`      |  `POST`  | `POST /accounts/manual`        | `create_manual_account` | `create_manual_account`      |  ✅ Done   |
-| `/manual_accounts/{id}` |  `GET`   | `GET /accounts/manual/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` |  ✅ Done   |
-| `/manual_accounts/{id}` |  `PUT`   | `PUT /accounts/manual/{id}`    | `update_manual_account` | `update_manual_account`      |  ✅ Done   |
-| `/manual_accounts/{id}` | `DELETE` | `DELETE /accounts/manual/{id}` | `delete_manual_account` | `delete_manual_account`      |  ✅ Done   |
+| Upstream v2 Endpoint    |  Method  | Local Route                    | FastMCP Tool            | Service Function             | Status  |
+| :---------------------- | :------: | :----------------------------- | :---------------------- | :--------------------------- | :-----: |
+| `/manual_accounts`      |  `GET`   | `GET /accounts/manual`         | `list_manual_accounts`  | `fetch_manual_accounts`      | ✅ Done |
+| `/manual_accounts`      |  `POST`  | `POST /accounts/manual`        | `create_manual_account` | `create_manual_account`      | ✅ Done |
+| `/manual_accounts/{id}` |  `GET`   | `GET /accounts/manual/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` | ✅ Done |
+| `/manual_accounts/{id}` |  `PUT`   | `PUT /accounts/manual/{id}`    | `update_manual_account` | `update_manual_account`      | ✅ Done |
+| `/manual_accounts/{id}` | `DELETE` | `DELETE /accounts/manual/{id}` | `delete_manual_account` | `delete_manual_account`      | ✅ Done |
 
 ---
 
 ### 4. Plaid Accounts (`/plaid_accounts`)
 
-| Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool          | Service Function            |   Status   |
-| :---------------------- | :----: | :-------------------------- | :-------------------- | :-------------------------- | :--------: |
-| `/plaid_accounts`       | `GET`  | `GET /accounts/plaid`       | `list_plaid_accounts` | `fetch_plaid_accounts`      |  ✅ Done   |
-| `/plaid_accounts/{id}`  | `GET`  | `GET /accounts/plaid/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` |  ✅ Done   |
-| `/plaid_accounts/fetch` | `POST` | `POST /accounts/plaid/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       |  ✅ Done   |
+| Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool          | Service Function            | Status  |
+| :---------------------- | :----: | :-------------------------- | :-------------------- | :-------------------------- | :-----: |
+| `/plaid_accounts`       | `GET`  | `GET /accounts/plaid`       | `list_plaid_accounts` | `fetch_plaid_accounts`      | ✅ Done |
+| `/plaid_accounts/{id}`  | `GET`  | `GET /accounts/plaid/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` | ✅ Done |
+| `/plaid_accounts/fetch` | `POST` | `POST /accounts/plaid/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       | ✅ Done |
 
 ---
 
 ### 5. Transactions Management (`/transactions`)
 
-| Upstream v2 Endpoint |  Method  | Local Route                 | FastMCP Tool               | Service Function            |   Status   |
-| :------------------- | :------: | :-------------------------- | :------------------------- | :-------------------------- | :--------: |
-| `/transactions`      |  `GET`   | `GET /transactions`         | `get_recent_transactions`  | `fetch_recent_transactions` |  ✅ Done   |
-| `/transactions`      |  `POST`  | `POST /transactions`        | `create_transactions`      | `create_transactions`       | ⏳ Planned |
-| `/transactions`      |  `PUT`   | `PUT /transactions`         | `bulk_update_transactions` | `bulk_update_transactions`  | ⏳ Planned |
-| `/transactions`      | `DELETE` | `DELETE /transactions`      | `bulk_delete_transactions` | `bulk_delete_transactions`  | ⏳ Planned |
-| `/transactions/{id}` |  `GET`   | `GET /transactions/{id}`    | `get_transaction`          | `fetch_transaction_by_id`   |  ✅ Done   |
-| `/transactions/{id}` |  `PUT`   | `PUT /transactions/{id}`    | `update_transaction`       | `update_transaction`        | ⏳ Planned |
-| `/transactions/{id}` | `DELETE` | `DELETE /transactions/{id}` | `delete_transaction`       | `delete_transaction`        | ⏳ Planned |
+| Upstream v2 Endpoint |  Method  | Local Route                 | FastMCP Tool               | Service Function            | Status  |
+| :------------------- | :------: | :-------------------------- | :------------------------- | :-------------------------- | :-----: |
+| `/transactions`      |  `GET`   | `GET /transactions`         | `get_recent_transactions`  | `fetch_recent_transactions` | ✅ Done |
+| `/transactions`      |  `POST`  | `POST /transactions`        | `create_transactions`      | `create_transactions`       | ✅ Done |
+| `/transactions`      |  `PUT`   | `PUT /transactions`         | `bulk_update_transactions` | `bulk_update_transactions`  | ✅ Done |
+| `/transactions`      | `DELETE` | `DELETE /transactions`      | `bulk_delete_transactions` | `bulk_delete_transactions`  | ✅ Done |
+| `/transactions/{id}` |  `GET`   | `GET /transactions/{id}`    | `get_transaction`          | `fetch_transaction_by_id`   | ✅ Done |
+| `/transactions/{id}` |  `PUT`   | `PUT /transactions/{id}`    | `update_transaction`       | `update_transaction`        | ✅ Done |
+| `/transactions/{id}` | `DELETE` | `DELETE /transactions/{id}` | `delete_transaction`       | `delete_transaction`        | ✅ Done |
 
 ---
 
 ### 6. Transaction Grouping & Splitting (`/transactions/group`, `/transactions/split`)
 
-| Upstream v2 Endpoint       |  Method  | Local Route                       | FastMCP Tool           | Service Function           |   Status   |
-| :------------------------- | :------: | :-------------------------------- | :--------------------- | :------------------------- | :--------: |
-| `/transactions/group`      |  `POST`  | `POST /transactions/group`        | `group_transactions`   | `create_transaction_group` | ⏳ Planned |
-| `/transactions/group/{id}` | `DELETE` | `DELETE /transactions/group/{id}` | `ungroup_transactions` | `delete_transaction_group` | ⏳ Planned |
-| `/transactions/split/{id}` |  `POST`  | `POST /transactions/split/{id}`   | `split_transaction`    | `split_transaction`        | ⏳ Planned |
-| `/transactions/split/{id}` | `DELETE` | `DELETE /transactions/split/{id}` | `unsplit_transaction`  | `unsplit_transaction`      | ⏳ Planned |
+| Upstream v2 Endpoint       |  Method  | Local Route                       | FastMCP Tool           | Service Function           | Status  |
+| :------------------------- | :------: | :-------------------------------- | :--------------------- | :------------------------- | :-----: |
+| `/transactions/group`      |  `POST`  | `POST /transactions/group`        | `group_transactions`   | `create_transaction_group` | ✅ Done |
+| `/transactions/group/{id}` | `DELETE` | `DELETE /transactions/group/{id}` | `ungroup_transactions` | `delete_transaction_group` | ✅ Done |
+| `/transactions/split/{id}` |  `POST`  | `POST /transactions/split/{id}`   | `split_transaction`    | `split_transaction`        | ✅ Done |
+| `/transactions/split/{id}` | `DELETE` | `DELETE /transactions/split/{id}` | `unsplit_transaction`  | `unsplit_transaction`      | ✅ Done |
 
 ---
 
 ### 7. Transaction Attachments (`/transactions/attachments`)
 
-| Upstream v2 Endpoint                  |  Method  | Local Route                                  | FastMCP Tool        | Service Function                |   Status   |
-| :------------------------------------ | :------: | :------------------------------------------- | :------------------ | :------------------------------ | :--------: |
-| `/transactions/{id}/attachments`      |  `POST`  | `POST /transactions/{id}/attachments`        | `upload_attachment` | `upload_transaction_attachment` | ⏳ Planned |
-| `/transactions/attachments/{file_id}` |  `GET`   | `GET /transactions/attachments/{file_id}`    | `get_attachment`    | `fetch_attachment_by_id`        | ⏳ Planned |
-| `/transactions/attachments/{file_id}` | `DELETE` | `DELETE /transactions/attachments/{file_id}` | `delete_attachment` | `delete_attachment`             | ⏳ Planned |
+| Upstream v2 Endpoint                  |  Method  | Local Route                                  | FastMCP Tool        | Service Function                | Status  |
+| :------------------------------------ | :------: | :------------------------------------------- | :------------------ | :------------------------------ | :-----: |
+| `/transactions/{id}/attachments`      |  `POST`  | `POST /transactions/{id}/attachments`        | `upload_attachment` | `upload_transaction_attachment` | ✅ Done |
+| `/transactions/attachments/{file_id}` |  `GET`   | `GET /transactions/attachments/{file_id}`    | `get_attachment`    | `fetch_attachment_by_id`        | ✅ Done |
+| `/transactions/attachments/{file_id}` | `DELETE` | `DELETE /transactions/attachments/{file_id}` | `delete_attachment` | `delete_attachment`             | ✅ Done |
 
 ---
 
@@ -152,22 +152,22 @@ graph TD
 
 ### 9. Recurring Items (`/recurring_items`)
 
-| Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool           | Service Function             |   Status   |
-| :---------------------- | :----: | :-------------------------- | :--------------------- | :--------------------------- | :--------: |
-| `/recurring_items`      | `GET`  | `GET /recurring_items`      | `list_recurring_items` | `fetch_recurring_items`      |  ✅ Done   |
-| `/recurring_items/{id}` | `GET`  | `GET /recurring_items/{id}` | `get_recurring_item`   | `fetch_recurring_item_by_id` |  ✅ Done   |
+| Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool           | Service Function             | Status  |
+| :---------------------- | :----: | :-------------------------- | :--------------------- | :--------------------------- | :-----: |
+| `/recurring_items`      | `GET`  | `GET /recurring_items`      | `list_recurring_items` | `fetch_recurring_items`      | ✅ Done |
+| `/recurring_items/{id}` | `GET`  | `GET /recurring_items/{id}` | `get_recurring_item`   | `fetch_recurring_item_by_id` | ✅ Done |
 
 ---
 
 ### 10. Budgets & Local Analytics (`/budgets`, `/spending`)
 
-| Upstream v2 Endpoint / Local Feature |  Method  | Local Route              | FastMCP Tool            | Service Function          |   Status   |
-| :----------------------------------- | :------: | :----------------------- | :---------------------- | :------------------------ | :--------: |
-| `/budgets/settings`                  |  `GET`   | `GET /budgets/settings`  | `get_budget_settings`   | `fetch_budget_settings`   |  ✅ Done   |
-| `/budgets`                           |  `PUT`   | `PUT /budgets`           | `upsert_budget`         | `set_budget_value`        |  ✅ Done   |
-| `/budgets`                           | `DELETE` | `DELETE /budgets`        | `clear_budget`          | `clear_budget_value`      |  ✅ Done   |
-| Local Analytics (Category Rollup)    |  `GET`   | `GET /spending/category` | `get_category_spending` | `fetch_category_spending` |  ✅ Done   |
-| Local Analytics (Time Series)        |  `GET`   | `GET /spending/trends`   | `get_spending_trends`   | `fetch_spending_trends`   |  ✅ Done   |
+| Upstream v2 Endpoint / Local Feature |  Method  | Local Route              | FastMCP Tool            | Service Function          | Status  |
+| :----------------------------------- | :------: | :----------------------- | :---------------------- | :------------------------ | :-----: |
+| `/budgets/settings`                  |  `GET`   | `GET /budgets/settings`  | `get_budget_settings`   | `fetch_budget_settings`   | ✅ Done |
+| `/budgets`                           |  `PUT`   | `PUT /budgets`           | `upsert_budget`         | `set_budget_value`        | ✅ Done |
+| `/budgets`                           | `DELETE` | `DELETE /budgets`        | `clear_budget`          | `clear_budget_value`      | ✅ Done |
+| Local Analytics (Category Rollup)    |  `GET`   | `GET /spending/category` | `get_category_spending` | `fetch_category_spending` | ✅ Done |
+| Local Analytics (Time Series)        |  `GET`   | `GET /spending/trends`   | `get_spending_trends`   | `fetch_spending_trends`   | ✅ Done |
 
 ---
 
@@ -205,4 +205,4 @@ graph TD
 
 - [x] Implement Budget Values (`PUT /budgets`, `DELETE /budgets`)
 - [x] Implement Spending Trends time-series analysis (`GET /spending/trends`)
-- [ ] API Key auth guard & GitHub Actions CI/CD workflows (`.github/workflows/ci.yaml`).
+- [x] API Key auth guard & GitHub Actions CI/CD workflows (`.github/workflows/ci.yaml`).

@@ -1,12 +1,74 @@
 """API-key protection for the REST application."""
 
+from __future__ import annotations
+
 import secrets
 from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 
-from lunchmoney_mcp.config import get_settings
+from lunchmoney_mcp.config import Settings, get_settings
+
+if TYPE_CHECKING:
+    from fastmcp.server.auth import AuthProvider
+
+
+def _oidc_proxy_class() -> type[Any]:
+    """Load FastMCP's optional OIDC proxy only when OAuth is configured."""
+    from fastmcp.server.auth import OIDCProxy
+
+    return OIDCProxy
+
+
+def get_mcp_oauth_provider(settings: Settings | None = None) -> AuthProvider | None:
+    """Build the optional OIDC proxy that protects remote MCP transports.
+
+    Parameters
+    ----------
+    settings : Settings | None
+        Explicit settings for construction or the cached application settings.
+
+    Returns
+    -------
+    AuthProvider | None
+        An OAuth provider when all required OIDC settings are configured, otherwise
+        ``None`` so local MCP use remains unauthenticated.
+
+    Raises
+    ------
+    ValueError
+        If only part of the required OAuth configuration is supplied.
+    """
+    resolved_settings = settings or get_settings()
+    configuration = {
+        "LUNCHMONEY_MCP_OAUTH_CONFIG_URL": (
+            resolved_settings.lunchmoney_mcp_oauth_config_url
+        ),
+        "LUNCHMONEY_MCP_OAUTH_CLIENT_ID": (
+            resolved_settings.lunchmoney_mcp_oauth_client_id
+        ),
+        "LUNCHMONEY_MCP_OAUTH_BASE_URL": resolved_settings.lunchmoney_mcp_oauth_base_url,
+    }
+    if not any(configuration.values()):
+        return None
+
+    missing = [name for name, value in configuration.items() if value is None]
+    if missing:
+        raise ValueError(
+            "OAuth requires "
+            + ", ".join(missing)
+            + " when any OAuth setting is configured"
+        )
+
+    return _oidc_proxy_class()(
+        config_url=resolved_settings.lunchmoney_mcp_oauth_config_url,
+        client_id=resolved_settings.lunchmoney_mcp_oauth_client_id,
+        client_secret=resolved_settings.lunchmoney_mcp_oauth_client_secret,
+        audience=resolved_settings.lunchmoney_mcp_oauth_audience,
+        base_url=resolved_settings.lunchmoney_mcp_oauth_base_url,
+    )
 
 
 async def verify_api_key(
@@ -39,4 +101,4 @@ async def verify_api_key(
     return await call_next(request)
 
 
-__all__ = ["verify_api_key"]
+__all__ = ["get_mcp_oauth_provider", "verify_api_key"]
