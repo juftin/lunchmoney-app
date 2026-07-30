@@ -100,9 +100,10 @@ lunchmoney-mcp --streamable-http  # Streamable HTTP
 
 ## 🔐 2. Authentication & Authorization (API Key vs. OAuth 2.0)
 
-Set `LUNCHMONEY_API_KEY` to require an `X-API-Key` header on every REST API
-request. Leave it unset for local development; MCP stdio and SSE transports
-continue to use the Lunch Money access token configured for the server.
+Set `LUNCHMONEY_MCP_API_KEY` to require an `X-API-Key` header on every REST API
+request. Leave it unset for local development. This differs from
+`LUNCHMONEY_ACCESS_TOKEN`, which is the server's credential for Lunch Money's
+upstream API; MCP stdio and SSE transports use that upstream credential.
 
 | Auth Model                 | Topology                  | Target Deployment                          | Implementation Details                                                                   |
 | :------------------------- | :------------------------ | :----------------------------------------- | :--------------------------------------------------------------------------------------- |

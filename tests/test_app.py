@@ -314,7 +314,7 @@ def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
-    monkeypatch.setenv("LUNCHMONEY_API_KEY", "rest-api-key")
+    monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "rest-api-key")
     get_settings.cache_clear()
 
     with TestClient(fastapi_app) as client:

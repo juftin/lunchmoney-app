@@ -30,7 +30,7 @@ async def verify_api_key(
     if request.url.path.startswith("/mcp"):
         return await call_next(request)
 
-    expected_key = get_settings().lunchmoney_api_key
+    expected_key = get_settings().lunchmoney_mcp_api_key
     provided_key = request.headers.get("X-API-Key")
     if expected_key is not None and not secrets.compare_digest(
         provided_key or "", expected_key
