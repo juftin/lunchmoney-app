@@ -306,6 +306,26 @@ def test_fastapi_root_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
         assert data["message"] == "Hello World"
 
 
+def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reject REST requests without the configured API key."""
+    from starlette.testclient import TestClient
+
+    from lunchmoney_mcp.config import get_settings
+
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+    monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
+    monkeypatch.setenv("LUNCHMONEY_API_KEY", "rest-api-key")
+    get_settings.cache_clear()
+
+    with TestClient(fastapi_app) as client:
+        assert client.get("/").status_code == 401
+        assert client.get("/", headers={"X-API-Key": "wrong"}).status_code == 401
+        response = client.get("/", headers={"X-API-Key": "rest-api-key"})
+
+    assert response.status_code == 200
+    get_settings.cache_clear()
+
+
 def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     """Trigger migrations and sync via the /sync endpoint."""
     from starlette.testclient import TestClient

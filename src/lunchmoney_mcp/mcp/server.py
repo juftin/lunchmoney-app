@@ -1,7 +1,10 @@
 """FastMCP server entrypoint registering modular domain tools."""
 
+import datetime
+import json
 import sys
 
+from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.mcp.tools import (
     accounts,
@@ -15,6 +18,7 @@ from lunchmoney_mcp.mcp.tools import (
     transactions,
     user,
 )
+from lunchmoney_mcp.services import fetch_account_summary, fetch_categories
 
 # Explicitly reference imported tool modules to ensure registration
 _ = (
@@ -29,6 +33,60 @@ _ = (
     transactions,
     user,
 )
+
+
+@mcp.resource(
+    "lunchmoney://summary",
+    description="Current-month account net worth and budget summary.",
+    mime_type="text/markdown",
+)
+async def account_summary_resource() -> str:
+    """Render the current month's live Lunch Money summary as Markdown."""
+    today = datetime.date.today()
+    summary = await fetch_account_summary(
+        client=get_lunchmoney_app(),
+        start_date=today.replace(day=1),
+        end_date=today,
+        include_totals=True,
+    )
+    return f"# Lunch Money summary\n\n```json\n{summary.model_dump_json(indent=2)}\n```"
+
+
+@mcp.resource(
+    "lunchmoney://categories",
+    description="Complete synchronized category hierarchy and budget settings.",
+    mime_type="application/json",
+)
+async def categories_resource() -> str:
+    """Render synchronized budget categories as a JSON resource."""
+    categories = await fetch_categories(db=get_database())
+    return json.dumps([category.model_dump(mode="json") for category in categories])
+
+
+@mcp.prompt(
+    name="budget_health_check",
+    description="Analyze monthly budget performance and flag over-budget categories.",
+)
+def budget_health_check() -> str:
+    """Provide a repeatable workflow for evaluating the current monthly budget."""
+    return (
+        "Review the current month's Lunch Money budget summary. Identify categories "
+        "that are over budget, explain the largest variances, and recommend practical "
+        "adjustments for the remainder of the month."
+    )
+
+
+@mcp.prompt(
+    name="uncategorized_transactions_audit",
+    description="Find uncategorized transactions and recommend assignments.",
+)
+def uncategorized_transactions_audit() -> str:
+    """Provide a repeatable workflow for auditing uncategorized transactions."""
+    return (
+        "Find recent uncategorized Lunch Money transactions. Group similar merchants, "
+        "recommend the most appropriate existing category for each group, and ask for "
+        "confirmation before making any changes."
+    )
 
 
 def main() -> None:

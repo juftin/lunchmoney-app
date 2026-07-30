@@ -99,6 +99,10 @@ def main():
 
 ## 🔐 2. Authentication & Authorization (API Key vs. OAuth 2.0)
 
+Set `LUNCHMONEY_API_KEY` to require an `X-API-Key` header on every REST API
+request. Leave it unset for local development; MCP stdio and SSE transports
+continue to use the Lunch Money access token configured for the server.
+
 | Auth Model                 | Topology                  | Target Deployment                          | Implementation Details                                                                   |
 | :------------------------- | :------------------------ | :----------------------------------------- | :--------------------------------------------------------------------------------------- |
 | **Static Token (Current)** | Single-Tenant / Local     | Desktop Apps (Claude, Antigravity, Cursor) | Injected via `LUNCHMONEY_ACCESS_TOKEN` environment variable.                             |

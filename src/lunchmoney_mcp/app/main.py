@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.utilities.lifespan import combine_lifespans
 
+from lunchmoney_mcp.app.auth import verify_api_key
 from lunchmoney_mcp.app.lifespan import lifespan
 from lunchmoney_mcp.app.routers import (
     accounts_router,
@@ -29,6 +30,8 @@ fastapi_app = FastAPI(
     description="Lunch Money Model Context Protocol Server & API",
     lifespan=lifespan,
 )
+
+fastapi_app.middleware("http")(verify_api_key)
 
 
 @fastapi_app.get(
@@ -67,6 +70,8 @@ app = FastAPI(
     ],
     lifespan=combine_lifespans(mcp_app.lifespan, lifespan),
 )
+
+app.middleware("http")(verify_api_key)
 
 __all__: list[str] = [
     "app",

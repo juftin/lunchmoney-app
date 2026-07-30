@@ -24,6 +24,7 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     monkeypatch.delenv("REDIS_URL", raising=False)
     monkeypatch.delenv("LUNCHMONEY_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_API_KEY", raising=False)
     monkeypatch.delenv("STATELESS", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", raising=False)
 
@@ -31,6 +32,7 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.lunchmoney_database_url == DEFAULT_DATABASE_URL
     assert settings.redis_url is None
     assert settings.lunchmoney_access_token is None
+    assert settings.lunchmoney_api_key is None
     assert settings.stateless is False
     assert settings.sync_safety_margin_minutes == 5
 
@@ -48,6 +50,7 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "test-token")
+    monkeypatch.setenv("LUNCHMONEY_API_KEY", "rest-api-key")
     monkeypatch.setenv("STATELESS", "true")
     monkeypatch.setenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", "10")
 
@@ -58,6 +61,7 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert settings.redis_url == "redis://localhost:6379/0"
     assert settings.lunchmoney_access_token == "test-token"
+    assert settings.lunchmoney_api_key == "rest-api-key"
     assert settings.stateless is True
     assert settings.sync_safety_margin_minutes == 10
 

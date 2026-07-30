@@ -29,6 +29,9 @@ from lunchmoney_mcp.mcp.tools.transactions import (
     upload_attachment,
 )
 from lunchmoney_mcp.mcp.tools.user import get_user_info
+from lunchmoney_mcp.mcp import server as _server
+
+_ = _server
 
 __all__ = [
     "get_account_summary",

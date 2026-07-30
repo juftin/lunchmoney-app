@@ -1,6 +1,7 @@
 """Tests for Model Context Protocol (MCP) tools and Pydantic response models."""
 
 import sys
+from unittest.mock import Mock
 from unittest.mock import ANY, AsyncMock
 
 import pytest
@@ -36,6 +37,31 @@ async def test_mcp_tools_registration() -> None:
     assert "get_manual_account" in tool_names
     assert "get_plaid_account" in tool_names
     assert "get_transaction" in tool_names
+
+
+@pytest.mark.asyncio
+async def test_mcp_resources_and_prompts_registration() -> None:
+    """Publish Sprint 5 resources and prompts on the shared MCP server."""
+    resource_uris = {str(resource.uri) for resource in await mcp.list_resources()}
+    prompt_names = {prompt.name for prompt in await mcp.list_prompts()}
+
+    assert "lunchmoney://summary" in resource_uris
+    assert "lunchmoney://categories" in resource_uris
+    assert "budget_health_check" in prompt_names
+    assert "uncategorized_transactions_audit" in prompt_names
+
+
+def test_mcp_main_selects_requested_transport(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Launch the MCP server with SSE only when its CLI flag is present."""
+    from lunchmoney_mcp.mcp import server
+
+    mock_run = Mock()
+    monkeypatch.setattr(server.mcp, "run", mock_run)
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--sse"])
+
+    server.main()
+
+    mock_run.assert_called_once_with(transport="sse")
 
 
 @pytest.mark.asyncio

@@ -103,11 +103,11 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-4-budgets--s
 
 _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-5-production-security--cicd)
 
-- [ ] **API Key Guard**: Implement `verify_api_key` middleware in [`src/lunchmoney_mcp/app/auth.py`](../src/lunchmoney_mcp/app/auth.py).
-- [ ] **MCP Executable Entrypoint**: Add `lunchmoney-mcp = "lunchmoney_mcp.mcp.server:main"` script in `pyproject.toml`.
-- [ ] **MCP Multi-Transport**: Support `--sse` transport flag in `mcp.run()`.
-- [ ] **MCP Resources**: Register `lunchmoney://summary` and `lunchmoney://categories` resources in [`src/lunchmoney_mcp/mcp/server.py`](../src/lunchmoney_mcp/mcp/server.py).
-- [ ] **MCP Prompts**: Register `budget_health_check` and `uncategorized_transactions_audit` prompts.
+- [x] **API Key Guard**: Implement `verify_api_key` middleware in [`src/lunchmoney_mcp/app/auth.py`](../src/lunchmoney_mcp/app/auth.py).
+- [x] **MCP Executable Entrypoint**: Add `lunchmoney-mcp = "lunchmoney_mcp.mcp.server:main"` script in `pyproject.toml`.
+- [x] **MCP Multi-Transport**: Support `--sse` transport flag in `mcp.run()`.
+- [x] **MCP Resources**: Register `lunchmoney://summary` and `lunchmoney://categories` resources in [`src/lunchmoney_mcp/mcp/server.py`](../src/lunchmoney_mcp/mcp/server.py).
+- [x] **MCP Prompts**: Register `budget_health_check` and `uncategorized_transactions_audit` prompts.
 - [x] **GitHub Actions CI**: Add `.github/workflows/ci.yaml` running `task lint`, `task check`, `task test`, and `docker build`.
 
 ---
