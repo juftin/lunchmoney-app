@@ -123,6 +123,32 @@ upstream API; every MCP transport uses that upstream credential.
 | **Static Token (Current)** | Single-Tenant / Local     | Desktop Apps (Claude, Antigravity, Cursor) | Injected via `LUNCHMONEY_ACCESS_TOKEN` environment variable.                             |
 | **Multi-Tenant OAuth 2.0** | Multi-User / Cloud Hosted | Web-Hosted MCP Servers / Remote SSE        | Lunch Money OAuth 2.0 PKCE flow. Per-session token resolution stored in context headers. |
 
+### 2.1 Remote MCP OAuth
+
+HTTP, SSE, and Streamable HTTP MCP endpoints can use an upstream OIDC identity
+provider through FastMCP's OAuth proxy. Configure all required values before
+starting an HTTP transport:
+
+```bash
+export LUNCHMONEY_MCP_OAUTH_CONFIG_URL="https://id.example.com/.well-known/openid-configuration"
+export LUNCHMONEY_MCP_OAUTH_CLIENT_ID="lunchmoney-mcp"
+export LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET="your-identity-provider-secret" # optional for public clients
+export LUNCHMONEY_MCP_OAUTH_BASE_URL="https://mcp.example.com"
+export LUNCHMONEY_MCP_OAUTH_AUDIENCE="https://mcp.example.com" # optional
+
+lunchmoney-mcp --streamable-http --host 0.0.0.0 --port 8000
+```
+
+`LUNCHMONEY_MCP_OAUTH_BASE_URL` must be the public HTTPS origin, without the
+`/mcp` path. Register `${LUNCHMONEY_MCP_OAUTH_BASE_URL}/auth/callback` as the
+callback URL with the identity provider. FastMCP publishes OAuth metadata and
+handles dynamic client registration and PKCE for compatible MCP clients.
+
+OAuth is disabled when all required OAuth variables are unset, preserving local
+stdio use. Supplying only some of `LUNCHMONEY_MCP_OAUTH_CONFIG_URL`,
+`LUNCHMONEY_MCP_OAUTH_CLIENT_ID`, and `LUNCHMONEY_MCP_OAUTH_BASE_URL` prevents
+startup so a remote endpoint cannot be accidentally left partially configured.
+
 ---
 
 ## 📦 3. MCP Primitives: Resources & Prompts

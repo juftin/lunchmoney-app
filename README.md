@@ -40,6 +40,25 @@ task dev
 `LUNCHMONEY_MCP_API_KEY` authenticates clients of this project; it is distinct
 from `LUNCHMONEY_ACCESS_TOKEN`, the server's upstream Lunch Money credential.
 
+### Remote MCP OAuth
+
+For MCP clients that require OAuth, configure an OIDC identity provider and
+start an HTTP transport:
+
+```bash
+export LUNCHMONEY_MCP_OAUTH_CONFIG_URL="https://id.example.com/.well-known/openid-configuration"
+export LUNCHMONEY_MCP_OAUTH_CLIENT_ID="lunchmoney-mcp"
+export LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET="your-identity-provider-secret"
+export LUNCHMONEY_MCP_OAUTH_BASE_URL="https://mcp.example.com"
+
+task run -- lunchmoney-mcp --streamable-http --host 0.0.0.0 --port 8000
+```
+
+The public base URL must match the deployed HTTPS origin. Register
+`https://mcp.example.com/auth/callback` with the identity provider. OAuth is
+disabled when these settings are unset, so local stdio clients still require no
+client authentication.
+
 ## Database configuration
 
 With no configuration, `LunchMoneyDatabase` uses the persistent SQLite file

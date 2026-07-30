@@ -23,6 +23,16 @@ class Settings(BaseSettings):
         Lunch Money API access token.
     lunchmoney_mcp_api_key : str | None
         Optional key required by this project's REST API.
+    lunchmoney_mcp_oauth_config_url : str | None
+        OIDC discovery URL for remote MCP client authentication.
+    lunchmoney_mcp_oauth_client_id : str | None
+        OAuth client identifier registered with the upstream identity provider.
+    lunchmoney_mcp_oauth_client_secret : str | None
+        Optional OAuth client secret for confidential identity-provider clients.
+    lunchmoney_mcp_oauth_base_url : str | None
+        Public base URL used for OAuth metadata and callback routes.
+    lunchmoney_mcp_oauth_audience : str | None
+        Optional OAuth audience requested from the identity provider.
     lunchmoney_database_url : str
         Database connection URL (sqlite+aiosqlite or postgresql+asyncpg).
     redis_url : str | None
@@ -54,6 +64,41 @@ class Settings(BaseSettings):
         description="Optional API key required by the Lunch Money MCP REST API",
     )
     """Optional API key required by the Lunch Money MCP REST API."""
+
+    lunchmoney_mcp_oauth_config_url: str | None = Field(
+        default=None,
+        validation_alias="LUNCHMONEY_MCP_OAUTH_CONFIG_URL",
+        description="OIDC discovery URL for remote MCP client authentication",
+    )
+    """OIDC discovery URL for remote MCP client authentication."""
+
+    lunchmoney_mcp_oauth_client_id: str | None = Field(
+        default=None,
+        validation_alias="LUNCHMONEY_MCP_OAUTH_CLIENT_ID",
+        description="OAuth client identifier registered with the identity provider",
+    )
+    """OAuth client identifier registered with the identity provider."""
+
+    lunchmoney_mcp_oauth_client_secret: str | None = Field(
+        default=None,
+        validation_alias="LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET",
+        description="Optional OAuth client secret for confidential clients",
+    )
+    """Optional OAuth client secret for confidential clients."""
+
+    lunchmoney_mcp_oauth_base_url: str | None = Field(
+        default=None,
+        validation_alias="LUNCHMONEY_MCP_OAUTH_BASE_URL",
+        description="Public base URL used for OAuth metadata and callback routes",
+    )
+    """Public base URL used for OAuth metadata and callback routes."""
+
+    lunchmoney_mcp_oauth_audience: str | None = Field(
+        default=None,
+        validation_alias="LUNCHMONEY_MCP_OAUTH_AUDIENCE",
+        description="Optional OAuth audience requested from the identity provider",
+    )
+    """Optional OAuth audience requested from the identity provider."""
 
     lunchmoney_database_url: str = Field(
         default=DEFAULT_DATABASE_URL,
