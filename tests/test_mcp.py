@@ -1,8 +1,7 @@
 """Tests for Model Context Protocol (MCP) tools and Pydantic response models."""
 
 import sys
-from unittest.mock import Mock
-from unittest.mock import ANY, AsyncMock
+from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 
@@ -51,17 +50,30 @@ async def test_mcp_resources_and_prompts_registration() -> None:
     assert "uncategorized_transactions_audit" in prompt_names
 
 
-def test_mcp_main_selects_requested_transport(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Launch the MCP server with SSE only when its CLI flag is present."""
+@pytest.mark.parametrize(
+    ("arguments", "transport"),
+    [
+        ([], "stdio"),
+        (["--sse"], "sse"),
+        (["--http"], "http"),
+        (["--streamable-http"], "streamable-http"),
+    ],
+)
+def test_mcp_main_selects_requested_transport(
+    monkeypatch: pytest.MonkeyPatch,
+    arguments: list[str],
+    transport: str,
+) -> None:
+    """Launch the MCP server using each supported CLI transport selection."""
     from lunchmoney_mcp.mcp import server
 
     mock_run = Mock()
     monkeypatch.setattr(server.mcp, "run", mock_run)
-    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--sse"])
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", *arguments])
 
     server.main()
 
-    mock_run.assert_called_once_with(transport="sse")
+    mock_run.assert_called_once_with(transport=transport)
 
 
 @pytest.mark.asyncio

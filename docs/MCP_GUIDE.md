@@ -44,16 +44,16 @@ Expose a clean CLI entrypoint in `pyproject.toml` so users and LLM clients can l
 lunchmoney-mcp = "lunchmoney_mcp.mcp.server:main"
 ```
 
-### 1.2 Multi-Transport Support (`stdio` & `sse`)
+### 1.2 Multi-Transport Support
 
-FastMCP natively supports both process piping (`stdio`) for local desktop apps and HTTP Server-Sent Events (`sse`) for remote microservices:
+The executable supports FastMCP's four transports. `stdio` is the default for
+local desktop clients; use the HTTP flags for remote server deployments:
 
-```python
-# src/lunchmoney_mcp/mcp/server.py
-def main():
-    import sys
-    transport = "sse" if "--sse" in sys.argv else "stdio"
-    mcp.run(transport=transport)
+```bash
+lunchmoney-mcp                    # stdio
+lunchmoney-mcp --sse              # Server-Sent Events
+lunchmoney-mcp --http             # HTTP
+lunchmoney-mcp --streamable-http  # Streamable HTTP
 ```
 
 ### 1.3 Client Configuration Snippets

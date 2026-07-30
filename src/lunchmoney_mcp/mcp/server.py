@@ -1,8 +1,8 @@
 """FastMCP server entrypoint registering modular domain tools."""
 
+import argparse
 import datetime
 import json
-import sys
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
@@ -90,8 +90,23 @@ def uncategorized_transactions_audit() -> str:
 
 
 def main() -> None:
-    """Launch the FastMCP server entrypoint supporting stdio and sse transports."""
-    transport = "sse" if "--sse" in sys.argv else "stdio"
+    """Launch the FastMCP server with the transport selected by a CLI flag."""
+    parser = argparse.ArgumentParser(description="Launch the Lunch Money MCP server.")
+    transport_group = parser.add_mutually_exclusive_group()
+    transport_group.add_argument(
+        "--sse", action="store_const", const="sse", dest="transport"
+    )
+    transport_group.add_argument(
+        "--http", action="store_const", const="http", dest="transport"
+    )
+    transport_group.add_argument(
+        "--streamable-http",
+        action="store_const",
+        const="streamable-http",
+        dest="transport",
+    )
+    args = parser.parse_args()
+    transport = args.transport or "stdio"
     mcp.run(transport=transport)
 
 
