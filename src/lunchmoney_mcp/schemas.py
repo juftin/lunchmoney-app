@@ -242,6 +242,23 @@ class TransactionInfo(BaseModel):
     """Transaction review status (cleared, uncleared, etc.)."""
 
 
+class TransactionAttachmentUploadRequest(BaseModel):
+    """File content and optional metadata for a transaction attachment."""
+
+    file: bytes
+    """Raw file content, encoded as base64 when supplied through JSON."""
+    filename: str | None = None
+    """Optional original filename retained by Lunch Money."""
+    notes: str | None = None
+    """Optional user-visible notes describing the attachment."""
+
+    def to_api_file(self) -> bytes | tuple[str, bytes]:
+        """Return the generated client's accepted multipart file value."""
+        if self.filename is None:
+            return self.file
+        return (self.filename, self.file)
+
+
 class SyncResult(BaseModel):
     """MCP tool sync_data response schema."""
 

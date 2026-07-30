@@ -194,11 +194,11 @@ graph TD
 
 ### Sprint 3: Transaction Mutations & Advanced Operations
 
-- [ ] Implement Transaction CRUD (`POST`, `PUT`, `DELETE` `/transactions`)
-- [ ] Implement Bulk Transaction operations (`PUT`, `DELETE` `/transactions`)
-- [ ] Implement Transaction Grouping (`POST /transactions/group`, `DELETE /transactions/group/{id}`)
-- [ ] Implement Transaction Splitting (`POST /transactions/split/{id}`, `DELETE /transactions/split/{id}`)
-- [ ] Implement Transaction Attachments (`POST`, `GET`, `DELETE` `/transactions/attachments`)
+- [x] Implement Transaction CRUD (`POST`, `PUT`, `DELETE` `/transactions`)
+- [x] Implement Bulk Transaction operations (`PUT`, `DELETE` `/transactions`)
+- [x] Implement Transaction Grouping (`POST /transactions/group`, `DELETE /transactions/group/{id}`)
+- [x] Implement Transaction Splitting (`POST /transactions/split/{id}`, `DELETE /transactions/split/{id}`)
+- [x] Implement Transaction Attachments (`POST`, `GET`, `DELETE` `/transactions/attachments`)
 
 ### Sprint 4: Budgets, Analytics & Production Security
 
