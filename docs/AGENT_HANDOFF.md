@@ -2,7 +2,7 @@
 
 ## 📋 Executive Overview & Purpose
 
-This document is an **exhaustive hand-off guide** for AI coding agents and human engineers maintaining **Lunch Money MCP**. It records architectural conventions and the completed implementation history through Sprint 7, when the Lunch Money v2 API coverage matrix was completed.
+This document is an **exhaustive hand-off guide** for AI coding agents and human engineers maintaining **Lunch Money MCP**. It records architectural conventions, the completed implementation history through Sprint 7, and the prioritized operational-product roadmap that follows completion of the Lunch Money v2 API coverage matrix.
 
 ---
 
@@ -46,6 +46,11 @@ graph LR
     S4 --> S5[Sprint 5: Production Security & CI/CD]
     S5 --> S6[Sprint 6: Remote MCP OAuth]
     S6 --> S7[Sprint 7: Tag Mutations & v2 Completion]
+    S7 --> S8[Sprint 8: Runtime & Scheduled Sync]
+    S8 --> S9[Sprint 9: Upstream Compatibility]
+    S9 --> S10[Sprint 10: Hardening & Observability]
+    S10 --> S11[Sprint 11: Server-Rendered Dashboard]
+    S11 --> S12[Sprint 12: CLI & Operator Experience]
 ```
 
 ---
@@ -83,3 +88,23 @@ Completed: optional OIDC OAuth protection for remote MCP HTTP transports, OAuth 
 ### Sprint 7: Tag Mutations & API Coverage Completion
 
 Completed: upstream-first tag `POST`, `PUT`, and `DELETE` operations through REST and MCP, including cached transaction-tag link cleanup. The documented Lunch Money v2 API matrix is now complete.
+
+### Sprint 8: Production Runtime & Scheduled Sync
+
+Planned: Gunicorn with the maintained Uvicorn worker package for production HTTP serving, and an opt-in APScheduler-driven `schedule` process for cron-based sync. Every scheduled run refreshes full metadata and incrementally refreshes transactions; the initial run bootstraps the rolling transaction window. Never start a scheduler inside Gunicorn workers and do not use `--preload` for scheduler coordination. The initial topology is one scheduler process plus any number of web workers, protected by the existing sync lock. HA scheduling requires PostgreSQL and a shared APScheduler data store/event broker; SQLite is not valid for shared schedulers.
+
+### Sprint 9: Upstream API Compatibility & Coverage Audit
+
+Planned: continuously compare the generated client with Lunch Money's alpha OpenAPI specification, maintain a machine-readable coverage manifest, and test against the mock service or a disposable test budget. Treat upstream version changes as an explicit compatibility review.
+
+### Sprint 10: Operational Hardening & Observability
+
+Planned: readiness/health endpoints, safe structured logging and Prometheus-compatible `/metrics`, network limits and trusted-proxy configuration, secret/backup/runbook guidance, hardened images, security scans, and production smoke tests. `/metrics` must be protected by network policy or authentication and must never expose secrets or financial payloads.
+
+### Sprint 11: Server-Rendered Financial Dashboard
+
+Planned: a single-user, single–Lunch Money-account, authenticated and accessible FastAPI HTML dashboard using server-rendered templates and existing services. It must not become a separate JavaScript application or duplicate service-layer analytics.
+
+### Sprint 12: CLI, Packaging & Operator Experience
+
+Planned: evolve the executable into `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version` subcommands, with clear transport help, redacted diagnostics, documented config precedence, and Docker Compose-first deployment/upgrade examples.

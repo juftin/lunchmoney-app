@@ -6,7 +6,7 @@ This document serves as the master planning blueprint for **Lunch Money MCP**. I
 
 1. Dual **Deployment Architectures** (Persistent Cached Mode vs. Stateless In-Memory Mode).
 2. A **100% Granular Mapping** of all 39 endpoints across 10 domain areas in the [Lunch Money v2 OpenAPI Specification](https://alpha.lunchmoney.dev/v2/docs).
-3. An 8-sprint implementation history through complete v2 API coverage.
+3. An 8-sprint implementation history through complete v2 API coverage, followed by a prioritized operational-product roadmap.
 
 ---
 
@@ -224,3 +224,96 @@ graph TD
 - [x] Implement upstream-first tag creation, update, and deletion through REST and MCP.
 - [x] Reconcile cached transaction-tag links before deleting a tag.
 - [x] Complete the documented 39-endpoint Lunch Money v2 API matrix.
+
+---
+
+## 🧭 Post-Coverage Roadmap
+
+The v2 API matrix is complete, but the upstream API is an open alpha and the
+server still needs operational and product work. The following sprints are
+ordered by dependency and deployment value. They are plans, not delivered
+features.
+
+### Sprint 8: Production Runtime & Scheduled Sync
+
+- [ ] Replace the FastAPI development CLI in deployment assets with Gunicorn
+      serving the ASGI application through the maintained `uvicorn-worker` worker
+      package. Keep direct Uvicorn for local development.
+- [ ] Add a dedicated `lunchmoney-mcp schedule` process using APScheduler's
+      async scheduler and an explicit cron expression/timezone configuration for
+      scheduled sync. Scheduling remains opt-in; `uvx lunchmoney-mcp` stdio and
+      `serve` without `--schedule` never start background work.
+- [ ] Define the initial schedule policy as full metadata refresh plus
+      incremental transaction refresh, using the persisted transaction watermark
+      and safety margin. The first run without a watermark bootstraps the rolling
+      transaction window before subsequent runs become incremental.
+- [ ] Keep schedulers out of Gunicorn web workers. Do **not** use Gunicorn
+      `--preload` as scheduler coordination: it preloads the app before worker
+      forks and cannot guarantee one scheduler or one execution.
+- [ ] Make the default deployment topology one scheduler process plus one or
+      more stateless web workers. Serialize sync through the existing distributed
+      migration/sync lock and expose last-run status.
+- [ ] Define an HA scheduler mode only for PostgreSQL plus a shared APScheduler
+      data store and event broker (Redis or PostgreSQL notifications). Reject
+      multi-scheduler SQLite configurations; SQLite is supported only with the
+      single dedicated scheduler process.
+- [ ] Add graceful startup/shutdown, missed-run coalescing, one-at-a-time sync
+      execution, structured run results, and integration coverage for duplicate
+      scheduler prevention.
+
+### Sprint 9: Upstream API Compatibility & Coverage Audit
+
+- [ ] Pin and regularly regenerate the generated Lunch Money client from the
+      current upstream OpenAPI specification; diff paths, operations, schemas, and
+      enum values in CI.
+- [ ] Add a machine-readable endpoint coverage manifest and a test that fails
+      when a supported upstream operation lacks its REST/MCP/service mapping.
+- [ ] Validate supported operations against Lunch Money's mock service or a
+      disposable test budget, with synthetic fixtures retained for unit tests.
+- [ ] Establish an alpha-API compatibility policy: version pinning, release
+      notes review, deprecation handling, and a documented response for a breaking
+      upstream change.
+
+### Sprint 10: Operational Hardening & Observability
+
+- [ ] Add health, readiness, and dependency checks that distinguish a live
+      process from a database-ready and scheduler-ready service.
+- [ ] Add structured logs, request IDs, safe error responses, and metrics for
+      HTTP/MCP requests, upstream failures/rate limits, sync duration, and cache
+      freshness. Export Prometheus-compatible metrics at `/metrics`; protect it by
+      network policy or authentication. Never emit tokens or financial payloads in
+      logs or metrics.
+- [ ] Set explicit trusted-proxy, allowed-host, CORS, request-size, timeout,
+      concurrency, and rate-limit policies, all secure by default.
+- [ ] Document TLS termination, secret rotation, database backup/restore,
+      retention, least-privilege deployment, and an incident/runbook checklist.
+- [ ] Add dependency/security scanning, container hardening, and production
+      smoke tests to CI/CD.
+
+### Sprint 11: Server-Rendered Financial Dashboard
+
+- [ ] Add a small, authenticated HTML dashboard served by FastAPI, using
+      server-rendered templates and semantic HTML/CSS—no separate JavaScript
+      application or client-side financial-data store. Scope the first release to
+      one authenticated user and one Lunch Money account.
+- [ ] Start with dashboard cards for cache freshness, account summary,
+      category spending, budget status, recent transactions, and the last scheduled
+      sync outcome.
+- [ ] Reuse existing services and schemas; dashboard routes remain thin
+      delegators and do not introduce duplicate analytics logic.
+- [ ] Ensure accessible keyboard navigation, responsive layouts, CSRF-safe
+      forms for any future mutations, and integration tests for authorization and
+      rendered empty/error states.
+
+### Sprint 12: CLI, Packaging & Operator Experience
+
+- [ ] Replace the single-purpose argument parser with discoverable subcommands:
+      `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version`.
+- [ ] Keep MCP transport flags mutually exclusive under `mcp`; make the stdio
+      default explicit in generated help and shell-completion documentation.
+- [ ] Provide config precedence and validation (`environment > config file >
+defaults`), redacted `doctor` diagnostics, meaningful exit codes, and no
+      secret values in output.
+- [ ] Publish Docker Compose as the first-class deployment path, with
+      API-only, MCP-only, combined, and dedicated-scheduler examples; add
+      release/versioning and upgrade documentation.
