@@ -3,7 +3,7 @@ Pydantic schemas and response models for FastAPI endpoints and MCP tools.
 """
 
 import datetime
-from typing import Any
+from typing import Any, Literal
 
 from lunchmoney.models import (
     AccountTypeEnum,
@@ -315,3 +315,29 @@ class GroupedSpendingResponse(BaseModel):
     """Aggregate income total across income categories."""
     categories: list[CategorySpending] = Field(default_factory=list)
     """Category spending rollups grouped by top-level category."""
+
+
+class SpendingTrendPoint(BaseModel):
+    """One time-series bucket of categorized spending activity."""
+
+    start_date: datetime.date
+    """Inclusive calendar date on which this bucket begins."""
+    total_spending: float
+    """Aggregate expense amount in this bucket."""
+    total_income: float
+    """Aggregate income amount in this bucket."""
+    transaction_count: int
+    """Number of included transactions in this bucket."""
+
+
+class SpendingTrendsResponse(BaseModel):
+    """Time-series spending analysis over a requested transaction window."""
+
+    start_date: datetime.date
+    """Inclusive start date of the analyzed transaction window."""
+    end_date: datetime.date
+    """Inclusive end date of the analyzed transaction window."""
+    granularity: Literal["daily", "weekly", "monthly"]
+    """Calendar period used to group transactions into trend points."""
+    trends: list[SpendingTrendPoint] = Field(default_factory=list)
+    """Chronologically ordered spending trend points."""

@@ -1,14 +1,14 @@
 """Spending breakdown API endpoints."""
 
 import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
 
 from lunchmoney_mcp.app.dependencies import get_database
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.schemas import GroupedSpendingResponse
-from lunchmoney_mcp.services import fetch_category_spending
+from lunchmoney_mcp.schemas import GroupedSpendingResponse, SpendingTrendsResponse
+from lunchmoney_mcp.services import fetch_category_spending, fetch_spending_trends
 
 router = APIRouter(tags=["Spending"])
 """FastAPI APIRouter for grouped spending analysis endpoints."""
@@ -45,4 +45,26 @@ async def get_category_spending(
     """
     return await fetch_category_spending(
         db=db, start_date=start_date, end_date=end_date, days=days
+    )
+
+
+@router.get(
+    path="/spending/trends",
+    response_model=SpendingTrendsResponse,
+    operation_id="get_spending_trends",
+)
+async def get_spending_trends(
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    granularity: Literal["daily", "weekly", "monthly"] = "monthly",
+    start_date: datetime.date | None = None,
+    end_date: datetime.date | None = None,
+    days: int | None = 30,
+) -> SpendingTrendsResponse:
+    """Fetch time-series income and spending totals over a date range."""
+    return await fetch_spending_trends(
+        db=db,
+        granularity=granularity,
+        start_date=start_date,
+        end_date=end_date,
+        days=days,
     )
