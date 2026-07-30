@@ -120,6 +120,15 @@ _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`
 
 ---
 
+### 🏷️ Sprint 7: Tag Mutations & API Coverage Completion
+
+- [x] **Tag Creation**: Implement Upstream-First `create_tag`, `POST /tags`, and FastMCP tool.
+- [x] **Tag Update**: Implement Upstream-First `update_tag`, `PUT /tags/{id}`, and FastMCP tool.
+- [x] **Tag Deletion**: Implement Upstream-First `delete_tag`, `DELETE /tags/{id}`, and FastMCP tool with cached transaction-link reconciliation.
+- [x] **Test Suite**: Add regression coverage for tag mutation delegation, cache updates, routes, and MCP tools.
+
+---
+
 ## 📝 Documentation Auto-Improvement Protocol
 
 Whenever an agent completes a task, refactor code, or modify a signature:
