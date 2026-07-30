@@ -9,6 +9,7 @@ from fastmcp.utilities.lifespan import combine_lifespans
 from lunchmoney_mcp.app.lifespan import lifespan
 from lunchmoney_mcp.app.routers import (
     accounts_router,
+    budgets_router,
     categories_router,
     recurring_router,
     spending_router,
@@ -50,6 +51,7 @@ async def root() -> RootResponse:
 fastapi_app.include_router(sync_router)
 fastapi_app.include_router(user_router)
 fastapi_app.include_router(summary_router)
+fastapi_app.include_router(budgets_router)
 fastapi_app.include_router(categories_router)
 fastapi_app.include_router(accounts_router)
 fastapi_app.include_router(transactions_router)

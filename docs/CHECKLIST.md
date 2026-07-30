@@ -91,7 +91,7 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-3-transactio
 
 _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-4-budgets--spending-trends)
 
-- [ ] **Budget Settings**: Implement `fetch_budget_settings`, `GET /budgets/settings`, and `get_budget_settings` tool.
+- [x] **Budget Settings**: Implement `fetch_budget_settings`, `GET /budgets/settings`, and `get_budget_settings` tool.
 - [ ] **Budget Upsert**: Implement `set_budget_value`, `PUT /budgets`, and `upsert_budget` tool.
 - [ ] **Budget Clear**: Implement `clear_budget_value`, `DELETE /budgets`, and `clear_budget` tool.
 - [ ] **Spending Trends Analysis**: Implement `fetch_spending_trends` (daily/weekly/monthly time-series aggregation), `GET /spending/trends`, and `get_spending_trends` tool.

@@ -202,6 +202,6 @@ graph TD
 
 ### Sprint 4: Budgets, Analytics & Production Security
 
-- [ ] Implement Budget Settings & Values (`GET /budgets/settings`, `PUT /budgets`, `DELETE /budgets`)
+- [ ] Implement Budget Values (`PUT /budgets`, `DELETE /budgets`)
 - [ ] Implement Spending Trends time-series analysis (`GET /spending/trends`)
 - [ ] API Key auth guard & GitHub Actions CI/CD workflows (`.github/workflows/ci.yaml`).
