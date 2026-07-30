@@ -129,6 +129,47 @@ _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`
 
 ---
 
+### ⏱️ Sprint 8: Production Runtime & Scheduled Sync
+
+_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-8-production-runtime--scheduled-sync)
+
+- [ ] **Gunicorn Runtime**: Replace FastAPI CLI deployment commands with Gunicorn and the maintained Uvicorn worker package; retain direct Uvicorn for local development.
+- [ ] **Dedicated Scheduler**: Add an opt-in `lunchmoney-mcp schedule` APScheduler process with configurable cron, timezone, graceful lifecycle, and sync run reporting; each run refreshes full metadata and incrementally refreshes transactions.
+- [ ] **Multi-Worker Safety**: Ensure Gunicorn workers never start schedulers; serialize scheduled syncs with the distributed lock and test duplicate-prevention behavior.
+- [ ] **HA Configuration**: Support multi-scheduler coordination only with PostgreSQL and a shared APScheduler data store/event broker; reject SQLite in that mode.
+
+### 🔎 Sprint 9: Upstream API Compatibility & Coverage Audit
+
+_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-9-upstream-api-compatibility--coverage-audit)
+
+- [ ] **Spec Drift Detection**: Pin/regenerate the generated client and fail CI when endpoint, schema, or enum changes are not reconciled.
+- [ ] **Coverage Manifest**: Verify every supported upstream operation has a service, REST, and MCP mapping.
+- [ ] **Upstream Contract Tests**: Exercise the mock service or a disposable test budget without real financial data.
+
+### 🛡️ Sprint 10: Operational Hardening & Observability
+
+_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-10-operational-hardening--observability)
+
+- [ ] **Health and Telemetry**: Add health/readiness checks, safe structured logs, request IDs, and Prometheus-compatible `/metrics` operational metrics protected by network policy or authentication.
+- [ ] **Network Hardening**: Apply secure proxy, host, CORS, size, timeout, concurrency, and rate-limit defaults.
+- [ ] **Deployment Safety**: Add security scanning, container hardening, backup/restore guidance, and production smoke tests.
+
+### 📈 Sprint 11: Server-Rendered Financial Dashboard
+
+_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-financial-dashboard)
+
+- [ ] **HTML Dashboard**: Add authenticated, accessible single-user, single-account server-rendered summary, spending, budget, transaction, and sync-status views without a separate JavaScript application.
+- [ ] **Service Reuse**: Keep dashboard routes as thin delegators to existing services and test authorized, empty, and error rendering.
+
+### 🧰 Sprint 12: CLI, Packaging & Operator Experience
+
+_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-experience)
+
+- [ ] **CLI Subcommands**: Provide `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version` with safe configuration validation and meaningful exit codes.
+- [ ] **Deployment Docs**: Make Docker Compose the first-class deployment path and document package, scheduler, and upgrade workflows.
+
+---
+
 ## 📝 Documentation Auto-Improvement Protocol
 
 Whenever an agent completes a task, refactor code, or modify a signature:
