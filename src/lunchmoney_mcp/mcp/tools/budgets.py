@@ -2,11 +2,21 @@
 
 from typing import TYPE_CHECKING
 
-from lunchmoney.models import BudgetSettingsResponseObject
+import datetime
+
+from lunchmoney.models import (
+    BudgetSettingsResponseObject,
+    BudgetUpsertResponseObject,
+    UpsertBudgetRequestObject,
+)
 
 from lunchmoney_mcp.app.dependencies import get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
-from lunchmoney_mcp.services import fetch_budget_settings
+from lunchmoney_mcp.services import (
+    clear_budget_value,
+    fetch_budget_settings,
+    set_budget_value,
+)
 
 if TYPE_CHECKING:
     from lunchmoney_mcp.client import LunchMoneyApp
@@ -23,3 +33,26 @@ async def get_budget_settings() -> BudgetSettingsResponseObject:
     """
     client: LunchMoneyApp = get_lunchmoney_app()
     return await fetch_budget_settings(client=client)
+
+
+@mcp.tool()
+async def upsert_budget(
+    request: UpsertBudgetRequestObject,
+) -> BudgetUpsertResponseObject:
+    """Set one category's budget value for a budget period."""
+    client: LunchMoneyApp = get_lunchmoney_app()
+    return await set_budget_value(client=client, request=request)
+
+
+@mcp.tool()
+async def clear_budget(
+    category_id: int,
+    start_date: datetime.date,
+) -> None:
+    """Clear one category's budget value for a budget period."""
+    client: LunchMoneyApp = get_lunchmoney_app()
+    await clear_budget_value(
+        client=client,
+        category_id=category_id,
+        start_date=start_date,
+    )

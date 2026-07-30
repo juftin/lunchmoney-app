@@ -9,7 +9,11 @@ from lunchmoney_mcp.services.accounts import (
     trigger_plaid_fetch,
     update_manual_account,
 )
-from lunchmoney_mcp.services.budgets import fetch_budget_settings
+from lunchmoney_mcp.services.budgets import (
+    clear_budget_value,
+    fetch_budget_settings,
+    set_budget_value,
+)
 from lunchmoney_mcp.services.categories import (
     create_category,
     delete_category,
@@ -21,7 +25,10 @@ from lunchmoney_mcp.services.recurring import (
     fetch_recurring_item_by_id,
     fetch_recurring_items,
 )
-from lunchmoney_mcp.services.spending import fetch_category_spending
+from lunchmoney_mcp.services.spending import (
+    fetch_category_spending,
+    fetch_spending_trends,
+)
 from lunchmoney_mcp.services.summary import fetch_account_summary
 from lunchmoney_mcp.services.sync import execute_mcp_sync, execute_sync
 from lunchmoney_mcp.services.tags import fetch_tag_by_id, fetch_tags
@@ -48,10 +55,12 @@ __all__ = [
     "execute_sync",
     "fetch_account_summary",
     "fetch_budget_settings",
+    "clear_budget_value",
     "fetch_accounts",
     "fetch_categories",
     "fetch_category_by_id",
     "fetch_category_spending",
+    "fetch_spending_trends",
     "fetch_manual_account_by_id",
     "fetch_plaid_account_by_id",
     "fetch_recent_transactions",
@@ -80,4 +89,5 @@ __all__ = [
     "update_manual_account",
     "delete_manual_account",
     "trigger_plaid_fetch",
+    "set_budget_value",
 ]

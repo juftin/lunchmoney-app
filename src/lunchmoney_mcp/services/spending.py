@@ -12,7 +12,21 @@ from lunchmoney_mcp.schemas import (
     CategorySpending,
     ChildCategorySpending,
     GroupedSpendingResponse,
+    SpendingTrendPoint,
+    SpendingTrendsResponse,
 )
+
+
+def _trend_bucket_start(
+    value: datetime.date,
+    granularity: str,
+) -> datetime.date:
+    """Return the calendar start date for a requested trend granularity."""
+    if granularity == "daily":
+        return value
+    if granularity == "weekly":
+        return value - datetime.timedelta(days=value.weekday())
+    return value.replace(day=1)
 
 
 async def fetch_category_spending(
@@ -139,4 +153,92 @@ async def fetch_category_spending(
         total_spending=float(total_spending),
         total_income=float(total_income),
         categories=spending_items,
+    )
+
+
+async def fetch_spending_trends(
+    db: LunchMoneyDatabase,
+    granularity: str = "monthly",
+    start_date: datetime.date | None = None,
+    end_date: datetime.date | None = None,
+    days: int | None = 30,
+) -> SpendingTrendsResponse:
+    """Aggregate synchronized transactions into calendar time-series buckets.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+    granularity : str
+        One of ``daily``, ``weekly``, or ``monthly``.
+    start_date : datetime.date | None
+        Optional inclusive start date for filtering transactions.
+    end_date : datetime.date | None
+        Optional inclusive end date for filtering transactions. Defaults to today.
+    days : int | None
+        Number of past days to analyze if ``start_date`` is omitted. Defaults to 30.
+
+    Returns
+    -------
+    SpendingTrendsResponse
+        Chronologically ordered income and expense totals for each populated bucket.
+
+    Raises
+    ------
+    ValueError
+        If ``granularity`` is not a supported calendar period.
+    """
+    if granularity not in {"daily", "weekly", "monthly"}:
+        raise ValueError("granularity must be daily, weekly, or monthly")
+
+    resolved_end = end_date or datetime.date.today()
+    resolved_start = (
+        start_date
+        if start_date is not None
+        else resolved_end - datetime.timedelta(days=days if days is not None else 30)
+    )
+    categories = {category.id: category for category in await db.list(Category)}
+
+    async with db.session() as session:
+        statement = select(Transaction).where(
+            Transaction.var_date >= resolved_start,
+            Transaction.var_date <= resolved_end,
+            Transaction.is_split_parent != True,  # noqa: E712
+        )
+        results: ScalarResult[Transaction] = await session.exec(statement)
+        transactions = results.all()
+
+    buckets: dict[datetime.date, dict[str, Decimal | int]] = {}
+    for transaction in transactions:
+        bucket_start = _trend_bucket_start(transaction.var_date, granularity)
+        bucket = buckets.setdefault(
+            bucket_start,
+            {
+                "total_spending": Decimal(0),
+                "total_income": Decimal(0),
+                "transaction_count": 0,
+            },
+        )
+        category = categories.get(transaction.category_id)
+        amount_key = (
+            "total_income"
+            if category is not None and category.is_income
+            else "total_spending"
+        )
+        bucket[amount_key] += transaction.amount  # type: ignore[operator]
+        bucket["transaction_count"] += 1  # type: ignore[operator]
+
+    return SpendingTrendsResponse(
+        start_date=resolved_start,
+        end_date=resolved_end,
+        granularity=granularity,  # type: ignore[arg-type]
+        trends=[
+            SpendingTrendPoint(
+                start_date=bucket_start,
+                total_spending=float(bucket["total_spending"]),
+                total_income=float(bucket["total_income"]),
+                transaction_count=int(bucket["transaction_count"]),
+            )
+            for bucket_start, bucket in sorted(buckets.items())
+        ],
     )

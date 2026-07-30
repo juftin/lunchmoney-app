@@ -163,10 +163,11 @@ graph TD
 
 | Upstream v2 Endpoint / Local Feature |  Method  | Local Route              | FastMCP Tool            | Service Function          |   Status   |
 | :----------------------------------- | :------: | :----------------------- | :---------------------- | :------------------------ | :--------: |
-| `/budgets/settings`                  |  `GET`   | `GET /budgets/settings`  | `get_budget_settings`   | `fetch_budget_settings`   | ⏳ Planned |
-| `/budgets`                           |  `PUT`   | `PUT /budgets`           | `upsert_budget`         | `set_budget_value`        | ⏳ Planned |
-| `/budgets`                           | `DELETE` | `DELETE /budgets`        | `clear_budget`          | `clear_budget_value`      | ⏳ Planned |
+| `/budgets/settings`                  |  `GET`   | `GET /budgets/settings`  | `get_budget_settings`   | `fetch_budget_settings`   |  ✅ Done   |
+| `/budgets`                           |  `PUT`   | `PUT /budgets`           | `upsert_budget`         | `set_budget_value`        |  ✅ Done   |
+| `/budgets`                           | `DELETE` | `DELETE /budgets`        | `clear_budget`          | `clear_budget_value`      |  ✅ Done   |
 | Local Analytics (Category Rollup)    |  `GET`   | `GET /spending/category` | `get_category_spending` | `fetch_category_spending` |  ✅ Done   |
+| Local Analytics (Time Series)        |  `GET`   | `GET /spending/trends`   | `get_spending_trends`   | `fetch_spending_trends`   |  ✅ Done   |
 
 ---
 
@@ -202,6 +203,6 @@ graph TD
 
 ### Sprint 4: Budgets, Analytics & Production Security
 
-- [ ] Implement Budget Values (`PUT /budgets`, `DELETE /budgets`)
-- [ ] Implement Spending Trends time-series analysis (`GET /spending/trends`)
+- [x] Implement Budget Values (`PUT /budgets`, `DELETE /budgets`)
+- [x] Implement Spending Trends time-series analysis (`GET /spending/trends`)
 - [ ] API Key auth guard & GitHub Actions CI/CD workflows (`.github/workflows/ci.yaml`).
