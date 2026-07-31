@@ -23,6 +23,17 @@ dependencies = [
 [project.scripts]
 lunchmoney-mcp = "lunchmoney_mcp.cli:main"
 
+[tool.lunchmoney_contract]
+client_package = "lunchmoney-python-async"
+client_version = "2.25.0"
+openapi_spec_package = "@lunch-money/v2-api-spec"
+openapi_spec_version = "2.9.4"
+
+[tool.pytest.ini_options]
+markers = [
+  "upstream_contract: tests that call Lunch Money's official static mock service"
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -34,6 +45,7 @@ dev = [
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
   "pytest-cov>=7.1.0",
+  "pyyaml==6.0.3",
   "ruff>=0.15.22",
   "ty>=0.0.61"
 ]

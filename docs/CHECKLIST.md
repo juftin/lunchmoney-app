@@ -143,9 +143,9 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-8-production-runtime--sc
 
 _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-9-upstream-api-compatibility--coverage-audit)
 
-- [ ] **Spec Drift Detection**: Pin/regenerate the generated client and fail CI when endpoint, schema, or enum changes are not reconciled.
-- [ ] **Coverage Manifest**: Verify every supported upstream operation has a service, REST, and MCP mapping.
-- [ ] **Upstream Contract Tests**: Exercise the mock service or a disposable test budget without real financial data.
+- [x] **Spec Drift Detection**: Pin/regenerate the generated client and fail CI when endpoint, schema, or enum changes are not reconciled.
+- [x] **Coverage Manifest**: Verify every supported upstream operation has a service, REST, and MCP mapping.
+- [x] **Upstream Contract Tests**: Exercise the mock service or a disposable test budget without real financial data.
 
 ### 🛡️ Sprint 10: Operational Hardening & Observability
 
