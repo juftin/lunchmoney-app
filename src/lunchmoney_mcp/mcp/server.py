@@ -3,10 +3,17 @@
 import argparse
 import datetime
 import json
+import sys
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.app.auth import get_mcp_oauth_provider
-from lunchmoney_mcp.config import RuntimeSettings
+from lunchmoney_mcp.config import (
+    McpCliSettings,
+    RuntimeSettings,
+    configure_runtime_mode,
+    configure_runtime_settings,
+    parse_cli_settings,
+)
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.mcp.tools import (
     accounts,
@@ -113,8 +120,6 @@ def create_argument_parser() -> argparse.ArgumentParser:
         const="streamable-http",
         dest="transport",
     )
-    parser.add_argument("--host", help="Host to bind for an HTTP transport.")
-    parser.add_argument("--port", type=int, help="Port to bind for an HTTP transport.")
     return parser
 
 
@@ -129,22 +134,31 @@ def configure_auth(settings: RuntimeSettings) -> None:
     mcp.auth = get_mcp_oauth_provider(settings=settings)
 
 
-def run_from_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+def run_from_args(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    settings: RuntimeSettings,
+) -> None:
     """Run FastMCP using arguments parsed by :func:`create_argument_parser`."""
     transport = args.transport or "stdio"
     if transport == "stdio":
-        if args.host is not None or args.port is not None:
+        if hasattr(args, "host") or hasattr(args, "port"):
             parser.error("--host and --port require an HTTP transport")
         mcp.run(transport=transport)
         return
 
-    mcp.run(transport=transport, host=args.host, port=args.port)
+    mcp.run(transport=transport, host=settings.host, port=settings.port)
 
 
 def main(argv: list[str] | None = None) -> None:
     """Launch the FastMCP server with the transport selected by a CLI flag."""
+    arguments = list(sys.argv[1:] if argv is None else argv)
     parser = create_argument_parser()
-    run_from_args(parser, parser.parse_args(argv))
+    settings = parse_cli_settings(arguments, McpCliSettings, root_parser=parser)
+    configure_runtime_settings(settings)
+    configure_runtime_mode("mcp")
+    configure_auth(settings)
+    run_from_args(parser, parser.parse_args(arguments), settings)
 
 
 __all__ = [

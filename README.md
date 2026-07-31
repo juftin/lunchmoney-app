@@ -54,10 +54,11 @@ task run -- lunchmoney-mcp schedule \
   --schedule-days 30
 ```
 
-Pydantic Settings parses safe runtime flags directly (for example,
-`--stateless`, `--server-host`, and `--sync-safety-margin-minutes`). Credentials and
-connection URLs are environment/dotenv-only; all settings use documented
-`LUNCHMONEY_` environment variables.
+Pydantic Settings parses safe runtime flags only for the command that uses them:
+`mcp` exposes transport, OAuth, `--host`, and `--port`; `schedule` exposes
+scheduling and `--stateless`; and `serve` exposes its web-server, scheduler,
+sync, and OAuth options. Credentials and connection URLs are environment/dotenv-only;
+all settings use documented `LUNCHMONEY_` environment variables.
 
 The scheduler reports its most recent outcome at `GET /sync/status` and through
 the `get_sync_status` MCP tool. It never runs in the Gunicorn web process. To

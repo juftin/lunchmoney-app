@@ -8,8 +8,11 @@ import pytest
 from lunchmoney_mcp.config import (
     DEFAULT_DATABASE_URL,
     IN_MEMORY_DATABASE_URL,
+    McpCliSettings,
     RuntimeSettings,
+    ScheduleCliSettings,
     SecretSettings,
+    ServeCliSettings,
     configure_runtime_mode,
     export_runtime_settings,
     get_secret_settings,
@@ -43,8 +46,8 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LUNCHMONEY_SCHEDULE_TIMEZONE", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SCHEDULE_DAYS", raising=False)
     monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_SERVER_HOST", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_SERVER_PORT", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_HOST", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_PORT", raising=False)
 
     secret_settings = SecretSettings()
     settings = RuntimeSettings()
@@ -63,8 +66,8 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.schedule_timezone == "UTC"
     assert settings.schedule_days == 30
     assert settings.embed_scheduler is False
-    assert settings.server_host == "127.0.0.1"
-    assert settings.server_port == 8000
+    assert settings.host == "127.0.0.1"
+    assert settings.port == 8000
 
 
 def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -95,8 +98,8 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LUNCHMONEY_SCHEDULE_TIMEZONE", "America/Denver")
     monkeypatch.setenv("LUNCHMONEY_SCHEDULE_DAYS", "45")
     monkeypatch.setenv("LUNCHMONEY_EMBED_SCHEDULER", "true")
-    monkeypatch.setenv("LUNCHMONEY_SERVER_HOST", "0.0.0.0")
-    monkeypatch.setenv("LUNCHMONEY_SERVER_PORT", "9000")
+    monkeypatch.setenv("LUNCHMONEY_HOST", "0.0.0.0")
+    monkeypatch.setenv("LUNCHMONEY_PORT", "9000")
 
     secret_settings = SecretSettings()
     settings = RuntimeSettings()
@@ -118,8 +121,8 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.schedule_timezone == "America/Denver"
     assert settings.schedule_days == 45
     assert settings.embed_scheduler is True
-    assert settings.server_host == "0.0.0.0"
-    assert settings.server_port == 9000
+    assert settings.host == "0.0.0.0"
+    assert settings.port == 9000
 
 
 def test_settings_parse_runtime_cli_arguments() -> None:
@@ -133,19 +136,34 @@ def test_settings_parse_runtime_cli_arguments() -> None:
             "--schedule-days",
             "45",
             "--embed-scheduler",
-            "--server-host",
+            "--host",
             "0.0.0.0",
-            "--server-port",
+            "--port",
             "9000",
-        ]
+        ],
+        ServeCliSettings,
     )
 
     assert settings.schedule_cron == "15 4 * * 1-5"
     assert settings.schedule_timezone == "America/Denver"
     assert settings.schedule_days == 45
     assert settings.embed_scheduler is True
-    assert settings.server_host == "0.0.0.0"
-    assert settings.server_port == 9000
+    assert settings.host == "0.0.0.0"
+    assert settings.port == 9000
+
+
+def test_cli_settings_prefer_flags_over_environment_and_dotenv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Resolve a command's CLI flags before environment variables and `.env` values."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("LUNCHMONEY_HOST=dotenv-host\n")
+    monkeypatch.setenv("LUNCHMONEY_HOST", "environment-host")
+
+    settings = parse_cli_settings(["--host", "cli-host"], McpCliSettings)
+
+    assert settings.host == "cli-host"
 
 
 def test_cli_help_only_exposes_lowercase_options(
@@ -153,7 +171,7 @@ def test_cli_help_only_exposes_lowercase_options(
 ) -> None:
     """Expose safe lowercase runtime options without secret settings."""
     with pytest.raises(SystemExit):
-        parse_cli_settings(["--help"])
+        parse_cli_settings(["--help"], ServeCliSettings)
 
     help_output = capsys.readouterr().out
     assert "--schedule-cron" in help_output
@@ -169,14 +187,47 @@ def test_cli_help_only_exposes_lowercase_options(
 def test_cli_rejects_secret_options() -> None:
     """Prevent credentials from being accepted as command-line arguments."""
     with pytest.raises(SystemExit):
-        parse_cli_settings(["--access-token", "synthetic-secret"])
+        parse_cli_settings(
+            ["--access-token", "synthetic-secret"],
+            ServeCliSettings,
+        )
 
 
-def test_runtime_cli_options_do_not_conflict_with_mcp_transport_options() -> None:
-    """Keep runtime serve flags distinct from the MCP transport's host and port."""
+def test_runtime_cli_options_share_mcp_transport_host_and_port() -> None:
+    """Use the runtime host and port flags with an HTTP MCP transport."""
     from lunchmoney_mcp.mcp.server import create_argument_parser
 
-    parse_cli_settings(["--stdio"], root_parser=create_argument_parser())
+    settings = parse_cli_settings(
+        ["--streamable-http", "--host", "0.0.0.0", "--port", "9000"],
+        McpCliSettings,
+        root_parser=create_argument_parser(),
+    )
+
+    assert settings.host == "0.0.0.0"
+    assert settings.port == 9000
+
+
+@pytest.mark.parametrize(
+    ("settings_type", "expected", "unexpected"),
+    [
+        (McpCliSettings, "--host", "--schedule-cron"),
+        (ScheduleCliSettings, "--schedule-cron", "--mcp-oauth-client-id"),
+        (ServeCliSettings, "--embed-scheduler", "--access-token"),
+    ],
+)
+def test_command_cli_help_only_shows_relevant_options(
+    capsys: pytest.CaptureFixture[str],
+    settings_type: type[McpCliSettings | ScheduleCliSettings | ServeCliSettings],
+    expected: str,
+    unexpected: str,
+) -> None:
+    """Show each entry point only the safe flags it can use."""
+    with pytest.raises(SystemExit):
+        parse_cli_settings(["--help"], settings_type)
+
+    help_output = capsys.readouterr().out
+    assert expected in help_output
+    assert unexpected not in help_output
 
 
 def test_export_runtime_settings_preserves_cli_values_for_reloader(
@@ -184,19 +235,19 @@ def test_export_runtime_settings_preserves_cli_values_for_reloader(
 ) -> None:
     """Export explicit runtime values into the environment inherited by reloaders."""
     monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_SERVER_HOST", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_SERVER_PORT", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_HOST", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_PORT", raising=False)
     settings = RuntimeSettings(
         embed_scheduler=True,
-        server_host="0.0.0.0",
-        server_port=9000,
+        host="0.0.0.0",
+        port=9000,
     )
 
     export_runtime_settings(settings)
 
     assert os.environ["LUNCHMONEY_EMBED_SCHEDULER"] == "true"
-    assert os.environ["LUNCHMONEY_SERVER_HOST"] == "0.0.0.0"
-    assert os.environ["LUNCHMONEY_SERVER_PORT"] == "9000"
+    assert os.environ["LUNCHMONEY_HOST"] == "0.0.0.0"
+    assert os.environ["LUNCHMONEY_PORT"] == "9000"
 
 
 def test_mcp_runtime_forces_ephemeral_database(

@@ -4,7 +4,7 @@ from functools import cache
 import os
 from typing import Any, Literal, cast
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, CliSettingsSource, SettingsConfigDict
 
 DEFAULT_DATABASE_URL: str = "sqlite+aiosqlite:///lunchmoney.db"
@@ -71,8 +71,8 @@ class SecretSettings(BaseSettings):
     """Redis connection URL for distributed locking."""
 
 
-class RuntimeSettings(BaseSettings):
-    """Environment and CLI settings that do not contain credentials."""
+class RuntimeSettingsBase(BaseSettings):
+    """Base model configuration for environment-backed non-secret settings."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -82,6 +82,10 @@ class RuntimeSettings(BaseSettings):
         cli_kebab_case=True,
         cli_implicit_flags=True,
     )
+
+
+class OAuthSettings(BaseModel):
+    """Non-secret OAuth settings shared by the MCP and FastAPI runtimes."""
 
     mcp_oauth_config_url: str | None = Field(
         default=None,
@@ -107,11 +111,19 @@ class RuntimeSettings(BaseSettings):
     )
     """Optional OAuth audience requested from the identity provider."""
 
+
+class ExecutionSettings(BaseModel):
+    """Non-secret settings controlling application execution and synchronization."""
+
     environment: str = Field(
         default="development",
         description="Application deployment environment",
     )
     """Application deployment environment name."""
+
+
+class StatelessSettings(BaseModel):
+    """Non-secret settings controlling database persistence."""
 
     stateless: bool = Field(
         default=False,
@@ -124,6 +136,10 @@ class RuntimeSettings(BaseSettings):
         description="Safety overlap margin in minutes for incremental ETL queries",
     )
     """Safety overlap margin for incremental ETL queries."""
+
+
+class ScheduleSettings(BaseModel):
+    """Non-secret settings controlling periodic synchronization."""
 
     schedule_cron: str = Field(
         default="0 * * * *",
@@ -144,25 +160,69 @@ class RuntimeSettings(BaseSettings):
     )
     """Rolling transaction window used by the scheduler's initial sync."""
 
+
+class EmbeddedSchedulerSettings(BaseModel):
+    """Non-secret settings controlling FastAPI's local scheduler."""
+
     embed_scheduler: bool = Field(
         default=False,
         description="Start the local scheduler from the FastAPI application lifespan",
     )
     """Whether a local single-process FastAPI server starts an embedded scheduler."""
 
-    server_host: str = Field(
-        default="127.0.0.1",
-        description="Interface used by the local FastAPI serve command",
-    )
-    """Interface used by the local FastAPI serve command."""
 
-    server_port: int = Field(
+class BindSettings(BaseModel):
+    """Non-secret settings shared by HTTP MCP and FastAPI servers."""
+
+    host: str = Field(
+        default="127.0.0.1",
+        description="Interface used by the local FastAPI and HTTP MCP commands",
+    )
+    """Interface used by the local FastAPI and HTTP MCP commands."""
+
+    port: int = Field(
         default=8000,
         ge=1,
         le=65535,
-        description="Port used by the local FastAPI serve command",
+        description="Port used by the local FastAPI and HTTP MCP commands",
     )
-    """Port used by the local FastAPI serve command."""
+    """Port used by the local FastAPI and HTTP MCP commands."""
+
+
+class RuntimeSettings(
+    OAuthSettings,
+    ExecutionSettings,
+    StatelessSettings,
+    ScheduleSettings,
+    EmbeddedSchedulerSettings,
+    BindSettings,
+    RuntimeSettingsBase,
+):
+    """All non-secret environment settings used by application components."""
+
+
+class McpCliSettings(OAuthSettings, BindSettings, RuntimeSettingsBase):
+    """CLI-visible settings for the standalone MCP runtime."""
+
+
+class ScheduleCliSettings(
+    StatelessSettings,
+    ScheduleSettings,
+    RuntimeSettingsBase,
+):
+    """CLI-visible settings for the dedicated scheduler runtime."""
+
+
+class ServeCliSettings(
+    OAuthSettings,
+    ExecutionSettings,
+    StatelessSettings,
+    ScheduleSettings,
+    EmbeddedSchedulerSettings,
+    BindSettings,
+    RuntimeSettingsBase,
+):
+    """CLI-visible settings for the local FastAPI runtime."""
 
 
 _runtime_settings: RuntimeSettings | None = None
@@ -175,8 +235,13 @@ _runtime_mode: RuntimeMode | None = None
 """Process-local runtime mode used to enforce command-level responsibilities."""
 
 
+CliSettings = McpCliSettings | ScheduleCliSettings | ServeCliSettings
+"""A command-specific model that exposes only that command's safe CLI flags."""
+
+
 def parse_cli_settings(
     arguments: list[str],
+    settings_type: type[CliSettings],
     root_parser: Any | None = None,
 ) -> RuntimeSettings:
     """Parse runtime options with Pydantic Settings' native CLI source.
@@ -185,6 +250,8 @@ def parse_cli_settings(
     ----------
     arguments : list[str]
         Kebab-case Pydantic Settings arguments without an executable or subcommand.
+    settings_type : type[CliSettings]
+        Command-specific model defining the safe options accepted by this entry point.
     root_parser : Any | None
         Optional parser with runtime-specific arguments that Pydantic extends with
         Settings options before parsing.
@@ -192,14 +259,16 @@ def parse_cli_settings(
     Returns
     -------
     RuntimeSettings
-        Non-secret configuration populated from CLI flags, environment variables, and `.env`.
+        Complete non-secret configuration populated from the command's CLI flags,
+        environment variables, and `.env`.
     """
     source = CliSettingsSource(
-        RuntimeSettings,
+        settings_type,
         cli_parse_args=arguments,
         root_parser=root_parser,
     )
-    return cast(Any, RuntimeSettings)(_cli_settings_source=source)
+    cli_settings = cast(Any, settings_type)(_cli_settings_source=source)
+    return RuntimeSettings.model_validate(cli_settings.model_dump(exclude_unset=True))
 
 
 def configure_runtime_settings(settings: RuntimeSettings) -> None:
