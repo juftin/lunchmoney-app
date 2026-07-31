@@ -85,7 +85,7 @@ graph TD
 
 | Upstream v2 Endpoint    |  Method  | Local Route                    | FastMCP Tool            | Service Function             | Status  |
 | :---------------------- | :------: | :----------------------------- | :---------------------- | :--------------------------- | :-----: |
-| `/manual_accounts`      |  `GET`   | `GET /accounts/manual`         | `list_manual_accounts`  | `fetch_manual_accounts`      | ✅ Done |
+| `/manual_accounts`      |  `GET`   | `GET /accounts`                | `list_accounts`         | `fetch_accounts`             | ✅ Done |
 | `/manual_accounts`      |  `POST`  | `POST /accounts/manual`        | `create_manual_account` | `create_manual_account`      | ✅ Done |
 | `/manual_accounts/{id}` |  `GET`   | `GET /accounts/manual/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` | ✅ Done |
 | `/manual_accounts/{id}` |  `PUT`   | `PUT /accounts/manual/{id}`    | `update_manual_account` | `update_manual_account`      | ✅ Done |
@@ -97,7 +97,7 @@ graph TD
 
 | Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool          | Service Function            | Status  |
 | :---------------------- | :----: | :-------------------------- | :-------------------- | :-------------------------- | :-----: |
-| `/plaid_accounts`       | `GET`  | `GET /accounts/plaid`       | `list_plaid_accounts` | `fetch_plaid_accounts`      | ✅ Done |
+| `/plaid_accounts`       | `GET`  | `GET /accounts`             | `list_accounts`       | `fetch_accounts`            | ✅ Done |
 | `/plaid_accounts/{id}`  | `GET`  | `GET /accounts/plaid/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` | ✅ Done |
 | `/plaid_accounts/fetch` | `POST` | `POST /accounts/plaid/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       | ✅ Done |
 
@@ -119,12 +119,12 @@ graph TD
 
 ### 6. Transaction Grouping & Splitting (`/transactions/group`, `/transactions/split`)
 
-| Upstream v2 Endpoint       |  Method  | Local Route                       | FastMCP Tool           | Service Function           | Status  |
-| :------------------------- | :------: | :-------------------------------- | :--------------------- | :------------------------- | :-----: |
-| `/transactions/group`      |  `POST`  | `POST /transactions/group`        | `group_transactions`   | `create_transaction_group` | ✅ Done |
-| `/transactions/group/{id}` | `DELETE` | `DELETE /transactions/group/{id}` | `ungroup_transactions` | `delete_transaction_group` | ✅ Done |
-| `/transactions/split/{id}` |  `POST`  | `POST /transactions/split/{id}`   | `split_transaction`    | `split_transaction`        | ✅ Done |
-| `/transactions/split/{id}` | `DELETE` | `DELETE /transactions/split/{id}` | `unsplit_transaction`  | `unsplit_transaction`      | ✅ Done |
+| Upstream v2 Endpoint       |  Method  | Local Route                       | FastMCP Tool           | Service Function       | Status  |
+| :------------------------- | :------: | :-------------------------------- | :--------------------- | :--------------------- | :-----: |
+| `/transactions/group`      |  `POST`  | `POST /transactions/group`        | `group_transactions`   | `group_transactions`   | ✅ Done |
+| `/transactions/group/{id}` | `DELETE` | `DELETE /transactions/group/{id}` | `ungroup_transactions` | `ungroup_transactions` | ✅ Done |
+| `/transactions/split/{id}` |  `POST`  | `POST /transactions/split/{id}`   | `split_transaction`    | `split_transaction`    | ✅ Done |
+| `/transactions/split/{id}` | `DELETE` | `DELETE /transactions/split/{id}` | `unsplit_transaction`  | `unsplit_transaction`  | ✅ Done |
 
 ---
 
@@ -263,14 +263,14 @@ features.
 
 ### Sprint 9: Upstream API Compatibility & Coverage Audit
 
-- [ ] Pin and regularly regenerate the generated Lunch Money client from the
+- [x] Pin and regularly regenerate the generated Lunch Money client from the
       current upstream OpenAPI specification; diff paths, operations, schemas, and
       enum values in CI.
-- [ ] Add a machine-readable endpoint coverage manifest and a test that fails
+- [x] Add a machine-readable endpoint coverage manifest and a test that fails
       when a supported upstream operation lacks its REST/MCP/service mapping.
-- [ ] Validate supported operations against Lunch Money's mock service or a
+- [x] Validate supported operations against Lunch Money's mock service or a
       disposable test budget, with synthetic fixtures retained for unit tests.
-- [ ] Establish an alpha-API compatibility policy: version pinning, release
+- [x] Establish an alpha-API compatibility policy: version pinning, release
       notes review, deprecation handling, and a documented response for a breaking
       upstream change.
 

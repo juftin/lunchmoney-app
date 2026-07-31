@@ -95,7 +95,13 @@ Planned: Gunicorn with the maintained Uvicorn worker package for production HTTP
 
 ### Sprint 9: Upstream API Compatibility & Coverage Audit
 
-Planned: continuously compare the generated client with Lunch Money's alpha OpenAPI specification, maintain a machine-readable coverage manifest, and test against the mock service or a disposable test budget. Treat upstream version changes as an explicit compatibility review.
+Completed: pin the generated client and upstream OpenAPI package, snapshot their
+paths, operations, schemas, and enum values, and enforce that review in CI.
+`docs/upstream-coverage.json` maps all 39 generated operations through service,
+REST, and MCP layers. CI also runs read-only checks against Lunch Money's
+official static mock with a synthetic token. See
+[`UPSTREAM_COMPATIBILITY.md`](UPSTREAM_COMPATIBILITY.md) for the upgrade and
+breaking-change policy.
 
 ### Sprint 10: Operational Hardening & Observability
 

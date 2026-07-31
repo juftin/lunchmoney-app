@@ -4,6 +4,7 @@ vars:
   PYTHON_SRC: src/
   PYTHON_TESTS: tests/
   PYTHON_NOTEBOOKS: notebooks/
+  PYTHON_SCRIPTS: scripts/
   IMAGE_NAME: lunchmoney-mcp
 
 tasks:
@@ -21,14 +22,14 @@ tasks:
   fix:
     desc: Code quality auto-fix - formatting + linting
     cmds:
-      - uv run ruff format {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.CLI_ARGS}}
-      - uv run ruff check --fix {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.CLI_ARGS}}
+      - uv run ruff format {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.PYTHON_SCRIPTS}} {{.CLI_ARGS}}
+      - uv run ruff check --fix {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.PYTHON_SCRIPTS}} {{.CLI_ARGS}}
 
   lint:
     desc: Code quality check - formatting + linting
     cmds:
-      - uv run ruff format --check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.CLI_ARGS}}
-      - uv run ruff check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.CLI_ARGS}}
+      - uv run ruff format --check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.PYTHON_SCRIPTS}} {{.CLI_ARGS}}
+      - uv run ruff check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.PYTHON_SCRIPTS}} {{.CLI_ARGS}}
 
   check:
     desc: Code quality check - type checking
@@ -39,6 +40,22 @@ tasks:
     desc: Testing - PyTest
     cmds:
       - uv run pytest {{.CLI_ARGS}}
+
+  upstream:check:
+    desc: Verify the pinned Lunch Money OpenAPI specification and generated client
+    cmds:
+      - uv run python scripts/check_upstream_contract.py
+
+  upstream:refresh:
+    desc: Refresh the reviewed Lunch Money OpenAPI contract snapshot
+    cmds:
+      - uv run python scripts/check_upstream_contract.py --write
+
+  contract:
+    desc: Run static and official mock-service compatibility checks
+    cmds:
+      - task upstream:check
+      - RUN_LUNCHMONEY_CONTRACT_TESTS=1 uv run pytest -m upstream_contract
 
   build:
     desc: Artifact building - Docker image
