@@ -32,7 +32,7 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 _Reference Spec_: [`docs/INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-0-incremental-etl--stateless-engine)
 
 - [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_mcp/mcp/tools/`](../src/lunchmoney_mcp/mcp/tools/).
-- [x] **Config Additions**: Add `stateless: bool` (`STATELESS`) and `sync_safety_margin_minutes: int` (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`) in [`src/lunchmoney_mcp/config.py`](../src/lunchmoney_mcp/config.py).
+- [x] **Config Additions**: Add `stateless: bool` (`LUNCHMONEY_STATELESS`) and `sync_safety_margin_minutes: int` (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`) in [`src/lunchmoney_mcp/config.py`](../src/lunchmoney_mcp/config.py).
 - [x] **SyncMetadata Model**: Create `SyncMetadata` table in [`src/lunchmoney_mcp/database/models/sync.py`](../src/lunchmoney_mcp/database/models/sync.py).
 - [x] **Alembic Migration**: Add migration `0002_add_sync_metadata_table.py` for `sync_metadata`.
 - [x] **Stateless In-Memory Database**: Update [`src/lunchmoney_mcp/database/backend.py`](../src/lunchmoney_mcp/database/backend.py) to support `StaticPool` in-memory SQLite and `create_tables()` helper.

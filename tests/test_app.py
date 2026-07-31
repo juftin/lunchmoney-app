@@ -310,11 +310,12 @@ def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reject REST requests without the configured API key."""
     from starlette.testclient import TestClient
 
-    from lunchmoney_mcp.config import get_settings
+    from lunchmoney_mcp.config import get_secret_settings, get_settings
 
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
     monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "rest-api-key")
+    get_secret_settings.cache_clear()
     get_settings.cache_clear()
 
     with TestClient(fastapi_app) as client:
@@ -323,6 +324,7 @@ def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
         response = client.get("/", headers={"X-API-Key": "rest-api-key"})
 
     assert response.status_code == 200
+    get_secret_settings.cache_clear()
     get_settings.cache_clear()
 
 

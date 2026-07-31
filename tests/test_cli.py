@@ -58,18 +58,18 @@ def test_cli_runs_scheduler_with_pydantic_runtime_options(
     cli.main(
         [
             "schedule",
-            "--scheduler-cron",
+            "--schedule-cron",
             "15 4 * * 1-5",
-            "--scheduler-timezone",
+            "--schedule-timezone",
             "America/Denver",
         ]
     )
 
     parse_cli_settings.assert_called_once_with(
         [
-            "--scheduler-cron",
+            "--schedule-cron",
             "15 4 * * 1-5",
-            "--scheduler-timezone",
+            "--schedule-timezone",
             "America/Denver",
         ]
     )

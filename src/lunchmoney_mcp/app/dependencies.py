@@ -8,6 +8,7 @@ from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.config import get_secret_settings
 from lunchmoney_mcp.database import LunchMoneyDatabase
 
 
@@ -50,7 +51,10 @@ def get_lunchmoney_app() -> LunchMoneyApp:
     LunchMoneyApp
         Configured Lunch Money API client.
     """
-    return LunchMoneyApp(cache=False)
+    return LunchMoneyApp(
+        access_token=get_secret_settings().access_token,
+        cache=False,
+    )
 
 
 __all__ = ["get_database", "get_db_session", "get_lunchmoney_app"]

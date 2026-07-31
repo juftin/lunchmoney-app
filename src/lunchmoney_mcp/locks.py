@@ -235,11 +235,9 @@ def get_migration_lock(
     Lock
         Instantiated Redis or LockFile instance.
     """
-    import os
+    from lunchmoney_mcp.config import SecretSettings
 
-    from lunchmoney_mcp.config import get_settings
-
-    redis_url = os.getenv("REDIS_URL") or get_settings().redis_url
+    redis_url = SecretSettings().redis_url
     if redis_url:
         client = redis.Redis.from_url(redis_url)
         return Redis(client=client, name=name)

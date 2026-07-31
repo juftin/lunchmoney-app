@@ -88,18 +88,18 @@ def test_redis_lock_contention() -> None:
 def test_get_migration_lock_default_file_lock(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Return LockFile instance when REDIS_URL is not set."""
-    monkeypatch.delenv("REDIS_URL", raising=False)
+    """Return LockFile instance when LUNCHMONEY_REDIS_URL is not set."""
+    monkeypatch.delenv("LUNCHMONEY_REDIS_URL", raising=False)
 
     lock = get_migration_lock()
     assert isinstance(lock, LockFile)
 
 
 def test_get_migration_lock_redis(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Return Redis lock instance when REDIS_URL environment variable is set."""
+    """Return Redis lock instance when LUNCHMONEY_REDIS_URL is set."""
     import redis
 
-    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("LUNCHMONEY_REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setattr(redis.Redis, "from_url", lambda url: MagicMock())
 
     lock = get_migration_lock()

@@ -49,15 +49,15 @@ configured 30-day rolling transaction window until a watermark exists.
 
 ```bash
 task run -- lunchmoney-mcp schedule \
-  --scheduler-cron "0 * * * *" \
-  --scheduler-timezone "America/Denver" \
-  --scheduler-days 30
+  --schedule-cron "0 * * * *" \
+  --schedule-timezone "America/Denver" \
+  --schedule-days 30
 ```
 
-Pydantic Settings parses the runtime flags directly. Every setting is available
-in kebab case (for example, `--stateless`, `--lunchmoney-database-url`, and
-`--sync-safety-margin-minutes`); the documented environment variables remain
-supported.
+Pydantic Settings parses safe runtime flags directly (for example,
+`--stateless`, `--server-host`, and `--sync-safety-margin-minutes`). Credentials and
+connection URLs are environment/dotenv-only; all settings use documented
+`LUNCHMONEY_` environment variables.
 
 The scheduler reports its most recent outcome at `GET /sync/status` and through
 the `get_sync_status` MCP tool. It never runs in the Gunicorn web process. To
@@ -76,11 +76,11 @@ For local single-process FastAPI development, enable the optional scheduler in
 the `serve` command:
 
 ```bash
-task dev -- --embedded-scheduler --scheduler-cron "0 * * * *"
+task dev -- --embed-scheduler --schedule-cron "0 * * * *"
 ```
 
 Embedded scheduling is disabled by default and only works with
-`ENVIRONMENT=development` and one direct Uvicorn/FastAPI worker. Startup rejects
+`LUNCHMONEY_ENVIRONMENT=development` and one direct Uvicorn/FastAPI worker. Startup rejects
 Gunicorn and configured multi-worker processes; use the dedicated scheduler
 process in those deployments.
 

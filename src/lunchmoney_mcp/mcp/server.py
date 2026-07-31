@@ -6,7 +6,7 @@ import json
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.app.auth import get_mcp_oauth_provider
-from lunchmoney_mcp.config import Settings
+from lunchmoney_mcp.config import RuntimeSettings
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.mcp.tools import (
     accounts,
@@ -118,12 +118,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def configure_auth(settings: Settings) -> None:
+def configure_auth(settings: RuntimeSettings) -> None:
     """Apply CLI-resolved OAuth configuration before starting FastMCP.
 
     Parameters
     ----------
-    settings : Settings
+    settings : RuntimeSettings
         Runtime configuration containing optional OIDC proxy settings.
     """
     mcp.auth = get_mcp_oauth_provider(settings=settings)

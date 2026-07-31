@@ -22,6 +22,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from lunchmoney_mcp.config import (
     DEFAULT_DATABASE_URL,
     IN_MEMORY_DATABASE_URL,
+    SecretSettings,
     get_settings,
     get_runtime_mode,
 )
@@ -58,10 +59,10 @@ def resolve_database_url(database_url: str | None = None) -> str:
     env_url = os.getenv("LUNCHMONEY_DATABASE_URL")
     if env_url:
         return env_url
-    settings = get_settings()
-    if "lunchmoney_database_url" in settings.model_fields_set:
-        return settings.lunchmoney_database_url
-    if settings.stateless:
+    secret_settings = SecretSettings()
+    if "database_url" in secret_settings.model_fields_set:
+        return secret_settings.database_url
+    if get_settings().stateless:
         return IN_MEMORY_DATABASE_URL
     return DEFAULT_DATABASE_URL
 
