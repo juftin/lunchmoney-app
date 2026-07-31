@@ -4,8 +4,16 @@ from functools import cache
 import os
 from typing import Any, Literal, cast
 
-from pydantic import AliasChoices, Field
-from pydantic_settings import BaseSettings, CliSettingsSource, SettingsConfigDict
+from pydantic import Field
+from pydantic.fields import FieldInfo
+from pydantic_settings import (
+    BaseSettings,
+    CliSettingsSource,
+    DotEnvSettingsSource,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 DEFAULT_DATABASE_URL: str = "sqlite+aiosqlite:///lunchmoney.db"
 """Default persistent SQLite connection URL used when omitted."""
@@ -15,17 +23,75 @@ IN_MEMORY_DATABASE_URL: str = (
 )
 """Shared in-memory SQLite connection URL used by stateless mode."""
 
+ENVIRONMENT_VARIABLE_NAMES: dict[str, str] = {
+    "lunchmoney_access_token": "LUNCHMONEY_ACCESS_TOKEN",
+    "lunchmoney_mcp_api_key": "LUNCHMONEY_MCP_API_KEY",
+    "lunchmoney_mcp_oauth_config_url": "LUNCHMONEY_MCP_OAUTH_CONFIG_URL",
+    "lunchmoney_mcp_oauth_client_id": "LUNCHMONEY_MCP_OAUTH_CLIENT_ID",
+    "lunchmoney_mcp_oauth_client_secret": "LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET",
+    "lunchmoney_mcp_oauth_base_url": "LUNCHMONEY_MCP_OAUTH_BASE_URL",
+    "lunchmoney_mcp_oauth_audience": "LUNCHMONEY_MCP_OAUTH_AUDIENCE",
+    "lunchmoney_database_url": "LUNCHMONEY_DATABASE_URL",
+    "redis_url": "REDIS_URL",
+    "environment": "ENVIRONMENT",
+    "stateless": "STATELESS",
+    "sync_safety_margin_minutes": "LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES",
+    "scheduler_cron": "LUNCHMONEY_SCHEDULE_CRON",
+    "scheduler_timezone": "LUNCHMONEY_SCHEDULE_TIMEZONE",
+    "scheduler_days": "LUNCHMONEY_SCHEDULE_DAYS",
+    "embedded_scheduler": "LUNCHMONEY_EMBED_SCHEDULER",
+    "server_host": "LUNCHMONEY_HOST",
+    "server_port": "LUNCHMONEY_PORT",
+}
+"""Canonical environment variable names for application settings."""
 
-class LowercaseCliSettingsSource(CliSettingsSource):
-    """Expose only lowercase option names while retaining uppercase environment aliases."""
 
-    def _get_arg_names(self, *args: Any, **kwargs: Any) -> list[str]:
-        """Return the lowercase flags generated for a settings field."""
-        return [
-            argument_name
-            for argument_name in super()._get_arg_names(*args, **kwargs)
-            if argument_name == argument_name.lower()
-        ]
+def _get_environment_variable_value(
+    source: EnvSettingsSource,
+    field_name: str,
+) -> tuple[Any, str, bool] | None:
+    """Retrieve the canonical environment variable value for a settings field."""
+    environment_variable = ENVIRONMENT_VARIABLE_NAMES.get(field_name)
+    if environment_variable is None:
+        return None
+
+    environment_name = (
+        environment_variable if source.case_sensitive else environment_variable.lower()
+    )
+    value = source.env_vars.get(environment_name)
+    if value is None:
+        return None
+    return value, field_name, False
+
+
+class LunchMoneyEnvSettingsSource(EnvSettingsSource):
+    """Load settings from their documented environment variable names."""
+
+    def get_field_value(
+        self,
+        field: FieldInfo,
+        field_name: str,
+    ) -> tuple[Any, str, bool]:
+        """Prefer a documented environment variable before default field lookup."""
+        environment_value = _get_environment_variable_value(self, field_name)
+        if environment_value is not None:
+            return environment_value
+        return super().get_field_value(field, field_name)
+
+
+class LunchMoneyDotEnvSettingsSource(DotEnvSettingsSource):
+    """Load settings from documented names in the configured dotenv file."""
+
+    def get_field_value(
+        self,
+        field: FieldInfo,
+        field_name: str,
+    ) -> tuple[Any, str, bool]:
+        """Prefer a documented dotenv variable before default field lookup."""
+        environment_value = _get_environment_variable_value(self, field_name)
+        if environment_value is not None:
+            return environment_value
+        return super().get_field_value(field, field_name)
 
 
 class Settings(BaseSettings):
@@ -81,118 +147,84 @@ class Settings(BaseSettings):
 
     lunchmoney_access_token: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_ACCESS_TOKEN", "lunchmoney_access_token"
-        ),
         description="Lunch Money API access token",
     )
     """Lunch Money API access token."""
 
     lunchmoney_mcp_api_key: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_MCP_API_KEY", "lunchmoney_mcp_api_key"
-        ),
         description="Optional API key required by the Lunch Money MCP REST API",
     )
     """Optional API key required by the Lunch Money MCP REST API."""
 
     lunchmoney_mcp_oauth_config_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_MCP_OAUTH_CONFIG_URL", "lunchmoney_mcp_oauth_config_url"
-        ),
         description="OIDC discovery URL for remote MCP client authentication",
     )
     """OIDC discovery URL for remote MCP client authentication."""
 
     lunchmoney_mcp_oauth_client_id: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_MCP_OAUTH_CLIENT_ID", "lunchmoney_mcp_oauth_client_id"
-        ),
         description="OAuth client identifier registered with the identity provider",
     )
     """OAuth client identifier registered with the identity provider."""
 
     lunchmoney_mcp_oauth_client_secret: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET", "lunchmoney_mcp_oauth_client_secret"
-        ),
         description="Optional OAuth client secret for confidential clients",
     )
     """Optional OAuth client secret for confidential clients."""
 
     lunchmoney_mcp_oauth_base_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_MCP_OAUTH_BASE_URL", "lunchmoney_mcp_oauth_base_url"
-        ),
         description="Public base URL used for OAuth metadata and callback routes",
     )
     """Public base URL used for OAuth metadata and callback routes."""
 
     lunchmoney_mcp_oauth_audience: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_MCP_OAUTH_AUDIENCE", "lunchmoney_mcp_oauth_audience"
-        ),
         description="Optional OAuth audience requested from the identity provider",
     )
     """Optional OAuth audience requested from the identity provider."""
 
     lunchmoney_database_url: str = Field(
         default=DEFAULT_DATABASE_URL,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_DATABASE_URL", "lunchmoney_database_url"
-        ),
         description="Database connection URL (sqlite+aiosqlite or postgresql+asyncpg)",
     )
     """Database connection URL."""
 
     redis_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("REDIS_URL", "redis_url"),
         description="Redis connection URL for distributed locking",
     )
     """Redis connection URL for distributed locking."""
 
     environment: str = Field(
         default="development",
-        validation_alias=AliasChoices("ENVIRONMENT", "environment"),
         description="Application deployment environment",
     )
     """Application deployment environment name."""
 
     stateless: bool = Field(
         default=False,
-        validation_alias=AliasChoices("STATELESS", "stateless"),
         description="Run in stateless mode using in-memory SQLite database refreshed from API",
     )
     """Whether to use the shared in-memory database."""
 
     sync_safety_margin_minutes: int = Field(
         default=5,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", "sync_safety_margin_minutes"
-        ),
         description="Safety overlap margin in minutes for incremental ETL queries",
     )
     """Safety overlap margin for incremental ETL queries."""
 
     scheduler_cron: str = Field(
         default="0 * * * *",
-        validation_alias=AliasChoices("LUNCHMONEY_SCHEDULE_CRON", "scheduler_cron"),
         description="Cron expression used by the opt-in scheduler process",
     )
     """Cron expression used by the opt-in scheduler process."""
 
     scheduler_timezone: str = Field(
         default="UTC",
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_SCHEDULE_TIMEZONE", "scheduler_timezone"
-        ),
         description="IANA timezone used to interpret the scheduler cron expression",
     )
     """IANA timezone used to interpret the scheduler cron expression."""
@@ -200,23 +232,18 @@ class Settings(BaseSettings):
     scheduler_days: int = Field(
         default=30,
         ge=1,
-        validation_alias=AliasChoices("LUNCHMONEY_SCHEDULE_DAYS", "scheduler_days"),
         description="Rolling transaction window used by the scheduler's initial sync",
     )
     """Rolling transaction window used by the scheduler's initial sync."""
 
     embedded_scheduler: bool = Field(
         default=False,
-        validation_alias=AliasChoices(
-            "LUNCHMONEY_EMBED_SCHEDULER", "embedded_scheduler"
-        ),
         description="Start the local scheduler from the FastAPI application lifespan",
     )
     """Whether a local single-process FastAPI server starts an embedded scheduler."""
 
     server_host: str = Field(
         default="127.0.0.1",
-        validation_alias=AliasChoices("LUNCHMONEY_HOST", "server_host"),
         description="Interface used by the local FastAPI serve command",
     )
     """Interface used by the local FastAPI serve command."""
@@ -225,10 +252,26 @@ class Settings(BaseSettings):
         default=8000,
         ge=1,
         le=65535,
-        validation_alias=AliasChoices("LUNCHMONEY_PORT", "server_port"),
         description="Port used by the local FastAPI serve command",
     )
     """Port used by the local FastAPI serve command."""
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Use sources that preserve the documented environment variable names."""
+        return (
+            init_settings,
+            LunchMoneyEnvSettingsSource(settings_cls),
+            LunchMoneyDotEnvSettingsSource(settings_cls),
+            file_secret_settings,
+        )
 
 
 _runtime_settings: Settings | None = None
@@ -260,7 +303,7 @@ def parse_cli_settings(
     Settings
         Configuration populated from CLI flags, environment variables, and `.env`.
     """
-    source = LowercaseCliSettingsSource(
+    source = CliSettingsSource(
         Settings,
         cli_parse_args=arguments,
         root_parser=root_parser,
@@ -314,12 +357,8 @@ def export_runtime_settings(settings: Settings) -> None:
         source are exported; defaults remain defaults in the child process.
     """
     for field_name in settings.model_fields_set:
-        field = Settings.model_fields[field_name]
-        alias = field.validation_alias
-        if not isinstance(alias, AliasChoices):
-            continue
-        environment_name = alias.choices[0]
-        if not isinstance(environment_name, str):
+        environment_name = ENVIRONMENT_VARIABLE_NAMES.get(field_name)
+        if environment_name is None:
             continue
         value = getattr(settings, field_name)
         if value is None:
