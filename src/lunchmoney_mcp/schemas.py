@@ -268,6 +268,21 @@ class SyncResult(BaseModel):
     """Detailed breakdown of synchronized record counts."""
 
 
+class ScheduledSyncStatus(BaseModel):
+    """Persisted result of the latest attempted scheduled synchronization."""
+
+    status: Literal["success", "failed", "skipped"]
+    """Final state of the scheduler attempt."""
+    started_at: datetime.datetime
+    """UTC timestamp at which the scheduler attempted the sync."""
+    finished_at: datetime.datetime
+    """UTC timestamp at which the scheduler recorded its final result."""
+    message: str | None = None
+    """Safe operator-facing explanation for a failed or skipped run."""
+    synced: SyncDetails | None = None
+    """Record counts returned by a successful synchronization, when available."""
+
+
 class ChildCategorySpending(BaseModel):
     """Spending breakdown for a child category."""
 

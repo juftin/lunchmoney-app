@@ -14,11 +14,14 @@ dependencies = [
   "fastmcp>=3.4.4,<4",
   "sqlalchemy[asyncio]>=2.0.51,<3",
   "filelock>=3.32.0",
-  "redis>=8.0.1"
+  "redis>=8.0.1",
+  "gunicorn>=23.0.0,<24",
+  "uvicorn-worker>=0.4.0,<1",
+  "apscheduler==3.11.2"
 ]
 
 [project.scripts]
-lunchmoney-mcp = "lunchmoney_mcp.mcp.server:main"
+lunchmoney-mcp = "lunchmoney_mcp.cli:main"
 
 [build-system]
 requires = ["hatchling"]

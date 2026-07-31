@@ -23,11 +23,13 @@ from lunchmoney_mcp.config import (
     DEFAULT_DATABASE_URL,
     IN_MEMORY_DATABASE_URL,
     get_settings,
+    get_runtime_mode,
 )
 from lunchmoney_mcp.database.models import (
     Category,
     ManualAccount,
     PlaidAccount,
+    ScheduledSyncRun,
     SyncMetadata,
     Tag,
     Transaction,
@@ -51,6 +53,8 @@ def resolve_database_url(database_url: str | None = None) -> str:
     """Resolve an explicit, environment-provided, or default database URL."""
     if database_url is not None:
         return database_url
+    if get_runtime_mode() == "mcp":
+        return IN_MEMORY_DATABASE_URL
     env_url = os.getenv("LUNCHMONEY_DATABASE_URL")
     if env_url:
         return env_url
@@ -642,6 +646,30 @@ class LunchMoneyDatabase:
                 await session.flush()
                 session.expunge(stored)
             return stored
+
+    async def record_scheduled_sync_run(
+        self,
+        run: ScheduledSyncRun,
+    ) -> ScheduledSyncRun:
+        """Persist and detach the final outcome of one scheduled synchronization."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                session.add(run)
+                await session.flush()
+                await session.refresh(run)
+                session.expunge(run)
+            return run
+
+    async def get_latest_scheduled_sync_run(self) -> ScheduledSyncRun | None:
+        """Return the most recently started scheduled synchronization, if any."""
+        statement = (
+            select(ScheduledSyncRun)
+            .order_by(cast(QueryableAttribute[Any], ScheduledSyncRun.started_at).desc())
+            .limit(1)
+        )
+        async with self.session_factory() as session:
+            result = await session.exec(statement)
+            return result.first()
 
     async def upsert[RecordT: SQLModel](self, record: RecordT) -> RecordT:
         """Atomically insert or update one supported record and its owned graph."""

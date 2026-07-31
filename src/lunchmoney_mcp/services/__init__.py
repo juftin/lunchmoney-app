@@ -30,7 +30,12 @@ from lunchmoney_mcp.services.spending import (
     fetch_spending_trends,
 )
 from lunchmoney_mcp.services.summary import fetch_account_summary
-from lunchmoney_mcp.services.sync import execute_mcp_sync, execute_sync
+from lunchmoney_mcp.services.sync import (
+    execute_mcp_sync,
+    execute_sync,
+    get_scheduled_sync_status,
+    run_scheduled_sync,
+)
 from lunchmoney_mcp.services.tags import (
     create_tag,
     delete_tag,
@@ -59,6 +64,8 @@ from lunchmoney_mcp.services.user import fetch_user_info
 __all__ = [
     "execute_mcp_sync",
     "execute_sync",
+    "get_scheduled_sync_status",
+    "run_scheduled_sync",
     "fetch_account_summary",
     "fetch_budget_settings",
     "clear_budget_value",

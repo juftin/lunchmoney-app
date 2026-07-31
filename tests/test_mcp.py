@@ -23,6 +23,7 @@ async def test_mcp_tools_registration() -> None:
     tool_names = {t.name for t in tools}
 
     assert "sync_data" in tool_names
+    assert "get_sync_status" in tool_names
     assert "get_user_info" in tool_names
     assert "list_categories" in tool_names
     assert "list_accounts" in tool_names
@@ -48,6 +49,27 @@ async def test_mcp_resources_and_prompts_registration() -> None:
     assert "lunchmoney://categories" in resource_uris
     assert "budget_health_check" in prompt_names
     assert "uncategorized_transactions_audit" in prompt_names
+
+
+@pytest.mark.asyncio
+async def test_mcp_runtime_lifespan_creates_and_disposes_ephemeral_storage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Initialize in-memory tool storage only while standalone MCP is running."""
+    import lunchmoney_mcp.mcp.app as mcp_app_module
+
+    database = Mock()
+    database.create_tables = AsyncMock()
+    database.dispose = AsyncMock()
+    get_database = Mock(return_value=database)
+    monkeypatch.setattr(mcp_app_module, "get_database", get_database)
+    monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
+
+    async with mcp_app_module.mcp_lifespan(mcp):
+        database.create_tables.assert_awaited_once_with()
+
+    database.dispose.assert_awaited_once_with()
+    get_database.cache_clear.assert_called_once_with()
 
 
 @pytest.mark.parametrize(

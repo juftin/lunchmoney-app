@@ -11,20 +11,78 @@ For a local MCP client, set it and start the default stdio transport:
 
 ```bash
 export LUNCHMONEY_ACCESS_TOKEN="your-lunch-money-token"
-task run -- lunchmoney-mcp --stdio
+task run -- lunchmoney-mcp mcp --stdio
 ```
 
 For a remote MCP client, choose one HTTP transport. Streamable HTTP and HTTP
 use `/mcp`; SSE uses `/sse`.
 
 ```bash
-task run -- lunchmoney-mcp --streamable-http --host 127.0.0.1 --port 8000
+task run -- lunchmoney-mcp mcp --streamable-http --host 127.0.0.1 --port 8000
 # Connect at http://127.0.0.1:8000/mcp
 ```
 
+The `mcp` command has no scheduler and uses ephemeral in-memory storage only.
 The available transports are mutually exclusive: `--stdio` (also the default),
 `--sse`, `--http`, and `--streamable-http`. `--host` and `--port` apply only to
 the HTTP transports.
+
+## Production deployment
+
+The container image runs the combined REST and MCP ASGI application with
+Gunicorn and `uvicorn-worker` on port 8000. Docker Compose uses that production
+command by default:
+
+```bash
+export LUNCHMONEY_ACCESS_TOKEN="your-lunch-money-token"
+task compose
+```
+
+Use `task dev` for local FastAPI development; it runs the direct Uvicorn server
+with auto-reload enabled.
+
+### Scheduled synchronization
+
+Scheduled synchronization is a dedicated, opt-in process. It refreshes metadata
+on every run and incrementally refreshes transactions; its first run uses the
+configured 30-day rolling transaction window until a watermark exists.
+
+```bash
+task run -- lunchmoney-mcp schedule \
+  --scheduler-cron "0 * * * *" \
+  --scheduler-timezone "America/Denver" \
+  --scheduler-days 30
+```
+
+Pydantic Settings parses the runtime flags directly. Every setting is available
+in kebab case (for example, `--stateless`, `--lunchmoney-database-url`, and
+`--sync-safety-margin-minutes`); the documented environment variables remain
+supported.
+
+The scheduler reports its most recent outcome at `GET /sync/status` and through
+the `get_sync_status` MCP tool. It never runs in the Gunicorn web process. To
+include the dedicated scheduler with the Compose deployment, use:
+
+```bash
+docker compose --profile scheduler up --build
+```
+
+Run exactly one scheduler process. APScheduler 3.11 is a stable runtime, but its
+job stores cannot be shared across scheduler processes, so HA scheduling is not
+supported. The web service can still run in multiple Gunicorn workers; scheduled
+sync remains isolated in its dedicated process and uses the shared sync lock.
+
+For local single-process FastAPI development, enable the optional scheduler in
+the `serve` command:
+
+```bash
+task dev -- --embedded-scheduler --scheduler-cron "0 * * * *"
+```
+
+Embedded scheduling is disabled by default and only works with
+`ENVIRONMENT=development` and one direct Uvicorn/FastAPI worker. Startup rejects
+Gunicorn and configured multi-worker processes; use the dedicated scheduler
+process in those deployments.
 
 ### REST API authentication
 
@@ -51,7 +109,7 @@ export LUNCHMONEY_MCP_OAUTH_CLIENT_ID="lunchmoney-mcp"
 export LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET="your-identity-provider-secret"
 export LUNCHMONEY_MCP_OAUTH_BASE_URL="https://mcp.example.com"
 
-task run -- lunchmoney-mcp --streamable-http --host 0.0.0.0 --port 8000
+task run -- lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 8000
 ```
 
 The public base URL must match the deployed HTTPS origin. Register
