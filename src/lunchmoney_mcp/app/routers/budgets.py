@@ -33,15 +33,11 @@ async def get_budget_settings(
 ) -> BudgetSettingsResponseObject:
     """Fetch the authenticated user's budget-period settings.
 
-    Parameters
-    ----------
-    client : LunchMoneyApp
-        Configured Lunch Money API client.
+    **Parameters:**
 
-    Returns
-    -------
-    BudgetSettingsResponseObject
-        Upstream budget-period settings.
+    - **client**: Configured Lunch Money API client.
+
+    **Returns:** Upstream budget-period settings.
     """
     return await fetch_budget_settings(client=client)
 

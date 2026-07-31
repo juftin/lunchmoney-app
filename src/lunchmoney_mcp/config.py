@@ -16,6 +16,18 @@ IN_MEMORY_DATABASE_URL: str = (
 """Shared in-memory SQLite connection URL used by stateless mode."""
 
 
+class LowercaseCliSettingsSource(CliSettingsSource):
+    """Expose only lowercase option names while retaining uppercase environment aliases."""
+
+    def _get_arg_names(self, *args: Any, **kwargs: Any) -> list[str]:
+        """Return the lowercase flags generated for a settings field."""
+        return [
+            argument_name
+            for argument_name in super()._get_arg_names(*args, **kwargs)
+            if argument_name == argument_name.lower()
+        ]
+
+
 class Settings(BaseSettings):
     """Lunch Money MCP application settings.
 
@@ -248,7 +260,7 @@ def parse_cli_settings(
     Settings
         Configuration populated from CLI flags, environment variables, and `.env`.
     """
-    source = CliSettingsSource(
+    source = LowercaseCliSettingsSource(
         Settings,
         cli_parse_args=arguments,
         root_parser=root_parser,

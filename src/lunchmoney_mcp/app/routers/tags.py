@@ -27,15 +27,11 @@ async def list_tags(
 ) -> list[TagInfo]:
     """List all synchronized transaction tags.
 
-    Parameters
-    ----------
-    db : LunchMoneyDatabase
-        Database manager instance.
+    **Parameters:**
 
-    Returns
-    -------
-    list[TagInfo]
-        All synchronized transaction tags.
+    - **db**: Database manager instance.
+
+    **Returns:** All synchronized transaction tags.
     """
     return await fetch_tags(db=db)
 
@@ -49,17 +45,12 @@ async def get_tag(
 ) -> TagInfo | None:
     """Fetch one synchronized transaction tag.
 
-    Parameters
-    ----------
-    tag_id : int
-        Identifier of the tag to retrieve.
-    db : LunchMoneyDatabase
-        Database manager instance.
+    **Parameters:**
 
-    Returns
-    -------
-    TagInfo | None
-        Matching tag, or ``None`` when it has not been synchronized.
+    - **tag_id**: Identifier of the tag to retrieve.
+    - **db**: Database manager instance.
+
+    **Returns:** Matching tag, or `None` when it has not been synchronized.
     """
     return await fetch_tag_by_id(db=db, tag_id=tag_id)
 

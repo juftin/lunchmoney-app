@@ -31,29 +31,18 @@ async def get_account_summary(
 ) -> SummaryResponseObject:
     """Fetch a live budget summary for the requested date range.
 
-    Parameters
-    ----------
-    client : LunchMoneyApp
-        Configured Lunch Money API client.
-    start_date : datetime.date
-        Inclusive start of the requested budget range.
-    end_date : datetime.date
-        Inclusive end of the requested budget range.
-    include_exclude_from_budgets : bool | None
-        Whether excluded categories should be included.
-    include_occurrences : bool | None
-        Whether category budget occurrences should be included.
-    include_past_budget_dates : bool | None
-        Whether prior occurrences should be included with occurrences.
-    include_totals : bool | None
-        Whether top-level totals should be included.
-    include_rollover_pool : bool | None
-        Whether rollover-pool details should be included.
+    **Parameters:**
 
-    Returns
-    -------
-    SummaryResponseObject
-        Upstream budget summary response for the requested range.
+    - **client**: Configured Lunch Money API client.
+    - **start_date**: Inclusive start of the requested budget range.
+    - **end_date**: Inclusive end of the requested budget range.
+    - **include_exclude_from_budgets**: Whether excluded categories should be included.
+    - **include_occurrences**: Whether category budget occurrences should be included.
+    - **include_past_budget_dates**: Whether prior occurrences should be included with occurrences.
+    - **include_totals**: Whether top-level totals should be included.
+    - **include_rollover_pool**: Whether rollover-pool details should be included.
+
+    **Returns:** Upstream budget summary response for the requested range.
     """
     return await fetch_account_summary(
         client=client,

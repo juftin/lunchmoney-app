@@ -31,15 +31,11 @@ async def list_categories(
 ) -> list[CategoryInfo]:
     """List all budget categories and subcategories.
 
-    Parameters
-    ----------
-    db : LunchMoneyDatabase
-        Database manager instance.
+    **Parameters:**
 
-    Returns
-    -------
-    list[CategoryInfo]
-        List of all budget category objects in database.
+    - **db**: Database manager instance.
+
+    **Returns:** All budget category objects in the database.
     """
     return await fetch_categories(db=db)
 
@@ -55,17 +51,12 @@ async def get_category(
 ) -> CategoryInfo | None:
     """Fetch one synchronized budget category.
 
-    Parameters
-    ----------
-    category_id : int
-        Identifier of the category to retrieve.
-    db : LunchMoneyDatabase
-        Database manager instance.
+    **Parameters:**
 
-    Returns
-    -------
-    CategoryInfo | None
-        Matching category, or ``None`` when it has not been synchronized.
+    - **category_id**: Identifier of the category to retrieve.
+    - **db**: Database manager instance.
+
+    **Returns:** Matching category, or `None` when it has not been synchronized.
     """
     return await fetch_category_by_id(db=db, category_id=category_id)
 

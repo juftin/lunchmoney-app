@@ -146,6 +146,20 @@ def test_settings_parse_runtime_cli_arguments() -> None:
     assert settings.server_port == 9000
 
 
+def test_cli_help_only_exposes_lowercase_options(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Keep environment-variable aliases out of the CLI help output."""
+    with pytest.raises(SystemExit):
+        parse_cli_settings(["--help"])
+
+    help_output = capsys.readouterr().out
+    assert "--lunchmoney-access-token" in help_output
+    assert "--sync-safety-margin-minutes" in help_output
+    assert "--LUNCHMONEY-ACCESS-TOKEN" not in help_output
+    assert "--LUNCHMONEY-SYNC-SAFETY-MARGIN-MINUTES" not in help_output
+
+
 def test_export_runtime_settings_preserves_cli_values_for_reloader(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
