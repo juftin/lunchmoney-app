@@ -21,4 +21,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 EXPOSE 8000
 
-CMD ["gunicorn", "lunchmoney_mcp.app:app", "--bind", "0.0.0.0:8000", "--worker-class", "uvicorn_worker.GunicornWorker"]
+CMD ["gunicorn", "lunchmoney_mcp.app:app", "--bind", "0.0.0.0:8000", "--worker-class", "uvicorn_worker.UvicornWorker"]

@@ -12,7 +12,7 @@ def test_container_uses_gunicorn_with_maintained_uvicorn_worker() -> None:
     dockerfile = (PROJECT_ROOT / "Dockerfile").read_text()
 
     assert 'CMD ["gunicorn", "lunchmoney_mcp.app:app"' in dockerfile
-    assert '"--worker-class", "uvicorn_worker.GunicornWorker"' in dockerfile
+    assert '"--worker-class", "uvicorn_worker.UvicornWorker"' in dockerfile
 
 
 def test_production_server_dependencies_are_declared() -> None:
