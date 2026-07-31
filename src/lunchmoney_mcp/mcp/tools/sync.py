@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
-from lunchmoney_mcp.schemas import SyncResult
-from lunchmoney_mcp.services import execute_mcp_sync
+from lunchmoney_mcp.schemas import ScheduledSyncStatus, SyncResult
+from lunchmoney_mcp.services import execute_mcp_sync, get_scheduled_sync_status
 
 if TYPE_CHECKING:
     from lunchmoney_mcp import LunchMoneyDatabase
@@ -45,4 +45,11 @@ async def sync_data(
     )
 
 
-__all__ = ["sync_data"]
+@mcp.tool()
+async def get_sync_status() -> ScheduledSyncStatus | None:
+    """Return the result of the latest attempted scheduled synchronization."""
+    db: LunchMoneyDatabase = get_database()
+    return await get_scheduled_sync_status(db=db)
+
+
+__all__ = ["get_sync_status", "sync_data"]

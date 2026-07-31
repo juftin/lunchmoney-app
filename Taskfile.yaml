@@ -56,9 +56,9 @@ tasks:
       - docker compose down {{.CLI_ARGS}}
 
   dev:
-    desc: Run development server with FastAPI CLI
+    desc: Run local FastAPI server with Pydantic settings CLI flags
     cmds:
-      - uv run fastapi dev src/lunchmoney_mcp/app/main.py {{.CLI_ARGS}}
+      - uv run lunchmoney-mcp serve {{.CLI_ARGS}}
 
   notebook:
     desc: Run interactive marimo notebook

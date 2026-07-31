@@ -133,10 +133,11 @@ _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`
 
 _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-8-production-runtime--scheduled-sync)
 
-- [ ] **Gunicorn Runtime**: Replace FastAPI CLI deployment commands with Gunicorn and the maintained Uvicorn worker package; retain direct Uvicorn for local development.
-- [ ] **Dedicated Scheduler**: Add an opt-in `lunchmoney-mcp schedule` APScheduler process with configurable cron, timezone, graceful lifecycle, and sync run reporting; each run refreshes full metadata and incrementally refreshes transactions.
-- [ ] **Multi-Worker Safety**: Ensure Gunicorn workers never start schedulers; serialize scheduled syncs with the distributed lock and test duplicate-prevention behavior.
-- [ ] **HA Configuration**: Support multi-scheduler coordination only with PostgreSQL and a shared APScheduler data store/event broker; reject SQLite in that mode.
+- [x] **Gunicorn Runtime**: Replace FastAPI CLI deployment commands with Gunicorn and the maintained Uvicorn worker package; retain direct Uvicorn for local development.
+- [x] **Dedicated Scheduler**: Add an opt-in `lunchmoney-mcp schedule` APScheduler process with configurable cron, timezone, graceful lifecycle, and sync run reporting; each run refreshes full metadata and incrementally refreshes transactions.
+- [x] **Multi-Worker Safety**: Ensure Gunicorn workers never start schedulers; serialize scheduled syncs with the distributed lock and test duplicate-prevention behavior.
+- [x] **Stable Scheduler Constraint**: Use one dedicated APScheduler 3.11 process; HA/multi-scheduler operation is explicitly unsupported because APScheduler 3 job stores cannot be shared.
+- [x] **Local Embedded Scheduler**: Allow an explicitly configured, single-worker development FastAPI process to run the scheduler through its lifespan; reject Gunicorn and multi-worker modes.
 
 ### 🔎 Sprint 9: Upstream API Compatibility & Coverage Audit
 

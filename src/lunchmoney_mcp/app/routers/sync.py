@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.schemas import SyncResponse
-from lunchmoney_mcp.services import execute_sync
+from lunchmoney_mcp.schemas import ScheduledSyncStatus, SyncResponse
+from lunchmoney_mcp.services import execute_sync, get_scheduled_sync_status
 
 router = APIRouter(tags=["Sync"])
 """FastAPI APIRouter for synchronization endpoints."""
@@ -53,3 +53,15 @@ async def sync(
         incremental=incremental,
         safety_margin_minutes=safety_margin_minutes,
     )
+
+
+@router.get(
+    path="/sync/status",
+    response_model=ScheduledSyncStatus | None,
+    operation_id="get_scheduled_sync_status",
+)
+async def scheduled_sync_status(
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+) -> ScheduledSyncStatus | None:
+    """Return the final result of the most recent scheduled synchronization."""
+    return await get_scheduled_sync_status(db=db)

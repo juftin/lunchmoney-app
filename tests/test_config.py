@@ -1,5 +1,6 @@
 """Tests for application configuration and Pydantic Settings."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,10 @@ from lunchmoney_mcp.config import (
     DEFAULT_DATABASE_URL,
     IN_MEMORY_DATABASE_URL,
     Settings,
+    configure_runtime_mode,
+    export_runtime_settings,
     get_settings,
+    parse_cli_settings,
 )
 from lunchmoney_mcp.database import resolve_database_url
 
@@ -32,6 +36,12 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_AUDIENCE", raising=False)
     monkeypatch.delenv("STATELESS", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_SCHEDULE_CRON", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_SCHEDULE_TIMEZONE", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_SCHEDULE_DAYS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_HOST", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_PORT", raising=False)
 
     settings = Settings()
     assert settings.lunchmoney_database_url == DEFAULT_DATABASE_URL
@@ -45,6 +55,12 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.lunchmoney_mcp_oauth_audience is None
     assert settings.stateless is False
     assert settings.sync_safety_margin_minutes == 5
+    assert settings.scheduler_cron == "0 * * * *"
+    assert settings.scheduler_timezone == "UTC"
+    assert settings.scheduler_days == 30
+    assert settings.embedded_scheduler is False
+    assert settings.server_host == "127.0.0.1"
+    assert settings.server_port == 8000
 
 
 def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -71,6 +87,12 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LUNCHMONEY_MCP_OAUTH_AUDIENCE", "https://mcp.example.com")
     monkeypatch.setenv("STATELESS", "true")
     monkeypatch.setenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", "10")
+    monkeypatch.setenv("LUNCHMONEY_SCHEDULE_CRON", "15 4 * * 1-5")
+    monkeypatch.setenv("LUNCHMONEY_SCHEDULE_TIMEZONE", "America/Denver")
+    monkeypatch.setenv("LUNCHMONEY_SCHEDULE_DAYS", "45")
+    monkeypatch.setenv("LUNCHMONEY_EMBED_SCHEDULER", "true")
+    monkeypatch.setenv("LUNCHMONEY_HOST", "0.0.0.0")
+    monkeypatch.setenv("LUNCHMONEY_PORT", "9000")
 
     settings = Settings()
     assert (
@@ -90,6 +112,71 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.lunchmoney_mcp_oauth_audience == "https://mcp.example.com"
     assert settings.stateless is True
     assert settings.sync_safety_margin_minutes == 10
+    assert settings.scheduler_cron == "15 4 * * 1-5"
+    assert settings.scheduler_timezone == "America/Denver"
+    assert settings.scheduler_days == 45
+    assert settings.embedded_scheduler is True
+    assert settings.server_host == "0.0.0.0"
+    assert settings.server_port == 9000
+
+
+def test_settings_parse_runtime_cli_arguments() -> None:
+    """Parse scheduler, embedded-server, and bind options from kebab-case CLI flags."""
+    settings = parse_cli_settings(
+        [
+            "--scheduler-cron",
+            "15 4 * * 1-5",
+            "--scheduler-timezone",
+            "America/Denver",
+            "--scheduler-days",
+            "45",
+            "--embedded-scheduler",
+            "--server-host",
+            "0.0.0.0",
+            "--server-port",
+            "9000",
+        ]
+    )
+
+    assert settings.scheduler_cron == "15 4 * * 1-5"
+    assert settings.scheduler_timezone == "America/Denver"
+    assert settings.scheduler_days == 45
+    assert settings.embedded_scheduler is True
+    assert settings.server_host == "0.0.0.0"
+    assert settings.server_port == 9000
+
+
+def test_export_runtime_settings_preserves_cli_values_for_reloader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Export explicit runtime values into the environment inherited by reloaders."""
+    monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_HOST", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_PORT", raising=False)
+    settings = Settings(
+        embedded_scheduler=True,
+        server_host="0.0.0.0",
+        server_port=9000,
+    )
+
+    export_runtime_settings(settings)
+
+    assert os.environ["LUNCHMONEY_EMBED_SCHEDULER"] == "true"
+    assert os.environ["LUNCHMONEY_HOST"] == "0.0.0.0"
+    assert os.environ["LUNCHMONEY_PORT"] == "9000"
+
+
+def test_mcp_runtime_forces_ephemeral_database(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Prevent standalone MCP transport processes from opening persistent storage."""
+    import lunchmoney_mcp.config as config_module
+
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", "sqlite+aiosqlite:///persistent.db")
+    monkeypatch.setattr(config_module, "_runtime_mode", None)
+    configure_runtime_mode("mcp")
+
+    assert resolve_database_url() == IN_MEMORY_DATABASE_URL
 
 
 def test_stateless_settings_select_shared_memory_url(

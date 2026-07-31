@@ -17,6 +17,26 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lunchmoney-scheduler
+    command: ["lunchmoney-mcp", "schedule"]
+    profiles: ["scheduler"]
+    environment:
+      LUNCHMONEY_DATABASE_URL: postgresql+asyncpg://lunchmoney:lunchmoney@postgres:5432/lunchmoney
+      REDIS_URL: redis://redis:6379/0
+      LUNCHMONEY_ACCESS_TOKEN: ${LUNCHMONEY_ACCESS_TOKEN:-}
+      LUNCHMONEY_SCHEDULE_CRON: ${LUNCHMONEY_SCHEDULE_CRON:-0 * * * *}
+      LUNCHMONEY_SCHEDULE_TIMEZONE: ${LUNCHMONEY_SCHEDULE_TIMEZONE:-UTC}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   postgres:
     image: postgres:17-alpine
     container_name: lunchmoney-postgres

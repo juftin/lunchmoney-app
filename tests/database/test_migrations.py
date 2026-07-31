@@ -302,6 +302,18 @@ def test_head_migration_creates_sync_metadata_table(tmp_path: Path) -> None:
         command.downgrade(config, "base")
 
 
+def test_head_migration_creates_scheduled_sync_runs_table(tmp_path: Path) -> None:
+    """Create the persistent scheduler run-reporting table on a fresh database."""
+    database_url = f"sqlite+aiosqlite:///{tmp_path / 'scheduled-sync-runs.db'}"
+    config = _migration_config(database_url)
+
+    command.upgrade(config, "head")
+    try:
+        assert "scheduled_sync_runs" in asyncio.run(_table_names(database_url))
+    finally:
+        command.downgrade(config, "base")
+
+
 def test_migration_contract_downgrades_after_contract_assertion_failure(
     tmp_path: Path,
 ) -> None:

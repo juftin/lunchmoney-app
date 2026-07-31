@@ -236,28 +236,27 @@ features.
 
 ### Sprint 8: Production Runtime & Scheduled Sync
 
-- [ ] Replace the FastAPI development CLI in deployment assets with Gunicorn
+- [x] Replace the FastAPI development CLI in deployment assets with Gunicorn
       serving the ASGI application through the maintained `uvicorn-worker` worker
       package. Keep direct Uvicorn for local development.
-- [ ] Add a dedicated `lunchmoney-mcp schedule` process using APScheduler's
+- [x] Add a dedicated `lunchmoney-mcp schedule` process using APScheduler's
       async scheduler and an explicit cron expression/timezone configuration for
-      scheduled sync. Scheduling remains opt-in; `uvx lunchmoney-mcp` stdio and
-      `serve` without `--schedule` never start background work.
-- [ ] Define the initial schedule policy as full metadata refresh plus
+      scheduled sync. Scheduling remains opt-in; `uvx lunchmoney-mcp mcp` and
+      `serve` without embedded scheduling never start background work.
+- [x] Define the initial schedule policy as full metadata refresh plus
       incremental transaction refresh, using the persisted transaction watermark
       and safety margin. The first run without a watermark bootstraps the rolling
       transaction window before subsequent runs become incremental.
-- [ ] Keep schedulers out of Gunicorn web workers. Do **not** use Gunicorn
+- [x] Keep schedulers out of Gunicorn web workers. Do **not** use Gunicorn
       `--preload` as scheduler coordination: it preloads the app before worker
       forks and cannot guarantee one scheduler or one execution.
-- [ ] Make the default deployment topology one scheduler process plus one or
+- [x] Make the default deployment topology one scheduler process plus one or
       more stateless web workers. Serialize sync through the existing distributed
       migration/sync lock and expose last-run status.
-- [ ] Define an HA scheduler mode only for PostgreSQL plus a shared APScheduler
-      data store and event broker (Redis or PostgreSQL notifications). Reject
-      multi-scheduler SQLite configurations; SQLite is supported only with the
-      single dedicated scheduler process.
-- [ ] Add graceful startup/shutdown, missed-run coalescing, one-at-a-time sync
+- [x] Keep APScheduler 3.11 in the supported single dedicated scheduler topology.
+      APScheduler 3 job stores cannot be shared, so HA/multi-scheduler operation
+      is explicitly unsupported; SQLite and PostgreSQL both use one scheduler.
+- [x] Add graceful startup/shutdown, missed-run coalescing, one-at-a-time sync
       execution, structured run results, and integration coverage for duplicate
       scheduler prevention.
 

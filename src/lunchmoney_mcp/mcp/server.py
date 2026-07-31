@@ -5,6 +5,8 @@ import datetime
 import json
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
+from lunchmoney_mcp.app.auth import get_mcp_oauth_provider
+from lunchmoney_mcp.config import Settings
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.mcp.tools import (
     accounts,
@@ -89,8 +91,8 @@ def uncategorized_transactions_audit() -> str:
     )
 
 
-def main() -> None:
-    """Launch the FastMCP server with the transport selected by a CLI flag."""
+def create_argument_parser() -> argparse.ArgumentParser:
+    """Create the transport parser used by the standalone MCP command."""
     parser = argparse.ArgumentParser(description="Launch the Lunch Money MCP server.")
     transport_group = parser.add_mutually_exclusive_group()
     transport_group.add_argument(
@@ -113,7 +115,22 @@ def main() -> None:
     )
     parser.add_argument("--host", help="Host to bind for an HTTP transport.")
     parser.add_argument("--port", type=int, help="Port to bind for an HTTP transport.")
-    args = parser.parse_args()
+    return parser
+
+
+def configure_auth(settings: Settings) -> None:
+    """Apply CLI-resolved OAuth configuration before starting FastMCP.
+
+    Parameters
+    ----------
+    settings : Settings
+        Runtime configuration containing optional OIDC proxy settings.
+    """
+    mcp.auth = get_mcp_oauth_provider(settings=settings)
+
+
+def run_from_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Run FastMCP using arguments parsed by :func:`create_argument_parser`."""
     transport = args.transport or "stdio"
     if transport == "stdio":
         if args.host is not None or args.port is not None:
@@ -124,4 +141,16 @@ def main() -> None:
     mcp.run(transport=transport, host=args.host, port=args.port)
 
 
-__all__ = ["main", "mcp"]
+def main(argv: list[str] | None = None) -> None:
+    """Launch the FastMCP server with the transport selected by a CLI flag."""
+    parser = create_argument_parser()
+    run_from_args(parser, parser.parse_args(argv))
+
+
+__all__ = [
+    "configure_auth",
+    "create_argument_parser",
+    "main",
+    "mcp",
+    "run_from_args",
+]

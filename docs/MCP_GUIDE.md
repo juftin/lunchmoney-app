@@ -38,12 +38,12 @@ graph TD
 
 ### 1.1 Executable Entrypoint & PyPI `uvx` Bundling
 
-Expose a clean CLI entrypoint in `pyproject.toml` so users and LLM clients can launch the server instantly via `uvx lunchmoney-mcp` or `pipx run lunchmoney-mcp` without manually cloning the repository:
+Expose a clean CLI entrypoint in `pyproject.toml` so users and LLM clients can launch the server instantly via `uvx lunchmoney-mcp mcp` or `pipx run lunchmoney-mcp mcp` without manually cloning the repository:
 
 ```toml
 # pyproject.toml
 [project.scripts]
-lunchmoney-mcp = "lunchmoney_mcp.mcp.server:main"
+lunchmoney-mcp = "lunchmoney_mcp.cli:main"
 ```
 
 ### 1.2 Multi-Transport Support
@@ -52,11 +52,11 @@ The executable supports FastMCP's four transports. `stdio` is the default for
 local desktop clients; use the HTTP flags for remote server deployments:
 
 ```bash
-lunchmoney-mcp                    # stdio
-lunchmoney-mcp --stdio            # stdio (explicit)
-lunchmoney-mcp --sse              # Server-Sent Events
-lunchmoney-mcp --http             # HTTP
-lunchmoney-mcp --streamable-http  # Streamable HTTP
+lunchmoney-mcp mcp                    # stdio
+lunchmoney-mcp mcp --stdio            # stdio (explicit)
+lunchmoney-mcp mcp --sse              # Server-Sent Events
+lunchmoney-mcp mcp --http             # HTTP
+lunchmoney-mcp mcp --streamable-http  # Streamable HTTP
 ```
 
 For HTTP transports, the default bind address is `127.0.0.1:8000`. The MCP
@@ -64,7 +64,7 @@ endpoints are `http://127.0.0.1:8000/mcp` for HTTP and Streamable HTTP, and
 `http://127.0.0.1:8000/sse` for SSE. Override the bind address as needed:
 
 ```bash
-lunchmoney-mcp --streamable-http --host 0.0.0.0 --port 9000
+lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 9000
 ```
 
 `--host` and `--port` are invalid with `--stdio`. The four transport flags are
@@ -137,7 +137,7 @@ export LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET="your-identity-provider-secret" # opti
 export LUNCHMONEY_MCP_OAUTH_BASE_URL="https://mcp.example.com"
 export LUNCHMONEY_MCP_OAUTH_AUDIENCE="https://mcp.example.com" # optional
 
-lunchmoney-mcp --streamable-http --host 0.0.0.0 --port 8000
+lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 8000
 ```
 
 `LUNCHMONEY_MCP_OAUTH_BASE_URL` must be the public HTTPS origin, without the

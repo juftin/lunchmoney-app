@@ -14,6 +14,7 @@ from lunchmoney_mcp.database.models import (  # noqa: F401
     Category,
     ManualAccount,
     PlaidAccount,
+    ScheduledSyncRun,
     SyncMetadata,
     Tag,
     Transaction,
