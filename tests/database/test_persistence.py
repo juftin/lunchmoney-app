@@ -1,7 +1,7 @@
 """Persistence contract tests for relationship-aware async database helpers."""
 
 from collections.abc import Iterable
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import cast
 
@@ -33,6 +33,10 @@ from factories import (
     transaction_object,
     user_object,
 )
+
+
+UTC = timezone.utc
+# Canonical UTC timezone compatible with all supported Python versions.
 
 
 class UnsupportedRecord(SQLModel):

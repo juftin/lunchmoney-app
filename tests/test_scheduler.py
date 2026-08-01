@@ -230,7 +230,7 @@ async def test_scheduled_sync_status_maps_persisted_record() -> None:
     from lunchmoney_mcp.database import ScheduledSyncRun
     from lunchmoney_mcp.services.sync import get_scheduled_sync_status
 
-    timestamp = datetime.datetime(2026, 7, 30, tzinfo=datetime.UTC)
+    timestamp = datetime.datetime(2026, 7, 30, tzinfo=datetime.timezone.utc)
     database = MagicMock()
     database.get_latest_scheduled_sync_run = AsyncMock(
         return_value=ScheduledSyncRun(

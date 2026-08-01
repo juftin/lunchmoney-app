@@ -3,7 +3,7 @@ name = "lunchmoney-mcp"
 version = "0.1.0"
 description = "Lunch Money Application"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 authors = [
   {name = "Justin Flannery", email = "juftin@juftin.com"}
 ]
@@ -21,13 +21,18 @@ dependencies = [
   "redis>=8.0.1",
   "gunicorn>=23.0.0,<24",
   "uvicorn-worker>=0.4.0,<1",
-  "apscheduler==3.11.2"
+  "apscheduler==3.11.2",
+  "typing-extensions>=4.12.2"
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: CPython"
 ]
 

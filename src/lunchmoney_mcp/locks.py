@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Self
+from typing_extensions import Self
 
 from filelock import FileLock as PyFileLock, Timeout as FileLockTimeout
 import redis
@@ -245,9 +245,9 @@ def get_migration_lock(
 
 
 FileLock = LockFile
-"""Alias for LockFile."""
+# Alias for LockFile.
 RedisLock = Redis
-"""Alias for Redis."""
+# Alias for Redis.
 
 __all__ = [
     "FileLock",

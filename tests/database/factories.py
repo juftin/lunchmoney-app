@@ -1,6 +1,6 @@
 """Deterministic synthetic generated-model factories for database tests."""
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime, timezone
 
 from lunchmoney.models import (
     AccountTypeEnum,
@@ -16,10 +16,13 @@ from lunchmoney.models import (
     UserObject,
 )
 
+UTC = timezone.utc
+# Canonical UTC timezone compatible with all supported Python versions.
+
 SYNTHETIC_DATE = date(2026, 1, 1)
-"""Stable calendar date used by generated-model fixtures."""
+# Stable calendar date used by generated-model fixtures.
 SYNTHETIC_DATETIME = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
-"""Stable UTC timestamp used by generated-model fixtures."""
+# Stable UTC timestamp used by generated-model fixtures.
 
 
 def user_object() -> UserObject:

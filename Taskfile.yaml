@@ -36,6 +36,7 @@ tasks:
           UV_PYTHON: "{{.UV_PYTHON}}"
           CLI_ARGS: --quiet
     env:
+      UV_MANAGED_PYTHON: 1
       UV_PYTHON: "{{.UV_PYTHON}}"
 
   test:matrix:
@@ -43,7 +44,7 @@ tasks:
     cmds:
       - for:
           matrix:
-            PYTHON: ["3.13"]
+            PYTHON: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         task: test
         vars:
           UV_PYTHON: "{{.ITEM.PYTHON}}"
@@ -196,6 +197,7 @@ tasks:
     cmds:
       - uv sync --all-extras {{.CLI_ARGS}}
     env:
+      UV_MANAGED_PYTHON: 1
       UV_PYTHON: "{{.UV_PYTHON}}"
 
   pre-commit-install:

@@ -1,10 +1,13 @@
 """Portable datetime storage helpers that retain source API shape."""
 
-from datetime import UTC, datetime, timedelta, timezone
-
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import DateTime
 from sqlalchemy.engine import Dialect
 from sqlalchemy.types import TypeDecorator
+
+
+UTC = timezone.utc
+# Canonical UTC timezone compatible with all supported Python versions.
 
 
 def datetime_offset_minutes(value: datetime | None) -> int | None:

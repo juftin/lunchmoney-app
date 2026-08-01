@@ -23,7 +23,7 @@ ASGIApp = Callable[
     ],
     Awaitable[None],
 ]
-"""Callable protocol shape accepted by the small ASGI middleware classes."""
+# Callable protocol shape accepted by the small ASGI middleware classes.
 
 
 async def _send_json_error(
@@ -152,7 +152,7 @@ class RequestTimeoutMiddleware:
             await asyncio.wait_for(
                 self.app(scope, receive, tracked_send), timeout=self.timeout_seconds
             )
-        except TimeoutError:
+        except asyncio.TimeoutError:
             if not response_started:
                 await _send_json_error(
                     send,

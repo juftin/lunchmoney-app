@@ -1,6 +1,8 @@
 """SQLModel record for the Lunch Money user."""
 
-from typing import ClassVar, Self
+from typing import ClassVar
+
+from typing_extensions import Self
 
 from lunchmoney.models import CurrencyEnum, UserObject
 from sqlalchemy import String

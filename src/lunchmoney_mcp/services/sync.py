@@ -147,13 +147,13 @@ async def run_scheduled_sync(
     ScheduledSyncStatus
         Final successful, failed, or skipped run status.
     """
-    started_at = datetime.datetime.now(datetime.UTC)
+    started_at = datetime.datetime.now(datetime.timezone.utc)
     lock = get_migration_lock()
     if not lock.acquire(blocking=False):
         result = ScheduledSyncStatus(
             status="skipped",
             started_at=started_at,
-            finished_at=datetime.datetime.now(datetime.UTC),
+            finished_at=datetime.datetime.now(datetime.timezone.utc),
             message="Skipped because another migration or synchronization is running.",
         )
         await _record_scheduled_sync_status(db=db, status=result)
@@ -171,14 +171,14 @@ async def run_scheduled_sync(
         result = ScheduledSyncStatus(
             status="failed",
             started_at=started_at,
-            finished_at=datetime.datetime.now(datetime.UTC),
+            finished_at=datetime.datetime.now(datetime.timezone.utc),
             message="Scheduled synchronization failed; inspect server logs for details.",
         )
     else:
         result = ScheduledSyncStatus(
             status="success",
             started_at=started_at,
-            finished_at=datetime.datetime.now(datetime.UTC),
+            finished_at=datetime.datetime.now(datetime.timezone.utc),
             synced=response.synced,
         )
     finally:

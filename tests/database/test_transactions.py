@@ -1,6 +1,6 @@
 """Tests for normalized transaction graphs and related records."""
 
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from types import NoneType
 from typing import get_args
@@ -30,6 +30,10 @@ from factories import (
     transaction_attachment_object,
     transaction_object,
 )
+
+
+UTC = timezone.utc
+# Canonical UTC timezone compatible with all supported Python versions.
 
 
 def test_transaction_graph_round_trip_is_exact() -> None:

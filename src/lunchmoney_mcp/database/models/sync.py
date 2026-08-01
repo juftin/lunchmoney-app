@@ -1,13 +1,16 @@
 """SQLModel record for incremental synchronization watermarks."""
 
 from builtins import type as builtin_type
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, ClassVar, cast
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
-
 from lunchmoney_mcp.database.models._datetime import UTCDateTime
+
+
+UTC = timezone.utc
+# Canonical UTC timezone compatible with all supported Python versions.
 
 
 class SyncMetadata(SQLModel, table=True):

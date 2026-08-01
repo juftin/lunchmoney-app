@@ -1,9 +1,10 @@
 """Normalized SQLModel records for Lunch Money category graphs."""
 
 from datetime import datetime
-from enum import StrEnum
 from builtins import type as builtin_type
-from typing import Any, ClassVar, Optional, Self, cast
+from typing import Any, ClassVar, Optional, cast
+
+from typing_extensions import Self
 
 from lunchmoney.models import CategoryObject, ChildCategoryObject
 from sqlalchemy import String
@@ -14,6 +15,7 @@ from lunchmoney_mcp.database.models._datetime import (
     datetime_offset_minutes,
     restore_datetime_shape,
 )
+from lunchmoney_mcp._compat import StrEnum
 
 
 class CategoryKind(StrEnum):

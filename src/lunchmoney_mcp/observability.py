@@ -218,10 +218,15 @@ def _metric_line(name: str, labels: Mapping[str, str], value: int | float) -> st
     if not labels:
         return f"{name} {value}"
     rendered_labels = ",".join(
-        f'{key}="{value.replace("\\", "\\\\").replace(chr(34), '\\\\"')}"'
+        f'{key}="{_escape_metric_label(value)}"'
         for key, value in sorted(labels.items())
     )
     return f"{name}{{{rendered_labels}}} {value}"
+
+
+def _escape_metric_label(value: str) -> str:
+    """Escape a Prometheus label value without relying on Python 3.12 f-string syntax."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def log_event(logger: logging.Logger, event: str, **fields: Any) -> None:
@@ -241,7 +246,7 @@ def log_event(logger: logging.Logger, event: str, **fields: Any) -> None:
 
 
 metrics = MetricsRegistry()
-"""Process-local bounded metrics registry exposed by the protected HTTP endpoint."""
+# Process-local bounded metrics registry exposed by the protected HTTP endpoint.
 
 
 __all__ = ["MetricsRegistry", "log_event", "metrics"]
