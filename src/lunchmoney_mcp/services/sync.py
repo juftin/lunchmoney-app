@@ -2,12 +2,16 @@
 
 import datetime
 import logging
+import time
 from typing import Literal, cast
+
+from lunchmoney.exceptions import ApiException
 
 from lunchmoney_mcp.app.sync import sync_database
 from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
 from lunchmoney_mcp.database import LunchMoneyDatabase, ScheduledSyncRun, run_migrations
 from lunchmoney_mcp.locks import get_migration_lock
+from lunchmoney_mcp.observability import metrics
 from lunchmoney_mcp.schemas import (
     ScheduledSyncStatus,
     SyncDetails,
@@ -45,19 +49,34 @@ async def execute_sync(
     SyncResponse
         Status summary and record counts of synchronized objects.
     """
-    if db.is_stateless:
-        logger.info("Initializing stateless schema and triggering %s-day sync...", days)
-        await db.create_tables()
-    else:
-        logger.info("Triggering database migrations and %s-day sync...", days)
-        await run_migrations()
-    summary: SyncSummary = await sync_database(
-        db=db,
-        client=client,
-        days=days,
-        incremental=incremental,
-        safety_margin_minutes=safety_margin_minutes,
+    started_at = time.perf_counter()
+    try:
+        if db.is_stateless:
+            logger.info(
+                "Initializing stateless schema and triggering %s-day sync...", days
+            )
+            await db.create_tables()
+        else:
+            logger.info("Triggering database migrations and %s-day sync...", days)
+            await run_migrations()
+        summary: SyncSummary = await sync_database(
+            db=db,
+            client=client,
+            days=days,
+            incremental=incremental,
+            safety_margin_minutes=safety_margin_minutes,
+        )
+    except Exception as error:
+        metrics.record_sync(
+            status="failure", duration_seconds=time.perf_counter() - started_at
+        )
+        if isinstance(error, ApiException):
+            metrics.record_upstream_failure(error)
+        raise
+    metrics.record_sync(
+        status="success", duration_seconds=time.perf_counter() - started_at
     )
+    metrics.record_cache_refresh()
     details = SyncDetails(
         user=summary.user,
         plaid_accounts=summary.plaid_accounts,

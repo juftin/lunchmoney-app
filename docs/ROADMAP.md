@@ -275,18 +275,18 @@ features.
 
 ### Sprint 10: Operational Hardening & Observability
 
-- [ ] Add health, readiness, and dependency checks that distinguish a live
+- [x] Add health, readiness, and dependency checks that distinguish a live
       process from a database-ready and scheduler-ready service.
-- [ ] Add structured logs, request IDs, safe error responses, and metrics for
+- [x] Add structured logs, request IDs, safe error responses, and metrics for
       HTTP/MCP requests, upstream failures/rate limits, sync duration, and cache
       freshness. Export Prometheus-compatible metrics at `/metrics`; protect it by
       network policy or authentication. Never emit tokens or financial payloads in
       logs or metrics.
-- [ ] Set explicit trusted-proxy, allowed-host, CORS, request-size, timeout,
+- [x] Set explicit trusted-proxy, allowed-host, CORS, request-size, timeout,
       concurrency, and rate-limit policies, all secure by default.
-- [ ] Document TLS termination, secret rotation, database backup/restore,
+- [x] Document TLS termination, secret rotation, database backup/restore,
       retention, least-privilege deployment, and an incident/runbook checklist.
-- [ ] Add dependency/security scanning, container hardening, and production
+- [x] Add dependency/security scanning, container hardening, and production
       smoke tests to CI/CD.
 
 ### Sprint 11: Server-Rendered Financial Dashboard

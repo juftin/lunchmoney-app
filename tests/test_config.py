@@ -42,6 +42,14 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
     monkeypatch.delenv("LUNCHMONEY_HOST", raising=False)
     monkeypatch.delenv("LUNCHMONEY_PORT", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_TRUSTED_PROXY_IPS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_ALLOWED_HOSTS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_CORS_ALLOWED_ORIGINS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_MAX_REQUEST_BODY_BYTES", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_REQUEST_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_MAX_CONCURRENT_REQUESTS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_RATE_LIMIT_REQUESTS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_RATE_LIMIT_WINDOW_SECONDS", raising=False)
 
     settings = Settings()
     assert settings.lunchmoney_database_url == DEFAULT_DATABASE_URL
@@ -61,6 +69,17 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.embedded_scheduler is False
     assert settings.server_host == "127.0.0.1"
     assert settings.server_port == 8000
+    assert settings.trusted_proxy_ips == ""
+    assert settings.trusted_proxy_ip_list == ()
+    assert settings.allowed_hosts == "localhost,127.0.0.1"
+    assert settings.allowed_host_list == ("localhost", "127.0.0.1")
+    assert settings.cors_allowed_origins == ""
+    assert settings.cors_allowed_origin_list == ()
+    assert settings.max_request_body_bytes == 1_048_576
+    assert settings.request_timeout_seconds == 30.0
+    assert settings.max_concurrent_requests == 100
+    assert settings.rate_limit_requests == 120
+    assert settings.rate_limit_window_seconds == 60
 
 
 def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -93,6 +112,17 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LUNCHMONEY_EMBED_SCHEDULER", "true")
     monkeypatch.setenv("LUNCHMONEY_HOST", "0.0.0.0")
     monkeypatch.setenv("LUNCHMONEY_PORT", "9000")
+    monkeypatch.setenv("LUNCHMONEY_TRUSTED_PROXY_IPS", "10.0.0.2, 2001:db8::1")
+    monkeypatch.setenv("LUNCHMONEY_ALLOWED_HOSTS", "api.example.com, mcp.example.com")
+    monkeypatch.setenv(
+        "LUNCHMONEY_CORS_ALLOWED_ORIGINS",
+        "https://app.example.com, https://admin.example.com",
+    )
+    monkeypatch.setenv("LUNCHMONEY_MAX_REQUEST_BODY_BYTES", "2097152")
+    monkeypatch.setenv("LUNCHMONEY_REQUEST_TIMEOUT_SECONDS", "45")
+    monkeypatch.setenv("LUNCHMONEY_MAX_CONCURRENT_REQUESTS", "25")
+    monkeypatch.setenv("LUNCHMONEY_RATE_LIMIT_REQUESTS", "30")
+    monkeypatch.setenv("LUNCHMONEY_RATE_LIMIT_WINDOW_SECONDS", "15")
 
     settings = Settings()
     assert (
@@ -118,6 +148,19 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.embedded_scheduler is True
     assert settings.server_host == "0.0.0.0"
     assert settings.server_port == 9000
+    assert settings.trusted_proxy_ips == "10.0.0.2,2001:db8::1"
+    assert settings.trusted_proxy_ip_list == ("10.0.0.2", "2001:db8::1")
+    assert settings.allowed_hosts == "api.example.com,mcp.example.com"
+    assert settings.allowed_host_list == ("api.example.com", "mcp.example.com")
+    assert settings.cors_allowed_origin_list == (
+        "https://app.example.com",
+        "https://admin.example.com",
+    )
+    assert settings.max_request_body_bytes == 2_097_152
+    assert settings.request_timeout_seconds == 45.0
+    assert settings.max_concurrent_requests == 25
+    assert settings.rate_limit_requests == 30
+    assert settings.rate_limit_window_seconds == 15
 
 
 def test_settings_parse_runtime_cli_arguments() -> None:
@@ -135,6 +178,22 @@ def test_settings_parse_runtime_cli_arguments() -> None:
             "0.0.0.0",
             "--server-port",
             "9000",
+            "--trusted-proxy-ips",
+            "10.0.0.2",
+            "--allowed-hosts",
+            "api.example.com",
+            "--cors-allowed-origins",
+            "https://app.example.com",
+            "--max-request-body-bytes",
+            "2097152",
+            "--request-timeout-seconds",
+            "45",
+            "--max-concurrent-requests",
+            "25",
+            "--rate-limit-requests",
+            "30",
+            "--rate-limit-window-seconds",
+            "15",
         ]
     )
 
@@ -144,6 +203,14 @@ def test_settings_parse_runtime_cli_arguments() -> None:
     assert settings.embedded_scheduler is True
     assert settings.server_host == "0.0.0.0"
     assert settings.server_port == 9000
+    assert settings.trusted_proxy_ip_list == ("10.0.0.2",)
+    assert settings.allowed_host_list == ("api.example.com",)
+    assert settings.cors_allowed_origin_list == ("https://app.example.com",)
+    assert settings.max_request_body_bytes == 2_097_152
+    assert settings.request_timeout_seconds == 45.0
+    assert settings.max_concurrent_requests == 25
+    assert settings.rate_limit_requests == 30
+    assert settings.rate_limit_window_seconds == 15
 
 
 def test_export_runtime_settings_preserves_cli_values_for_reloader(
@@ -164,6 +231,67 @@ def test_export_runtime_settings_preserves_cli_values_for_reloader(
     assert os.environ["LUNCHMONEY_EMBED_SCHEDULER"] == "true"
     assert os.environ["LUNCHMONEY_HOST"] == "0.0.0.0"
     assert os.environ["LUNCHMONEY_PORT"] == "9000"
+
+
+def test_export_runtime_settings_preserves_network_policy_for_reloader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Export configured network policy values into a reloader child process."""
+    for environment_name in (
+        "LUNCHMONEY_TRUSTED_PROXY_IPS",
+        "LUNCHMONEY_ALLOWED_HOSTS",
+        "LUNCHMONEY_CORS_ALLOWED_ORIGINS",
+        "LUNCHMONEY_MAX_REQUEST_BODY_BYTES",
+        "LUNCHMONEY_REQUEST_TIMEOUT_SECONDS",
+        "LUNCHMONEY_MAX_CONCURRENT_REQUESTS",
+        "LUNCHMONEY_RATE_LIMIT_REQUESTS",
+        "LUNCHMONEY_RATE_LIMIT_WINDOW_SECONDS",
+    ):
+        monkeypatch.delenv(environment_name, raising=False)
+    settings = Settings(
+        trusted_proxy_ips="10.0.0.2",
+        allowed_hosts="api.example.com",
+        cors_allowed_origins="https://app.example.com",
+        max_request_body_bytes=2_097_152,
+        request_timeout_seconds=45,
+        max_concurrent_requests=25,
+        rate_limit_requests=30,
+        rate_limit_window_seconds=15,
+    )
+
+    export_runtime_settings(settings)
+
+    assert os.environ["LUNCHMONEY_TRUSTED_PROXY_IPS"] == "10.0.0.2"
+    assert os.environ["LUNCHMONEY_ALLOWED_HOSTS"] == "api.example.com"
+    assert os.environ["LUNCHMONEY_CORS_ALLOWED_ORIGINS"] == "https://app.example.com"
+    assert os.environ["LUNCHMONEY_MAX_REQUEST_BODY_BYTES"] == "2097152"
+    assert os.environ["LUNCHMONEY_REQUEST_TIMEOUT_SECONDS"] == "45.0"
+    assert os.environ["LUNCHMONEY_MAX_CONCURRENT_REQUESTS"] == "25"
+    assert os.environ["LUNCHMONEY_RATE_LIMIT_REQUESTS"] == "30"
+    assert os.environ["LUNCHMONEY_RATE_LIMIT_WINDOW_SECONDS"] == "15"
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value", "error"),
+    [
+        (
+            "trusted_proxy_ips",
+            "proxy.internal",
+            "does not appear to be an IPv4 or IPv6 address",
+        ),
+        ("allowed_hosts", "", "at least one host"),
+        ("allowed_hosts", "*", "must not contain a wildcard"),
+        ("cors_allowed_origins", "*", "must not contain a wildcard"),
+    ],
+)
+def test_settings_reject_insecure_network_policy(
+    field_name: str,
+    value: str,
+    error: str,
+) -> None:
+    """Reject wildcard and implicit network trust configuration."""
+    with pytest.raises(ValueError, match=error):
+        Settings(**{field_name: value})
 
 
 def test_mcp_runtime_forces_ephemeral_database(

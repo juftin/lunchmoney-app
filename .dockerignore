@@ -1,0 +1,22 @@
+# Keep developer state, credentials, and non-runtime material out of image builds.
+.git
+.github
+.venv
+.env
+.env.*
+*.db
+*.sqlite3
+.lunchmoney_*.lock
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.superpowers
+.worktrees
+.idea
+.vscode
+__marimo__
+docs
+notebooks
+tests

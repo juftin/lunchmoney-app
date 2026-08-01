@@ -31,10 +31,17 @@ the HTTP transports.
 
 The container image runs the combined REST and MCP ASGI application with
 Gunicorn and `uvicorn-worker` on port 8000. Docker Compose uses that production
-command by default:
+command by default. The Compose stack binds HTTP only to loopback and requires
+explicit production credentials; see the [operations runbook](docs/OPERATIONS.md)
+for TLS, secrets, backups, restores, retention, and incident response.
 
 ```bash
 export LUNCHMONEY_ACCESS_TOKEN="your-lunch-money-token"
+export LUNCHMONEY_MCP_API_KEY="your-server-key"
+export POSTGRES_USER="lunchmoney"
+export POSTGRES_PASSWORD="use-a-long-random-password"
+export POSTGRES_DB="lunchmoney"
+export LUNCHMONEY_DATABASE_URL="postgresql+asyncpg://lunchmoney:use-a-long-random-password@postgres:5432/lunchmoney"
 task compose
 ```
 
