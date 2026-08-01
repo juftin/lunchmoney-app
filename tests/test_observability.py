@@ -21,10 +21,11 @@ class RateLimitedError(Exception):
 
 def test_health_liveness_bypasses_rest_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep a process liveness probe available when the REST API is protected."""
-    from lunchmoney_mcp.config import get_settings
+    from lunchmoney_mcp.config import get_secret_settings, get_settings
 
     monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "synthetic-api-key")
     get_settings.cache_clear()
+    get_secret_settings.cache_clear()
     try:
         with TestClient(fastapi_app) as client:
             response = client.get("/health")
@@ -33,17 +34,20 @@ def test_health_liveness_bypasses_rest_api_key(monkeypatch: pytest.MonkeyPatch) 
         assert response.json() == {"status": "ok"}
     finally:
         get_settings.cache_clear()
+        get_secret_settings.cache_clear()
 
 
 def test_readiness_reports_database_and_scheduler_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Expose database readiness while identifying a disabled embedded scheduler."""
-    from lunchmoney_mcp.config import get_settings
+    from lunchmoney_mcp.config import RuntimeSettings, get_settings
 
-    monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
-    get_settings.cache_clear()
     health_module = import_module("lunchmoney_mcp.app.routers.health")
+    lifespan_module = import_module("lunchmoney_mcp.app.lifespan")
+    settings = RuntimeSettings(embed_scheduler=False)
+    monkeypatch.setattr(health_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(lifespan_module, "get_settings", lambda: settings)
 
     monkeypatch.setattr(
         health_module, "database_is_ready", AsyncMock(return_value=True)
@@ -66,11 +70,13 @@ def test_readiness_hides_database_error_details(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Return only a bounded unavailable status when a dependency is unhealthy."""
-    from lunchmoney_mcp.config import get_settings
+    from lunchmoney_mcp.config import RuntimeSettings, get_settings
 
-    monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
-    get_settings.cache_clear()
     health_module = import_module("lunchmoney_mcp.app.routers.health")
+    lifespan_module = import_module("lunchmoney_mcp.app.lifespan")
+    settings = RuntimeSettings(embed_scheduler=False)
+    monkeypatch.setattr(health_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(lifespan_module, "get_settings", lambda: settings)
 
     monkeypatch.setattr(
         health_module, "database_is_ready", AsyncMock(return_value=False)
@@ -91,10 +97,11 @@ def test_readiness_hides_database_error_details(
 
 def test_metrics_require_configured_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reject metric scrapes unless the operator configured REST authentication."""
-    from lunchmoney_mcp.config import get_settings
+    from lunchmoney_mcp.config import get_secret_settings, get_settings
 
     monkeypatch.delenv("LUNCHMONEY_MCP_API_KEY", raising=False)
     get_settings.cache_clear()
+    get_secret_settings.cache_clear()
     try:
         with TestClient(fastapi_app) as client:
             response = client.get("/metrics")
@@ -105,16 +112,18 @@ def test_metrics_require_configured_api_key(monkeypatch: pytest.MonkeyPatch) -> 
         }
     finally:
         get_settings.cache_clear()
+        get_secret_settings.cache_clear()
 
 
 def test_metrics_include_safe_http_and_mcp_counters(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Expose bounded route labels and require the configured API key."""
-    from lunchmoney_mcp.config import get_settings
+    from lunchmoney_mcp.config import get_secret_settings, get_settings
 
     monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "synthetic-api-key")
     get_settings.cache_clear()
+    get_secret_settings.cache_clear()
     try:
         with TestClient(fastapi_app) as client:
             response = client.get("/", headers={"X-API-Key": "synthetic-api-key"})
@@ -133,6 +142,7 @@ def test_metrics_include_safe_http_and_mcp_counters(
         assert "synthetic-api-key" not in metrics_response.text
     finally:
         get_settings.cache_clear()
+        get_secret_settings.cache_clear()
 
 
 def test_metrics_registry_tracks_sync_and_rate_limit_without_error_text() -> None:

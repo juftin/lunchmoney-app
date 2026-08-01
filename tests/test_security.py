@@ -6,10 +6,10 @@ from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from lunchmoney_mcp.app.security import apply_security_middleware
-from lunchmoney_mcp.config import Settings
+from lunchmoney_mcp.config import RuntimeSettings
 
 
-def build_test_app(settings: Settings) -> FastAPI:
+def build_test_app(settings: RuntimeSettings) -> FastAPI:
     """Create a small HTTP app protected by the supplied network policy."""
     app = FastAPI()
 
@@ -35,7 +35,7 @@ def build_test_app(settings: Settings) -> FastAPI:
 
 def test_network_policy_rejects_unknown_hosts() -> None:
     """Require a configured Host header before serving a request."""
-    app = build_test_app(Settings(allowed_hosts="api.example.com"))
+    app = build_test_app(RuntimeSettings(allowed_hosts="api.example.com"))
 
     with TestClient(app, base_url="http://api.example.com") as client:
         assert client.get("/ok").status_code == 200
@@ -45,7 +45,9 @@ def test_network_policy_rejects_unknown_hosts() -> None:
 
 def test_network_policy_rejects_oversized_bodies() -> None:
     """Reject a payload from its declared Content-Length before application parsing."""
-    app = build_test_app(Settings(allowed_hosts="localhost", max_request_body_bytes=4))
+    app = build_test_app(
+        RuntimeSettings(allowed_hosts="localhost", max_request_body_bytes=4)
+    )
 
     with TestClient(app, base_url="http://localhost") as client:
         response = client.post("/echo", content=b"12345")
@@ -59,7 +61,7 @@ def test_network_policy_rejects_oversized_bodies() -> None:
 def test_network_policy_times_out_slow_requests() -> None:
     """End requests that exceed their explicitly configured execution budget."""
     app = build_test_app(
-        Settings(allowed_hosts="localhost", request_timeout_seconds=0.001)
+        RuntimeSettings(allowed_hosts="localhost", request_timeout_seconds=0.001)
     )
 
     with TestClient(app, base_url="http://localhost") as client:
@@ -72,7 +74,7 @@ def test_network_policy_times_out_slow_requests() -> None:
 def test_network_policy_rate_limits_each_client() -> None:
     """Reject requests beyond the fixed-window per-client allowance."""
     app = build_test_app(
-        Settings(
+        RuntimeSettings(
             allowed_hosts="localhost",
             rate_limit_requests=1,
             rate_limit_window_seconds=60,

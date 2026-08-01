@@ -9,7 +9,12 @@ from typing import TYPE_CHECKING, Any
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 
-from lunchmoney_mcp.config import Settings, get_settings
+from lunchmoney_mcp.config import (
+    RuntimeSettings,
+    SecretSettings,
+    get_secret_settings,
+    get_settings,
+)
 
 if TYPE_CHECKING:
     from fastmcp.server.auth import AuthProvider
@@ -22,13 +27,18 @@ def _oidc_proxy_class() -> type[Any]:
     return OIDCProxy
 
 
-def get_mcp_oauth_provider(settings: Settings | None = None) -> AuthProvider | None:
+def get_mcp_oauth_provider(
+    settings: RuntimeSettings | None = None,
+    secret_settings: SecretSettings | None = None,
+) -> AuthProvider | None:
     """Build the optional OIDC proxy that protects remote MCP transports.
 
     Parameters
     ----------
-    settings : Settings | None
+    settings : RuntimeSettings | None
         Explicit settings for construction or the cached application settings.
+    secret_settings : SecretSettings | None
+        Explicit secret settings for construction or the cached secret settings.
 
     Returns
     -------
@@ -42,14 +52,11 @@ def get_mcp_oauth_provider(settings: Settings | None = None) -> AuthProvider | N
         If only part of the required OAuth configuration is supplied.
     """
     resolved_settings = settings or get_settings()
+    resolved_secret_settings = secret_settings or get_secret_settings()
     configuration = {
-        "LUNCHMONEY_MCP_OAUTH_CONFIG_URL": (
-            resolved_settings.lunchmoney_mcp_oauth_config_url
-        ),
-        "LUNCHMONEY_MCP_OAUTH_CLIENT_ID": (
-            resolved_settings.lunchmoney_mcp_oauth_client_id
-        ),
-        "LUNCHMONEY_MCP_OAUTH_BASE_URL": resolved_settings.lunchmoney_mcp_oauth_base_url,
+        "LUNCHMONEY_MCP_OAUTH_CONFIG_URL": (resolved_settings.mcp_oauth_config_url),
+        "LUNCHMONEY_MCP_OAUTH_CLIENT_ID": (resolved_settings.mcp_oauth_client_id),
+        "LUNCHMONEY_MCP_OAUTH_BASE_URL": resolved_settings.mcp_oauth_base_url,
     }
     if not any(configuration.values()):
         return None
@@ -63,11 +70,11 @@ def get_mcp_oauth_provider(settings: Settings | None = None) -> AuthProvider | N
         )
 
     return _oidc_proxy_class()(
-        config_url=resolved_settings.lunchmoney_mcp_oauth_config_url,
-        client_id=resolved_settings.lunchmoney_mcp_oauth_client_id,
-        client_secret=resolved_settings.lunchmoney_mcp_oauth_client_secret,
-        audience=resolved_settings.lunchmoney_mcp_oauth_audience,
-        base_url=resolved_settings.lunchmoney_mcp_oauth_base_url,
+        config_url=resolved_settings.mcp_oauth_config_url,
+        client_id=resolved_settings.mcp_oauth_client_id,
+        client_secret=resolved_secret_settings.mcp_oauth_client_secret,
+        audience=resolved_settings.mcp_oauth_audience,
+        base_url=resolved_settings.mcp_oauth_base_url,
     )
 
 
@@ -97,7 +104,7 @@ async def verify_api_key(
     }:
         return await call_next(request)
 
-    expected_key = get_settings().lunchmoney_mcp_api_key
+    expected_key = get_secret_settings().mcp_api_key
     provided_key = request.headers.get("X-API-Key")
     if request.url.path == "/metrics" and expected_key is None:
         return JSONResponse(

@@ -28,23 +28,15 @@ async def sync(
 ) -> SyncResponse:
     """Initialize the schema and synchronize Lunch Money data for a date window.
 
-    Parameters
-    ----------
-    db : LunchMoneyDatabase
-        Database manager instance.
-    client : LunchMoneyApp
-        Lunch Money API client wrapper.
-    days : int
-        Number of past calendar days to pull transactions for. Default is 30.
-    incremental : bool
-        Whether to resume transaction sync from its successful watermark.
-    safety_margin_minutes : int | None
-        Optional overlap override for an incremental transaction sync.
+    **Parameters:**
 
-    Returns
-    -------
-    SyncResponse
-        Status summary and record counts of synchronized objects.
+    - **db**: Database manager instance.
+    - **client**: Lunch Money API client wrapper.
+    - **days**: Number of past calendar days to pull transactions for. Defaults to 30.
+    - **incremental**: Whether to resume transaction sync from its successful watermark.
+    - **safety_margin_minutes**: Optional overlap override for an incremental transaction sync.
+
+    **Returns:** Status summary and record counts of synchronized objects.
     """
     return await execute_sync(
         db=db,

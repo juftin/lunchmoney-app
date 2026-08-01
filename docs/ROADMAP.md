@@ -47,7 +47,7 @@ graph TD
 - **Sync Strategy**: Background worker or explicit `/sync` calls fetch upstream updates and upsert changes into the database. Reads are served instantaneously from local disk/database cache.
 - **Use Cases**: Local CLI usage, long-running MCP servers, home-server deployments (Docker Compose).
 
-### 2. Stateless In-Memory Mode (`STATELESS=true`)
+### 2. Stateless In-Memory Mode (`LUNCHMONEY_STATELESS=true`)
 
 - **Database Engine**: Shared in-memory SQLite (`sqlite+aiosqlite:///file:memdb?mode=memory&cache=shared&uri=true`) configured with `StaticPool`.
 - **Sync Strategy**: **100% refreshed from Lunch Money v2 API on demand**. For every request or operation:
@@ -175,7 +175,7 @@ graph TD
 
 ### Sprint 0: Incremental ETL Engine Architecture
 
-- [x] Add `STATELESS=true` setting & `IN_MEMORY_DATABASE_URL` resolution in `config.py`.
+- [x] Add `LUNCHMONEY_STATELESS=true` setting & `IN_MEMORY_DATABASE_URL` resolution in `config.py`.
 - [x] Add `StaticPool` in-memory SQLite initialization in `LunchMoneyDatabase`.
 - [x] Add `db.create_tables()` schema initialization helper.
 - [x] Add `SyncMetadata` table and opt-in incremental sync timestamp filtering.

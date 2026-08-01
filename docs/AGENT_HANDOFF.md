@@ -59,7 +59,7 @@ graph LR
 
 ### Sprint 0: Incremental ETL & Stateless Engine
 
-Completed: `SyncMetadata` watermark tracking, opt-in incremental sync (`incremental=True`), configurable safety overlap margins (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`), and in-memory SQLite support (`STATELESS=true`).
+Completed: `SyncMetadata` watermark tracking, opt-in incremental sync (`incremental=True`), configurable safety overlap margins (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`), and in-memory SQLite support (`LUNCHMONEY_STATELESS=true`).
 
 ### Sprint 1: Complete Read-Only 100% v2 API Coverage
 

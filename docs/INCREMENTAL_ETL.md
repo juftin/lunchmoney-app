@@ -31,7 +31,7 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > [!NOTE]
 > **4. Stateless Storage is Explicit and Override-Safe**:
 >
-> - `STATELESS=true` selects a shared in-memory SQLite URL backed by `StaticPool` only when no explicit, environment, or dotenv database URL is configured.
+> - `LUNCHMONEY_STATELESS=true` selects a shared in-memory SQLite URL backed by `StaticPool` only when no explicit, environment, or dotenv database URL is configured.
 > - Startup and explicit synchronization call `LunchMoneyDatabase.create_tables()` on the cached database instance in stateless mode; persistent databases continue to use Alembic migrations.
 
 ---
@@ -76,20 +76,13 @@ sequenceDiagram
 ### Configuration (`src/lunchmoney_mcp/config.py`)
 
 ```python
-    stateless: bool = Field(
-        default=False,
-        validation_alias="STATELESS",
-        description="Run in stateless mode using in-memory SQLite database refreshed from API",
-    )
+    model_config = SettingsConfigDict(env_prefix="LUNCHMONEY_")
 
-    sync_safety_margin_minutes: int = Field(
-        default=5,
-        validation_alias="LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES",
-        description="Safety overlap margin in minutes for incremental ETL queries",
-    )
+    stateless: bool = False
+    sync_safety_margin_minutes: int = 5
 ```
 
-An explicit constructor URL, `LUNCHMONEY_DATABASE_URL`, or a dotenv-provided database URL takes precedence over `STATELESS=true`.
+An explicit constructor URL, `LUNCHMONEY_DATABASE_URL`, or a dotenv-provided database URL takes precedence over `LUNCHMONEY_STATELESS=true`.
 
 ### Transport Interfaces
 

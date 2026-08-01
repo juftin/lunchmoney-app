@@ -35,7 +35,7 @@ def scheduler_status(
     request: Request,
 ) -> Literal["ready", "not_configured", "unavailable"]:
     """Return embedded scheduler readiness without starting or probing another process."""
-    if not get_settings().embedded_scheduler:
+    if not get_settings().embed_scheduler:
         return "not_configured"
     scheduler = getattr(request.app.state, "scheduler", None)
     return "ready" if scheduler is not None and scheduler.running else "unavailable"

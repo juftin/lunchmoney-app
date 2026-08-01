@@ -8,9 +8,14 @@ import pytest
 from lunchmoney_mcp.config import (
     DEFAULT_DATABASE_URL,
     IN_MEMORY_DATABASE_URL,
-    Settings,
+    McpCliSettings,
+    RuntimeSettings,
+    ScheduleCliSettings,
+    SecretSettings,
+    ServeCliSettings,
     configure_runtime_mode,
     export_runtime_settings,
+    get_secret_settings,
     get_settings,
     parse_cli_settings,
 )
@@ -26,7 +31,7 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
         Pytest environment monkeypatching fixture.
     """
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
-    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_REDIS_URL", raising=False)
     monkeypatch.delenv("LUNCHMONEY_ACCESS_TOKEN", raising=False)
     monkeypatch.delenv("LUNCHMONEY_MCP_API_KEY", raising=False)
     monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_CONFIG_URL", raising=False)
@@ -34,7 +39,8 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET", raising=False)
     monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_BASE_URL", raising=False)
     monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_AUDIENCE", raising=False)
-    monkeypatch.delenv("STATELESS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_ENVIRONMENT", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_STATELESS", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SCHEDULE_CRON", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SCHEDULE_TIMEZONE", raising=False)
@@ -51,24 +57,25 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LUNCHMONEY_RATE_LIMIT_REQUESTS", raising=False)
     monkeypatch.delenv("LUNCHMONEY_RATE_LIMIT_WINDOW_SECONDS", raising=False)
 
-    settings = Settings()
-    assert settings.lunchmoney_database_url == DEFAULT_DATABASE_URL
-    assert settings.redis_url is None
-    assert settings.lunchmoney_access_token is None
-    assert settings.lunchmoney_mcp_api_key is None
-    assert settings.lunchmoney_mcp_oauth_config_url is None
-    assert settings.lunchmoney_mcp_oauth_client_id is None
-    assert settings.lunchmoney_mcp_oauth_client_secret is None
-    assert settings.lunchmoney_mcp_oauth_base_url is None
-    assert settings.lunchmoney_mcp_oauth_audience is None
+    secret_settings = SecretSettings()
+    settings = RuntimeSettings()
+    assert secret_settings.database_url == DEFAULT_DATABASE_URL
+    assert secret_settings.redis_url is None
+    assert secret_settings.access_token is None
+    assert secret_settings.mcp_api_key is None
+    assert secret_settings.mcp_oauth_client_secret is None
+    assert settings.mcp_oauth_config_url is None
+    assert settings.mcp_oauth_client_id is None
+    assert settings.mcp_oauth_base_url is None
+    assert settings.mcp_oauth_audience is None
     assert settings.stateless is False
     assert settings.sync_safety_margin_minutes == 5
-    assert settings.scheduler_cron == "0 * * * *"
-    assert settings.scheduler_timezone == "UTC"
-    assert settings.scheduler_days == 30
-    assert settings.embedded_scheduler is False
-    assert settings.server_host == "127.0.0.1"
-    assert settings.server_port == 8000
+    assert settings.schedule_cron == "0 * * * *"
+    assert settings.schedule_timezone == "UTC"
+    assert settings.schedule_days == 30
+    assert settings.embed_scheduler is False
+    assert settings.host == "127.0.0.1"
+    assert settings.port == 8000
     assert settings.trusted_proxy_ips == ""
     assert settings.trusted_proxy_ip_list == ()
     assert settings.allowed_hosts == "localhost,127.0.0.1"
@@ -93,7 +100,7 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(
         "LUNCHMONEY_DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/db"
     )
-    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("LUNCHMONEY_REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "test-token")
     monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "rest-api-key")
     monkeypatch.setenv(
@@ -104,7 +111,7 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET", "synthetic-secret")
     monkeypatch.setenv("LUNCHMONEY_MCP_OAUTH_BASE_URL", "https://mcp.example.com")
     monkeypatch.setenv("LUNCHMONEY_MCP_OAUTH_AUDIENCE", "https://mcp.example.com")
-    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
     monkeypatch.setenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", "10")
     monkeypatch.setenv("LUNCHMONEY_SCHEDULE_CRON", "15 4 * * 1-5")
     monkeypatch.setenv("LUNCHMONEY_SCHEDULE_TIMEZONE", "America/Denver")
@@ -124,30 +131,28 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LUNCHMONEY_RATE_LIMIT_REQUESTS", "30")
     monkeypatch.setenv("LUNCHMONEY_RATE_LIMIT_WINDOW_SECONDS", "15")
 
-    settings = Settings()
+    secret_settings = SecretSettings()
+    settings = RuntimeSettings()
+    assert secret_settings.database_url == "postgresql+asyncpg://user:pass@localhost/db"
+    assert secret_settings.redis_url == "redis://localhost:6379/0"
+    assert secret_settings.access_token == "test-token"
+    assert secret_settings.mcp_api_key == "rest-api-key"
     assert (
-        settings.lunchmoney_database_url
-        == "postgresql+asyncpg://user:pass@localhost/db"
-    )
-    assert settings.redis_url == "redis://localhost:6379/0"
-    assert settings.lunchmoney_access_token == "test-token"
-    assert settings.lunchmoney_mcp_api_key == "rest-api-key"
-    assert (
-        settings.lunchmoney_mcp_oauth_config_url
+        settings.mcp_oauth_config_url
         == "https://id.example.com/.well-known/openid-configuration"
     )
-    assert settings.lunchmoney_mcp_oauth_client_id == "lunchmoney-mcp"
-    assert settings.lunchmoney_mcp_oauth_client_secret == "synthetic-secret"
-    assert settings.lunchmoney_mcp_oauth_base_url == "https://mcp.example.com"
-    assert settings.lunchmoney_mcp_oauth_audience == "https://mcp.example.com"
+    assert settings.mcp_oauth_client_id == "lunchmoney-mcp"
+    assert secret_settings.mcp_oauth_client_secret == "synthetic-secret"
+    assert settings.mcp_oauth_base_url == "https://mcp.example.com"
+    assert settings.mcp_oauth_audience == "https://mcp.example.com"
     assert settings.stateless is True
     assert settings.sync_safety_margin_minutes == 10
-    assert settings.scheduler_cron == "15 4 * * 1-5"
-    assert settings.scheduler_timezone == "America/Denver"
-    assert settings.scheduler_days == 45
-    assert settings.embedded_scheduler is True
-    assert settings.server_host == "0.0.0.0"
-    assert settings.server_port == 9000
+    assert settings.schedule_cron == "15 4 * * 1-5"
+    assert settings.schedule_timezone == "America/Denver"
+    assert settings.schedule_days == 45
+    assert settings.embed_scheduler is True
+    assert settings.host == "0.0.0.0"
+    assert settings.port == 9000
     assert settings.trusted_proxy_ips == "10.0.0.2,2001:db8::1"
     assert settings.trusted_proxy_ip_list == ("10.0.0.2", "2001:db8::1")
     assert settings.allowed_hosts == "api.example.com,mcp.example.com"
@@ -167,16 +172,16 @@ def test_settings_parse_runtime_cli_arguments() -> None:
     """Parse scheduler, embedded-server, and bind options from kebab-case CLI flags."""
     settings = parse_cli_settings(
         [
-            "--scheduler-cron",
+            "--schedule-cron",
             "15 4 * * 1-5",
-            "--scheduler-timezone",
+            "--schedule-timezone",
             "America/Denver",
-            "--scheduler-days",
+            "--schedule-days",
             "45",
-            "--embedded-scheduler",
-            "--server-host",
+            "--embed-scheduler",
+            "--host",
             "0.0.0.0",
-            "--server-port",
+            "--port",
             "9000",
             "--trusted-proxy-ips",
             "10.0.0.2",
@@ -194,15 +199,16 @@ def test_settings_parse_runtime_cli_arguments() -> None:
             "30",
             "--rate-limit-window-seconds",
             "15",
-        ]
+        ],
+        ServeCliSettings,
     )
 
-    assert settings.scheduler_cron == "15 4 * * 1-5"
-    assert settings.scheduler_timezone == "America/Denver"
-    assert settings.scheduler_days == 45
-    assert settings.embedded_scheduler is True
-    assert settings.server_host == "0.0.0.0"
-    assert settings.server_port == 9000
+    assert settings.schedule_cron == "15 4 * * 1-5"
+    assert settings.schedule_timezone == "America/Denver"
+    assert settings.schedule_days == 45
+    assert settings.embed_scheduler is True
+    assert settings.host == "0.0.0.0"
+    assert settings.port == 9000
     assert settings.trusted_proxy_ip_list == ("10.0.0.2",)
     assert settings.allowed_host_list == ("api.example.com",)
     assert settings.cors_allowed_origin_list == ("https://app.example.com",)
@@ -213,6 +219,84 @@ def test_settings_parse_runtime_cli_arguments() -> None:
     assert settings.rate_limit_window_seconds == 15
 
 
+def test_cli_settings_prefer_flags_over_environment_and_dotenv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Resolve a command's CLI flags before environment variables and `.env` values."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("LUNCHMONEY_HOST=dotenv-host\n")
+    monkeypatch.setenv("LUNCHMONEY_HOST", "environment-host")
+
+    settings = parse_cli_settings(["--host", "cli-host"], McpCliSettings)
+
+    assert settings.host == "cli-host"
+
+
+def test_cli_help_only_exposes_lowercase_options(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Expose safe lowercase runtime options without secret settings."""
+    with pytest.raises(SystemExit):
+        parse_cli_settings(["--help"], ServeCliSettings)
+
+    help_output = capsys.readouterr().out
+    assert "--schedule-cron" in help_output
+    assert "--sync-safety-margin-minutes" in help_output
+    assert "--access-token" not in help_output
+    assert "--mcp-api-key" not in help_output
+    assert "--mcp-oauth-client-secret" not in help_output
+    assert "--database-url" not in help_output
+    assert "--redis-url" not in help_output
+    assert "--LUNCHMONEY-SYNC-SAFETY-MARGIN-MINUTES" not in help_output
+
+
+def test_cli_rejects_secret_options() -> None:
+    """Prevent credentials from being accepted as command-line arguments."""
+    with pytest.raises(SystemExit):
+        parse_cli_settings(
+            ["--access-token", "synthetic-secret"],
+            ServeCliSettings,
+        )
+
+
+def test_runtime_cli_options_share_mcp_transport_host_and_port() -> None:
+    """Use the runtime host and port flags with an HTTP MCP transport."""
+    from lunchmoney_mcp.mcp.server import create_argument_parser
+
+    settings = parse_cli_settings(
+        ["--streamable-http", "--host", "0.0.0.0", "--port", "9000"],
+        McpCliSettings,
+        root_parser=create_argument_parser(),
+    )
+
+    assert settings.host == "0.0.0.0"
+    assert settings.port == 9000
+
+
+@pytest.mark.parametrize(
+    ("settings_type", "expected", "unexpected"),
+    [
+        (McpCliSettings, "--host", "--schedule-cron"),
+        (ScheduleCliSettings, "--schedule-cron", "--mcp-oauth-client-id"),
+        (ServeCliSettings, "--embed-scheduler", "--access-token"),
+    ],
+)
+def test_command_cli_help_only_shows_relevant_options(
+    capsys: pytest.CaptureFixture[str],
+    settings_type: type[McpCliSettings | ScheduleCliSettings | ServeCliSettings],
+    expected: str,
+    unexpected: str,
+) -> None:
+    """Show each entry point only the safe flags it can use."""
+    with pytest.raises(SystemExit):
+        parse_cli_settings(["--help"], settings_type)
+
+    help_output = capsys.readouterr().out
+    assert expected in help_output
+    assert unexpected not in help_output
+
+
 def test_export_runtime_settings_preserves_cli_values_for_reloader(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -220,10 +304,10 @@ def test_export_runtime_settings_preserves_cli_values_for_reloader(
     monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
     monkeypatch.delenv("LUNCHMONEY_HOST", raising=False)
     monkeypatch.delenv("LUNCHMONEY_PORT", raising=False)
-    settings = Settings(
-        embedded_scheduler=True,
-        server_host="0.0.0.0",
-        server_port=9000,
+    settings = RuntimeSettings(
+        embed_scheduler=True,
+        host="0.0.0.0",
+        port=9000,
     )
 
     export_runtime_settings(settings)
@@ -248,7 +332,7 @@ def test_export_runtime_settings_preserves_network_policy_for_reloader(
         "LUNCHMONEY_RATE_LIMIT_WINDOW_SECONDS",
     ):
         monkeypatch.delenv(environment_name, raising=False)
-    settings = Settings(
+    settings = RuntimeSettings(
         trusted_proxy_ips="10.0.0.2",
         allowed_hosts="api.example.com",
         cors_allowed_origins="https://app.example.com",
@@ -291,7 +375,7 @@ def test_settings_reject_insecure_network_policy(
 ) -> None:
     """Reject wildcard and implicit network trust configuration."""
     with pytest.raises(ValueError, match=error):
-        Settings(**{field_name: value})
+        RuntimeSettings(**{field_name: value})
 
 
 def test_mcp_runtime_forces_ephemeral_database(
@@ -311,7 +395,7 @@ def test_stateless_settings_select_shared_memory_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Resolve the shared in-memory URL when stateless mode is enabled."""
-    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     get_settings.cache_clear()
 
@@ -325,7 +409,7 @@ def test_database_url_overrides_stateless_mode(
     """Preserve explicit and environment database URL precedence in stateless mode."""
     environment_url = "sqlite+aiosqlite:///environment.db"
     explicit_url = "sqlite+aiosqlite:///explicit.db"
-    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
     monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", environment_url)
     get_settings.cache_clear()
 
@@ -341,7 +425,7 @@ def test_dotenv_database_url_overrides_stateless_mode(
     """Preserve a database URL supplied through Pydantic's `.env` source."""
     dotenv_url = "sqlite+aiosqlite:///dotenv.db"
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     (tmp_path / ".env").write_text(f"LUNCHMONEY_DATABASE_URL={dotenv_url}\n")
     get_settings.cache_clear()
@@ -356,7 +440,7 @@ def test_dotenv_default_database_url_overrides_stateless_mode(
 ) -> None:
     """Preserve an explicitly configured default URL over stateless mode."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("STATELESS", "true")
+    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     (tmp_path / ".env").write_text(f"LUNCHMONEY_DATABASE_URL={DEFAULT_DATABASE_URL}\n")
     get_settings.cache_clear()
@@ -366,7 +450,10 @@ def test_dotenv_default_database_url_overrides_stateless_mode(
 
 
 def test_get_settings_cached() -> None:
-    """Return a cached Settings instance."""
+    """Return cached runtime and secret settings instances."""
     settings_1 = get_settings()
     settings_2 = get_settings()
     assert settings_1 is settings_2
+    secret_settings_1 = get_secret_settings()
+    secret_settings_2 = get_secret_settings()
+    assert secret_settings_1 is secret_settings_2

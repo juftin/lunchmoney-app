@@ -23,14 +23,10 @@ async def get_user_info(
 ) -> UserInfo | None:
     """Fetch the authenticated user profile and budget details.
 
-    Parameters
-    ----------
-    db : LunchMoneyDatabase
-        Database manager instance.
+    **Parameters:**
 
-    Returns
-    -------
-    UserInfo | None
-        User profile details or None if no user profile has been synced.
+    - **db**: Database manager instance.
+
+    **Returns:** User profile details, or `None` if no user profile has been synced.
     """
     return await fetch_user_info(db=db)

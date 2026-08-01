@@ -13,7 +13,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-from lunchmoney_mcp.config import Settings
+from lunchmoney_mcp.config import RuntimeSettings
 
 ASGIApp = Callable[
     [
@@ -239,14 +239,14 @@ class RateLimitMiddleware:
         await self.app(scope, receive, send)
 
 
-def apply_security_middleware(app: FastAPI, settings: Settings) -> None:
+def apply_security_middleware(app: FastAPI, settings: RuntimeSettings) -> None:
     """Install secure HTTP policies on the combined REST and MCP application.
 
     Parameters
     ----------
     app : FastAPI
         Top-level application receiving REST and MCP traffic.
-    settings : Settings
+    settings : RuntimeSettings
         Validated deployment policy configuration.
     """
     if settings.cors_allowed_origin_list:

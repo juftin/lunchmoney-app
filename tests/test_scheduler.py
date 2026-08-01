@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from lunchmoney_mcp.config import Settings
+from lunchmoney_mcp.config import RuntimeSettings
 from lunchmoney_mcp.schemas import ScheduledSyncStatus, SyncDetails, SyncResponse
 
 
@@ -56,7 +56,7 @@ def test_scheduler_uses_stable_single_process_runtime() -> None:
     """Use APScheduler 3's asyncio runtime with coalesced single-instance jobs."""
     from lunchmoney_mcp.scheduler import build_scheduler
 
-    scheduler = build_scheduler(Settings())
+    scheduler = build_scheduler(RuntimeSettings())
 
     assert isinstance(scheduler, AsyncIOScheduler)
     assert scheduler._job_defaults == {
@@ -79,7 +79,7 @@ def test_embedded_scheduler_starts_inside_local_fastapi_process(
         lambda settings, timezone: scheduler,
     )
 
-    started = scheduler_module.start_embedded_scheduler(settings=Settings())
+    started = scheduler_module.start_embedded_scheduler(settings=RuntimeSettings())
 
     assert started is scheduler
     scheduler.add_job.assert_called_once()
@@ -91,7 +91,7 @@ def test_embedded_scheduler_starts_inside_local_fastapi_process(
     [
         (["gunicorn"], None, "development", "Gunicorn"),
         (["uvicorn"], "2", "development", "exactly one"),
-        (["uvicorn"], None, "production", "ENVIRONMENT=development"),
+        (["uvicorn"], None, "production", "LUNCHMONEY_ENVIRONMENT=development"),
     ],
 )
 def test_embedded_scheduler_rejects_nonlocal_or_multiworker_runtime(
@@ -115,7 +115,7 @@ def test_embedded_scheduler_rejects_nonlocal_or_multiworker_runtime(
         match=message,
     ):
         scheduler_module.start_embedded_scheduler(
-            settings=Settings(environment=environment)
+            settings=RuntimeSettings(environment=environment)
         )
 
 
@@ -136,7 +136,7 @@ async def test_schedule_process_coalesces_and_replaces_its_job(
     shutdown_event.set()
 
     await scheduler_module.run_schedule_process(
-        settings=Settings(),
+        settings=RuntimeSettings(),
         shutdown_event=shutdown_event,
     )
 
