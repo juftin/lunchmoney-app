@@ -39,7 +39,7 @@ def test_ci_scans_release_artifacts_and_smoke_tests_compose() -> None:
     """Keep security scans and a production liveness/readiness check in CI."""
     workflow = (PROJECT_ROOT / ".github/workflows/ci.yaml").read_text()
 
-    assert "aquasecurity/trivy-action@v0.33.1" in workflow
+    assert "aquasecurity/trivy-action@v0.36.0" in workflow
     assert "scanners: vuln,secret,misconfig" in workflow
     assert "docker compose up --build --detach --wait" in workflow
     assert "X-API-Key: ${LUNCHMONEY_MCP_API_KEY}" in workflow
