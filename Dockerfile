@@ -4,7 +4,21 @@ WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1 \
     PATH="/app/.venv/bin:$PATH" \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+ARG APP_UID=10001
+ARG APP_GID=10001
+
+# Apply the available Debian security fixes while keeping the final layer free of
+# package index files.
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/*
+
+# The application never needs root privileges at runtime.
+RUN groupadd --gid "${APP_GID}" lunchmoney \
+    && useradd --uid "${APP_UID}" --gid lunchmoney --create-home --shell /usr/sbin/nologin lunchmoney
 
 # Install third-party dependencies first for Docker layer caching
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -13,12 +27,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev
 
 # Copy application source
-COPY . /app
+COPY --chown=lunchmoney:lunchmoney . /app
 
 # Install project package
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev \
+    && chown -R lunchmoney:lunchmoney /app
 
 EXPOSE 8000
+
+USER lunchmoney:lunchmoney
 
 CMD ["gunicorn", "lunchmoney_mcp.app:app", "--bind", "0.0.0.0:8000", "--worker-class", "uvicorn_worker.UvicornWorker"]

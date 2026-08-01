@@ -96,11 +96,21 @@ async def verify_api_key(
     Response
         The downstream response, or a 401 response for missing or invalid keys.
     """
-    if request.url.path.startswith("/mcp"):
+    if request.url.path.startswith("/mcp") or request.url.path in {
+        "/health",
+        "/healthz",
+        "/ready",
+        "/readyz",
+    }:
         return await call_next(request)
 
     expected_key = get_secret_settings().mcp_api_key
     provided_key = request.headers.get("X-API-Key")
+    if request.url.path == "/metrics" and expected_key is None:
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Metrics endpoint requires API key configuration"},
+        )
     if expected_key is not None and not secrets.compare_digest(
         provided_key or "", expected_key
     ):

@@ -21,6 +21,11 @@ tasks:
       - task: pre-commit-install
       - task: sync
 
+  security:
+    desc: Audit locked production Python dependencies for known vulnerabilities
+    cmds:
+      - uv audit --preview-features audit --locked --no-group dev {{.CLI_ARGS}}
+
   test:
     desc: Run tests
     cmds:

@@ -77,7 +77,7 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-  "marimo>=0.23.15",
+  "marimo>=0.23.16",
   "pre-commit>=4.6.1",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
@@ -93,8 +93,8 @@ docs = [
   "mkdocs-autorefs~=1.4.3",
   "mkdocs-gen-files~=0.5.0",
   "mkdocs-literate-nav~=0.6.2",
-  "mkdocs-material~=9.6.18",
+  "mkdocs-material>=9.7,<10",
   "mkdocs-section-index~=0.3.10",
   "mkdocstrings[python]~=0.30.0",
-  "pymdown-extensions>=10.21.2,<11"
+  "pymdown-extensions>=11,<12"
 ]
