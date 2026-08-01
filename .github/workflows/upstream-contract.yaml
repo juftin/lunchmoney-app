@@ -24,6 +24,6 @@ jobs:
       - name: Set up Task
         uses: go-task/setup-task@v2
       - name: Install dependencies
-        run: task install -- --frozen
+        run: task install -- --locked
       - name: Run upstream contract checks
         run: task contract

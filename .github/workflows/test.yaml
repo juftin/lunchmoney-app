@@ -50,6 +50,6 @@ jobs:
           install: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           annotations-pytest: true
-          pytest-coverage: ${{ github.event_name == 'pull_request' }}
+          pytest-coverage: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false }}
         env:
           UV_PYTHON: ${{ matrix.python }}
