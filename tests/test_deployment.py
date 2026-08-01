@@ -29,6 +29,7 @@ def test_compose_keeps_data_services_private_and_hardens_app_processes() -> None
     assert "http://127.0.0.1:8000/health" in compose
     assert '"X-API-Key": os.environ["LUNCHMONEY_MCP_API_KEY"]' in compose
     assert "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" in compose
+    assert "LUNCHMONEY_REDIS_URL: redis://redis:6379/0" in compose
     assert "LUNCHMONEY_ALLOWED_HOSTS" in compose
     assert "LUNCHMONEY_TRUSTED_PROXY_IPS" in compose
     assert "LUNCHMONEY_CORS_ALLOWED_ORIGINS" in compose
@@ -38,7 +39,7 @@ def test_ci_scans_release_artifacts_and_smoke_tests_compose() -> None:
     """Keep security scans and a production liveness/readiness check in CI."""
     workflow = (PROJECT_ROOT / ".github/workflows/ci.yaml").read_text()
 
-    assert "aquasecurity/trivy-action" in workflow
+    assert "aquasecurity/trivy-action@v0.33.1" in workflow
     assert "scanners: vuln,secret,misconfig" in workflow
     assert "docker compose up --build --detach --wait" in workflow
     assert "X-API-Key: ${LUNCHMONEY_MCP_API_KEY}" in workflow
