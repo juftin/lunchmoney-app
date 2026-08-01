@@ -14,6 +14,9 @@ def test_container_uses_gunicorn_with_maintained_uvicorn_worker() -> None:
     assert 'CMD ["gunicorn", "lunchmoney_mcp.app:app"' in dockerfile
     assert '"--worker-class", "uvicorn_worker.UvicornWorker"' in dockerfile
     assert "USER lunchmoney:lunchmoney" in dockerfile
+    assert "apt-get update" in dockerfile
+    assert "apt-get upgrade --yes" in dockerfile
+    assert "rm -rf /var/lib/apt/lists/*" in dockerfile
 
 
 def test_compose_keeps_data_services_private_and_hardens_app_processes() -> None:

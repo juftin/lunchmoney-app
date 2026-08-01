@@ -10,6 +10,12 @@ ENV UV_COMPILE_BYTECODE=1 \
 ARG APP_UID=10001
 ARG APP_GID=10001
 
+# Apply the available Debian security fixes while keeping the final layer free of
+# package index files.
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/*
+
 # The application never needs root privileges at runtime.
 RUN groupadd --gid "${APP_GID}" lunchmoney \
     && useradd --uid "${APP_UID}" --gid lunchmoney --create-home --shell /usr/sbin/nologin lunchmoney
