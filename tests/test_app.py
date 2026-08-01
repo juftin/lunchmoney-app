@@ -299,7 +299,7 @@ def test_fastapi_root_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 
-    with TestClient(fastapi_app) as client:
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
         response = client.get("/")
         assert response.status_code == 200
         data = response.json()
@@ -318,7 +318,7 @@ def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
     get_secret_settings.cache_clear()
     get_settings.cache_clear()
 
-    with TestClient(fastapi_app) as client:
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
         assert client.get("/").status_code == 401
         assert client.get("/", headers={"X-API-Key": "wrong"}).status_code == 401
         response = client.get("/", headers={"X-API-Key": "rest-api-key"})
@@ -356,7 +356,7 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 
-    with TestClient(fastapi_app) as client:
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
         response = client.post("/sync?days=30")
         assert response.status_code == 200
         data = response.json()
@@ -391,7 +391,7 @@ def test_fastapi_sync_endpoint_forwards_incremental_options(
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 
-    with TestClient(fastapi_app) as client:
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
         response = client.post("/sync?days=14&incremental=true&safety_margin_minutes=9")
 
     assert response.status_code == 200
@@ -570,7 +570,7 @@ def test_fastapi_lifespan_migration_single_worker(
 
     monkeypatch.setattr(lifespan_module, "run_migrations", mock_migrations)
 
-    with TestClient(fastapi_app) as client:
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
         response = client.get("/")
         assert response.status_code == 200
         assert migrations_ran is True
@@ -631,7 +631,7 @@ def test_stateless_startup_syncs_and_persists_without_manual_schema_setup(
     get_database.cache_clear()
 
     try:
-        with TestClient(fastapi_app) as client:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
             empty_user = client.get("/user")
             sync_response = client.post("/sync?days=30")
             persisted_user = client.get("/user")

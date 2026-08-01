@@ -151,9 +151,9 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-9-upstream-api-compatibi
 
 _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-10-operational-hardening--observability)
 
-- [ ] **Health and Telemetry**: Add health/readiness checks, safe structured logs, request IDs, and Prometheus-compatible `/metrics` operational metrics protected by network policy or authentication.
-- [ ] **Network Hardening**: Apply secure proxy, host, CORS, size, timeout, concurrency, and rate-limit defaults.
-- [ ] **Deployment Safety**: Add security scanning, container hardening, backup/restore guidance, and production smoke tests.
+- [x] **Health and Telemetry**: Add health/readiness checks, safe structured logs, request IDs, and Prometheus-compatible `/metrics` operational metrics protected by network policy or authentication.
+- [x] **Network Hardening**: Apply secure proxy, host, CORS, size, timeout, concurrency, and rate-limit defaults.
+- [x] **Deployment Safety**: Add security scanning, container hardening, backup/restore guidance, and production smoke tests.
 
 ### 📈 Sprint 11: Server-Rendered Financial Dashboard
 
