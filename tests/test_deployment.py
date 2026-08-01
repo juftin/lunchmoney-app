@@ -42,12 +42,21 @@ def test_ci_scans_release_artifacts_and_smoke_tests_compose() -> None:
     """Keep security scans and a production liveness/readiness check in CI."""
     workflow = (PROJECT_ROOT / ".github/workflows/ci.yaml").read_text()
 
+    assert "run: task security" in workflow
     assert "aquasecurity/trivy-action@v0.36.0" in workflow
-    assert "scanners: vuln,secret,misconfig" in workflow
+    assert "scanners: secret,misconfig" in workflow
     assert "docker compose up --build --detach --wait" in workflow
     assert "X-API-Key: ${LUNCHMONEY_MCP_API_KEY}" in workflow
     assert "http://127.0.0.1:8000/health" in workflow
     assert "http://127.0.0.1:8000/ready" in workflow
+
+
+def test_security_task_audits_locked_production_dependencies() -> None:
+    """Audit the frozen runtime dependency set instead of an ad hoc environment."""
+    taskfile = (PROJECT_ROOT / "Taskfile.yaml").read_text()
+
+    assert "security:" in taskfile
+    assert "uv audit --preview-features audit --frozen --no-group dev" in taskfile
 
 
 def test_production_server_dependencies_are_declared() -> None:

@@ -72,12 +72,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Scan dependencies, secrets, and infrastructure configuration
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9.0.0
+        with:
+          enable-cache: true
+
+      - name: Set up Task
+        uses: go-task/setup-task@v2
+
+      - name: Audit Python dependencies
+        run: task security
+
+      - name: Scan secrets and infrastructure configuration
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
-          scanners: vuln,secret,misconfig
+          scanners: secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"

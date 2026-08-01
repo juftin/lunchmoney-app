@@ -38,6 +38,19 @@ failed service; keep them on the loopback deployment binding or limit them at
 the reverse proxy. `/metrics` requires `LUNCHMONEY_MCP_API_KEY` and must remain
 available only to the operations network or an authenticated monitoring client.
 
+## Audit release dependencies
+
+Run the following before publishing a release or after changing a dependency:
+
+```bash
+task security
+```
+
+This audits the frozen production Python dependency set with `uv audit` and
+fails when it finds a known vulnerability. It does not inspect the operating
+system, container configuration, or secrets; CI continues to use Trivy for
+those release-image and repository checks.
+
 ## Network policy
 
 The server starts with localhost and `127.0.0.1` as its only accepted `Host`
