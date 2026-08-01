@@ -58,9 +58,25 @@ tasks:
       - RUN_LUNCHMONEY_CONTRACT_TESTS=1 uv run pytest -m upstream_contract
 
   build:
-    desc: Artifact building - Docker image
+    desc: Build Python distribution artifacts and the Docker image
+    cmds:
+      - task: dist
+      - task: docker
+
+  dist:
+    desc: Build Python distribution artifacts
+    cmds:
+      - uv build {{.CLI_ARGS}}
+
+  docker:
+    desc: Build Docker image
     cmds:
       - docker build -t {{.IMAGE_NAME}}:latest . {{.CLI_ARGS}}
+
+  docs:
+    desc: Build or serve documentation
+    cmds:
+      - uv run --group docs mkdocs {{.CLI_ARGS | default "serve"}}
 
   compose:
     desc: Run application and infrastructure services with Docker Compose

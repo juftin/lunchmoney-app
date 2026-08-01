@@ -1,5 +1,6 @@
 """Lunch Money MCP package."""
 
+from lunchmoney_mcp.__about__ import __application__, __version__
 from lunchmoney_mcp.app import app
 from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
 from lunchmoney_mcp.config import (
@@ -39,6 +40,8 @@ __all__ = [
     "DEFAULT_DATABASE_URL",
     "AccountInfo",
     "AccountsSummary",
+    "__application__",
+    "__version__",
     "CategoryInfo",
     "CategorySpending",
     "ChildCategorySpending",

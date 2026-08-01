@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 # Environment and virtualenvs
+.env
 .venv/
 env/
 venv/
@@ -13,11 +14,23 @@ ENV/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+pytest.xml
+htmlcov/
+.cache/
 .superpowers/
 .worktrees/
 .idea/
 .vscode/
 __marimo__/
+
+# Package and documentation build output
+build/
+dist/
+*.egg-info/
+site/
 
 # Application runtime databases & lockfiles
 *.db
