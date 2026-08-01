@@ -27,21 +27,14 @@ async def get_category_spending(
 ) -> GroupedSpendingResponse:
     """Fetch grouped spending analysis by category over specified date range.
 
-    Parameters
-    ----------
-    db : LunchMoneyDatabase
-        Database manager instance.
-    start_date : datetime.date | None
-        Optional start date for transaction filtering.
-    end_date : datetime.date | None
-        Optional end date for transaction filtering.
-    days : int | None
-        Number of past days to query if start_date is omitted. Default is 30.
+    **Parameters:**
 
-    Returns
-    -------
-    GroupedSpendingResponse
-        Grouped spending report with parent/child category rollups and totals.
+    - **db**: Database manager instance.
+    - **start_date**: Optional start date for transaction filtering.
+    - **end_date**: Optional end date for transaction filtering.
+    - **days**: Number of past days to query when `start_date` is omitted. Defaults to 30.
+
+    **Returns:** Grouped spending report with parent/child category rollups and totals.
     """
     return await fetch_category_spending(
         db=db, start_date=start_date, end_date=end_date, days=days

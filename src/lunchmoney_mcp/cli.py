@@ -7,6 +7,9 @@ import sys
 import uvicorn
 
 from lunchmoney_mcp.config import (
+    McpCliSettings,
+    ScheduleCliSettings,
+    ServeCliSettings,
     configure_runtime_mode,
     configure_runtime_settings,
     export_runtime_settings,
@@ -45,30 +48,35 @@ def main(argv: list[str] | None = None) -> None:
     parsed, runtime_arguments = parser.parse_known_args(arguments)
     if parsed.command == "mcp":
         mcp_parser = mcp_server.create_argument_parser()
-        settings = parse_cli_settings(runtime_arguments, root_parser=mcp_parser)
+        settings = parse_cli_settings(
+            runtime_arguments,
+            McpCliSettings,
+            root_parser=mcp_parser,
+        )
         configure_runtime_settings(settings)
         configure_runtime_mode("mcp")
         mcp_server.configure_auth(settings)
         mcp_server.run_from_args(
             mcp_parser,
             mcp_parser.parse_args(runtime_arguments),
+            settings,
         )
         return
     if parsed.command == "schedule":
-        settings = parse_cli_settings(runtime_arguments)
+        settings = parse_cli_settings(runtime_arguments, ScheduleCliSettings)
         configure_runtime_settings(settings)
         configure_runtime_mode("schedule")
         asyncio.run(run_schedule_process(settings=settings))
         return
 
-    settings = parse_cli_settings(runtime_arguments)
+    settings = parse_cli_settings(runtime_arguments, ServeCliSettings)
     configure_runtime_settings(settings)
     configure_runtime_mode("serve")
     export_runtime_settings(settings)
     uvicorn.run(
         "lunchmoney_mcp.app.main:app",
-        host=settings.server_host,
-        port=settings.server_port,
+        host=settings.host,
+        port=settings.port,
         reload=True,
     )
 

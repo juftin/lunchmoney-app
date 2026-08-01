@@ -27,21 +27,14 @@ async def list_recurring_items(
 ) -> list[RecurringObject]:
     """List live recurring items with optional matching information.
 
-    Parameters
-    ----------
-    client : LunchMoneyApp
-        Configured Lunch Money API client.
-    start_date : datetime.date | None
-        Optional matching window start date.
-    end_date : datetime.date | None
-        Optional matching window end date.
-    include_suggested : bool | None
-        Whether suggested recurring items should be returned.
+    **Parameters:**
 
-    Returns
-    -------
-    list[RecurringObject]
-        Recurring items returned by Lunch Money.
+    - **client**: Configured Lunch Money API client.
+    - **start_date**: Optional matching window start date.
+    - **end_date**: Optional matching window end date.
+    - **include_suggested**: Whether suggested recurring items should be returned.
+
+    **Returns:** Recurring items returned by Lunch Money.
     """
     return await fetch_recurring_items(
         client=client,
@@ -64,21 +57,14 @@ async def get_recurring_item(
 ) -> RecurringObject:
     """Fetch one live recurring item with optional matching information.
 
-    Parameters
-    ----------
-    recurring_item_id : int
-        Identifier of the recurring item to retrieve.
-    client : LunchMoneyApp
-        Configured Lunch Money API client.
-    start_date : datetime.date | None
-        Optional matching window start date.
-    end_date : datetime.date | None
-        Optional matching window end date.
+    **Parameters:**
 
-    Returns
-    -------
-    RecurringObject
-        Recurring item returned by Lunch Money.
+    - **recurring_item_id**: Identifier of the recurring item to retrieve.
+    - **client**: Configured Lunch Money API client.
+    - **start_date**: Optional matching window start date.
+    - **end_date**: Optional matching window end date.
+
+    **Returns:** Recurring item returned by Lunch Money.
     """
     return await fetch_recurring_item_by_id(
         client=client,

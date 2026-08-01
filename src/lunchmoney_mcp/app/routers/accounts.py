@@ -37,15 +37,11 @@ async def list_accounts(
 ) -> AccountsSummary:
     """List all connected Plaid and manual accounts with current balances.
 
-    Parameters
-    ----------
-    db : LunchMoneyDatabase
-        Database manager instance.
+    **Parameters:**
 
-    Returns
-    -------
-    AccountsSummary
-        Combined summary of connected Plaid and manual accounts.
+    - **db**: Database manager instance.
+
+    **Returns:** Combined summary of connected Plaid and manual accounts.
     """
     return await fetch_accounts(db=db)
 
@@ -61,17 +57,12 @@ async def get_manual_account(
 ) -> AccountInfo | None:
     """Fetch one synchronized manual account.
 
-    Parameters
-    ----------
-    account_id : int
-        Identifier of the manual account to retrieve.
-    db : LunchMoneyDatabase
-        Database manager instance.
+    **Parameters:**
 
-    Returns
-    -------
-    AccountInfo | None
-        Matching account, or ``None`` when it has not been synchronized.
+    - **account_id**: Identifier of the manual account to retrieve.
+    - **db**: Database manager instance.
+
+    **Returns:** Matching account, or `None` when it has not been synchronized.
     """
     return await fetch_manual_account_by_id(db=db, account_id=account_id)
 
@@ -87,17 +78,12 @@ async def get_plaid_account(
 ) -> AccountInfo | None:
     """Fetch one synchronized Plaid account.
 
-    Parameters
-    ----------
-    account_id : int
-        Identifier of the Plaid account to retrieve.
-    db : LunchMoneyDatabase
-        Database manager instance.
+    **Parameters:**
 
-    Returns
-    -------
-    AccountInfo | None
-        Matching account, or ``None`` when it has not been synchronized.
+    - **account_id**: Identifier of the Plaid account to retrieve.
+    - **db**: Database manager instance.
+
+    **Returns:** Matching account, or `None` when it has not been synchronized.
     """
     return await fetch_plaid_account_by_id(db=db, account_id=account_id)
 

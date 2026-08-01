@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             )
 
     scheduler = None
-    if get_settings().embedded_scheduler:
+    if get_settings().embed_scheduler:
         scheduler = start_embedded_scheduler()
         app.state.scheduler = scheduler
 

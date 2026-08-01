@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_mcp.config import Settings, get_settings
+from lunchmoney_mcp.config import RuntimeSettings, get_settings
 from lunchmoney_mcp.services import run_scheduled_sync as execute_scheduled_sync
 
 logger = logging.getLogger(__name__)
@@ -31,14 +31,14 @@ class EmbeddedSchedulerConfigurationError(SchedulerConfigurationError):
 
 
 def build_scheduler(
-    settings: Settings,
+    settings: RuntimeSettings,
     timezone: str | None = None,
 ) -> AsyncIOScheduler:
     """Create the single-process scheduler with safe job defaults.
 
     Parameters
     ----------
-    settings : Settings
+    settings : RuntimeSettings
         Application configuration controlling the scheduler.
     timezone : str | None
         Optional timezone override for this scheduler process.
@@ -49,7 +49,7 @@ def build_scheduler(
         An unstarted stable APScheduler 3 scheduler.
     """
     return AsyncIOScheduler(
-        timezone=timezone or settings.scheduler_timezone,
+        timezone=timezone or settings.schedule_timezone,
         job_defaults={
             "coalesce": True,
             "max_instances": 1,
@@ -59,7 +59,7 @@ def build_scheduler(
 
 
 async def run_schedule_process(
-    settings: Settings | None = None,
+    settings: RuntimeSettings | None = None,
     cron: str | None = None,
     timezone: str | None = None,
     shutdown_event: asyncio.Event | None = None,
@@ -68,7 +68,7 @@ async def run_schedule_process(
 
     Parameters
     ----------
-    settings : Settings | None
+    settings : RuntimeSettings | None
         Explicit settings for testing or embedded use. Defaults to environment settings.
     cron : str | None
         Optional five-field cron override for this scheduler process.
@@ -83,8 +83,8 @@ async def run_schedule_process(
         If the cron expression or timezone is invalid.
     """
     resolved_settings = settings or get_settings()
-    cron_expression = cron or resolved_settings.scheduler_cron
-    resolved_timezone = timezone or resolved_settings.scheduler_timezone
+    cron_expression = cron or resolved_settings.schedule_cron
+    resolved_timezone = timezone or resolved_settings.schedule_timezone
     scheduler = _create_scheduler(
         settings=resolved_settings,
         cron=cron_expression,
@@ -120,13 +120,13 @@ async def run_schedule_process(
 
 
 def start_embedded_scheduler(
-    settings: Settings | None = None,
+    settings: RuntimeSettings | None = None,
 ) -> AsyncIOScheduler:
     """Start a scheduler inside one local FastAPI process.
 
     Parameters
     ----------
-    settings : Settings | None
+    settings : RuntimeSettings | None
         Explicit settings for testing or embedded use. Defaults to environment settings.
 
     Returns
@@ -143,8 +143,8 @@ def start_embedded_scheduler(
     _validate_embedded_scheduler_settings(resolved_settings)
     scheduler = _create_scheduler(
         settings=resolved_settings,
-        cron=resolved_settings.scheduler_cron,
-        timezone=resolved_settings.scheduler_timezone,
+        cron=resolved_settings.schedule_cron,
+        timezone=resolved_settings.schedule_timezone,
     )
     scheduler.start()
     logger.info("Started local scheduler inside FastAPI lifespan")
@@ -161,7 +161,7 @@ async def stop_scheduler(scheduler: AsyncIOScheduler) -> None:
 
 
 def _create_scheduler(
-    settings: Settings,
+    settings: RuntimeSettings,
     cron: str,
     timezone: str,
 ) -> AsyncIOScheduler:
@@ -183,10 +183,10 @@ def _create_scheduler(
     return scheduler
 
 
-def _validate_embedded_scheduler_settings(settings: Settings) -> None:
+def _validate_embedded_scheduler_settings(settings: RuntimeSettings) -> None:
     """Reject embedded scheduler startup outside local single-process development."""
     if settings.environment != "development":
-        msg = "Embedded scheduling requires ENVIRONMENT=development."
+        msg = "Embedded scheduling requires LUNCHMONEY_ENVIRONMENT=development."
         raise EmbeddedSchedulerConfigurationError(msg)
     if _is_gunicorn_process():
         msg = "Embedded scheduling cannot run in a Gunicorn process."
@@ -223,7 +223,7 @@ async def run_scheduled_sync() -> None:
         result = await execute_scheduled_sync(
             db=get_database(),
             client=get_lunchmoney_app(),
-            days=settings.scheduler_days,
+            days=settings.schedule_days,
         )
         log_method = logger.info if result.status == "success" else logger.warning
         log_method(

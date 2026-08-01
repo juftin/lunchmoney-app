@@ -5,6 +5,7 @@ from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 
+from lunchmoney_mcp.config import RuntimeSettings
 from lunchmoney_mcp.mcp import mcp
 from lunchmoney_mcp.schemas import (
     CategoryInfo,
@@ -77,8 +78,16 @@ async def test_mcp_runtime_lifespan_creates_and_disposes_ephemeral_storage(
     [
         ([], "stdio", {"transport": "stdio"}),
         (["--stdio"], "stdio", {"transport": "stdio"}),
-        (["--sse"], "sse", {"transport": "sse", "host": None, "port": None}),
-        (["--http"], "http", {"transport": "http", "host": None, "port": None}),
+        (
+            ["--sse"],
+            "sse",
+            {"transport": "sse", "host": None, "port": None},
+        ),
+        (
+            ["--http"],
+            "http",
+            {"transport": "http", "host": None, "port": None},
+        ),
         (
             ["--streamable-http"],
             "streamable-http",
@@ -101,6 +110,9 @@ def test_mcp_main_selects_requested_transport(
 
     server.main()
 
+    if transport != "stdio":
+        run_arguments["host"] = RuntimeSettings().host
+        run_arguments["port"] = RuntimeSettings().port
     mock_run.assert_called_once_with(**run_arguments)
 
 

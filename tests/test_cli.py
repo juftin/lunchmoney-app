@@ -4,6 +4,12 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from lunchmoney_mcp.config import (
+    McpCliSettings,
+    ScheduleCliSettings,
+    ServeCliSettings,
+)
+
 
 def test_cli_runs_standalone_mcp_without_persistent_storage(
     monkeypatch: pytest.MonkeyPatch,
@@ -33,12 +39,16 @@ def test_cli_runs_standalone_mcp_without_persistent_storage(
 
     cli.main(["mcp", "--stdio"])
 
-    parse_cli_settings.assert_called_once_with(["--stdio"], root_parser=mcp_parser)
+    parse_cli_settings.assert_called_once_with(
+        ["--stdio"],
+        McpCliSettings,
+        root_parser=mcp_parser,
+    )
     configure_runtime_settings.assert_called_once_with(settings)
     configure_runtime_mode.assert_called_once_with("mcp")
     configure_auth.assert_called_once_with(settings)
     mcp_parser.parse_args.assert_called_once_with(["--stdio"])
-    run_from_args.assert_called_once_with(mcp_parser, transport_arguments)
+    run_from_args.assert_called_once_with(mcp_parser, transport_arguments, settings)
 
 
 def test_cli_runs_scheduler_with_pydantic_runtime_options(
@@ -58,20 +68,21 @@ def test_cli_runs_scheduler_with_pydantic_runtime_options(
     cli.main(
         [
             "schedule",
-            "--scheduler-cron",
+            "--schedule-cron",
             "15 4 * * 1-5",
-            "--scheduler-timezone",
+            "--schedule-timezone",
             "America/Denver",
         ]
     )
 
     parse_cli_settings.assert_called_once_with(
         [
-            "--scheduler-cron",
+            "--schedule-cron",
             "15 4 * * 1-5",
-            "--scheduler-timezone",
+            "--schedule-timezone",
             "America/Denver",
-        ]
+        ],
+        ScheduleCliSettings,
     )
     configure_runtime_settings.assert_called_once_with(settings)
     run_schedule_process.assert_awaited_once_with(settings=settings)
@@ -83,7 +94,7 @@ def test_cli_runs_fastapi_with_pydantic_runtime_options(
     """Pass Pydantic Settings CLI flags to the local FastAPI runtime."""
     import lunchmoney_mcp.cli as cli
 
-    settings = Mock(server_host="0.0.0.0", server_port=9000)
+    settings = Mock(host="0.0.0.0", port=9000)
     parse_cli_settings = Mock(return_value=settings)
     configure_runtime_settings = Mock()
     export_runtime_settings = Mock()
@@ -93,10 +104,11 @@ def test_cli_runs_fastapi_with_pydantic_runtime_options(
     monkeypatch.setattr(cli, "export_runtime_settings", export_runtime_settings)
     monkeypatch.setattr(cli.uvicorn, "run", run)
 
-    cli.main(["serve", "--server-host", "0.0.0.0", "--server-port", "9000"])
+    cli.main(["serve", "--host", "0.0.0.0", "--port", "9000"])
 
     parse_cli_settings.assert_called_once_with(
-        ["--server-host", "0.0.0.0", "--server-port", "9000"]
+        ["--host", "0.0.0.0", "--port", "9000"],
+        ServeCliSettings,
     )
     configure_runtime_settings.assert_called_once_with(settings)
     export_runtime_settings.assert_called_once_with(settings)
