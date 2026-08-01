@@ -246,7 +246,7 @@ def log_event(logger: logging.Logger, event: str, **fields: Any) -> None:
 
 
 metrics = MetricsRegistry()
-# Process-local bounded metrics registry exposed by the protected HTTP endpoint.
+"""Process-local bounded metrics registry exposed by the protected HTTP endpoint."""
 
 
 __all__ = ["MetricsRegistry", "log_event", "metrics"]

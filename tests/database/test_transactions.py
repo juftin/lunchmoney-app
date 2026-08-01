@@ -33,7 +33,7 @@ from factories import (
 
 
 UTC = timezone.utc
-# Canonical UTC timezone compatible with all supported Python versions.
+"""Canonical UTC timezone compatible with all supported Python versions."""
 
 
 def test_transaction_graph_round_trip_is_exact() -> None:

@@ -23,7 +23,7 @@ ASGIApp = Callable[
     ],
     Awaitable[None],
 ]
-# Callable protocol shape accepted by the small ASGI middleware classes.
+"""Callable protocol shape accepted by the small ASGI middleware classes."""
 
 
 async def _send_json_error(

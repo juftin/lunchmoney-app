@@ -44,16 +44,16 @@ from lunchmoney_mcp.database.models import (
 
 
 RecordT = TypeVar("RecordT", bound=SQLModel)
-# A database record subtype used by record-loading helpers.
+"""A database record subtype used by record-loading helpers."""
 
 _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
     {User, PlaidAccount, ManualAccount, Category, Tag, Transaction}
 )
-# Explicit record classes accepted by the convenience persistence API.
+"""Explicit record classes accepted by the convenience persistence API."""
 
 
 PROJECT_ROOT: Path = Path(__file__).parents[3]
-# Repository root containing the Alembic configuration.
+"""Repository root containing the Alembic configuration."""
 
 
 def resolve_database_url(database_url: str | None = None) -> str:

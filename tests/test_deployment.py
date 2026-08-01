@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT: Path = Path(__file__).parents[1]
-# Repository root containing production deployment files.
+"""Repository root containing production deployment files."""
 
 
 def test_container_uses_gunicorn_with_maintained_uvicorn_worker() -> None:

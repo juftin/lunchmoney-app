@@ -36,7 +36,7 @@ from factories import (
 
 
 UTC = timezone.utc
-# Canonical UTC timezone compatible with all supported Python versions.
+"""Canonical UTC timezone compatible with all supported Python versions."""
 
 
 class UnsupportedRecord(SQLModel):

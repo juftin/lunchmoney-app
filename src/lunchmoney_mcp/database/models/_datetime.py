@@ -7,7 +7,7 @@ from sqlalchemy.types import TypeDecorator
 
 
 UTC = timezone.utc
-# Canonical UTC timezone compatible with all supported Python versions.
+"""Canonical UTC timezone compatible with all supported Python versions."""
 
 
 def datetime_offset_minutes(value: datetime | None) -> int | None:

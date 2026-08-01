@@ -10,7 +10,7 @@ from lunchmoney_mcp.database.models._datetime import UTCDateTime
 
 
 UTC = timezone.utc
-# Canonical UTC timezone compatible with all supported Python versions.
+"""Canonical UTC timezone compatible with all supported Python versions."""
 
 
 class SyncMetadata(SQLModel, table=True):

@@ -245,9 +245,9 @@ def get_migration_lock(
 
 
 FileLock = LockFile
-# Alias for LockFile.
+"""Alias for LockFile."""
 RedisLock = Redis
-# Alias for Redis.
+"""Alias for Redis."""
 
 __all__ = [
     "FileLock",
