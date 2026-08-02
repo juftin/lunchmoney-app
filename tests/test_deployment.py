@@ -10,9 +10,10 @@ PROJECT_ROOT: Path = Path(__file__).parents[1]
 def test_container_uses_gunicorn_with_maintained_uvicorn_worker() -> None:
     """Serve the ASGI app with the supported production worker integration."""
     dockerfile = (PROJECT_ROOT / "Dockerfile").read_text()
+    gunicorn_config = (PROJECT_ROOT / "gunicorn.conf.py").read_text()
 
-    assert 'CMD ["gunicorn", "lunchmoney_mcp.app:app"' in dockerfile
-    assert '"--worker-class", "uvicorn_worker.UvicornWorker"' in dockerfile
+    assert 'CMD ["gunicorn", "lunchmoney_mcp.app:app"]' in dockerfile
+    assert '"uvicorn_worker.UvicornWorker"' in gunicorn_config
     assert "USER lunchmoney:lunchmoney" in dockerfile
     assert "apt-get update" in dockerfile
     assert "apt-get upgrade --yes" in dockerfile

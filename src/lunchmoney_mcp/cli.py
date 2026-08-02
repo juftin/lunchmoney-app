@@ -1,5 +1,7 @@
 """Command-line entrypoint for the MCP, FastAPI, and scheduler runtimes."""
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import sys
@@ -15,6 +17,7 @@ from lunchmoney_mcp.config import (
     export_runtime_settings,
     parse_cli_settings,
 )
+from lunchmoney_mcp.logging_config import LOG_CONFIG
 from lunchmoney_mcp.mcp import server as mcp_server
 from lunchmoney_mcp.scheduler import run_schedule_process
 
@@ -78,6 +81,7 @@ def main(argv: list[str] | None = None) -> None:
         host=settings.host,
         port=settings.port,
         reload=True,
+        log_config=LOG_CONFIG,
     )
 
 
