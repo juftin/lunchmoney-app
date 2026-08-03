@@ -38,4 +38,4 @@ EXPOSE 8000
 
 USER lunchmoney:lunchmoney
 
-CMD ["gunicorn", "lunchmoney_mcp.app:app", "--bind", "0.0.0.0:8000", "--worker-class", "uvicorn_worker.UvicornWorker"]
+CMD ["gunicorn", "lunchmoney_mcp.app:app"]

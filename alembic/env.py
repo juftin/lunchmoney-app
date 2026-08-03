@@ -1,6 +1,7 @@
 """Alembic environment for asynchronous SQLite and PostgreSQL migrations."""
 
 import asyncio
+import logging
 from logging.config import fileConfig
 
 from alembic import context
@@ -26,7 +27,7 @@ from lunchmoney_mcp.database.models import (  # noqa: F401
 config = context.config
 """Alembic configuration supplied by the command entry point."""
 
-if config.config_file_name is not None:
+if config.config_file_name is not None and not logging.getLogger().handlers:
     fileConfig(config.config_file_name)
 
 target_metadata = SQLModel.metadata

@@ -117,4 +117,5 @@ def test_cli_runs_fastapi_with_pydantic_runtime_options(
         host="0.0.0.0",
         port=9000,
         reload=True,
+        log_config=cli.LOG_CONFIG,
     )
