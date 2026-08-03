@@ -1,6 +1,6 @@
 """Deterministic synthetic generated-model factories for database tests."""
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime, timezone
 
 from lunchmoney.models import (
     AccountTypeEnum,
@@ -15,6 +15,9 @@ from lunchmoney.models import (
     TransactionObject,
     UserObject,
 )
+
+UTC = timezone.utc
+"""Canonical UTC timezone compatible with all supported Python versions."""
 
 SYNTHETIC_DATE = date(2026, 1, 1)
 """Stable calendar date used by generated-model fixtures."""

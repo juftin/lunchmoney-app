@@ -48,7 +48,7 @@ async def test_sync_metadata_is_upserted_by_domain(
     database: LunchMoneyDatabase,
 ) -> None:
     """Replace and reload the watermark identified by one domain."""
-    timestamp = datetime.datetime(2026, 7, 28, tzinfo=datetime.UTC)
+    timestamp = datetime.datetime(2026, 7, 28, tzinfo=datetime.timezone.utc)
     stored = await database.upsert_sync_metadata(
         SyncMetadata(domain="transactions", last_synced_at=timestamp)
     )
@@ -63,11 +63,11 @@ async def test_sync_metadata_upsert_replaces_domain_watermark(
     """Replace the previous watermark when the domain already exists."""
     original = SyncMetadata(
         domain="transactions",
-        last_synced_at=datetime.datetime(2026, 7, 27, tzinfo=datetime.UTC),
+        last_synced_at=datetime.datetime(2026, 7, 27, tzinfo=datetime.timezone.utc),
     )
     replacement = SyncMetadata(
         domain="transactions",
-        last_synced_at=datetime.datetime(2026, 7, 28, tzinfo=datetime.UTC),
+        last_synced_at=datetime.datetime(2026, 7, 28, tzinfo=datetime.timezone.utc),
     )
 
     await database.upsert_sync_metadata(original)
@@ -82,7 +82,7 @@ async def test_sync_metadata_upsert_replaces_domain_watermark(
     [
         (
             datetime.datetime(2026, 7, 28, 10, 0),
-            datetime.datetime(2026, 7, 28, 10, 0, tzinfo=datetime.UTC),
+            datetime.datetime(2026, 7, 28, 10, 0, tzinfo=datetime.timezone.utc),
         ),
         (
             datetime.datetime(
@@ -93,7 +93,7 @@ async def test_sync_metadata_upsert_replaces_domain_watermark(
                 0,
                 tzinfo=datetime.timezone(datetime.timedelta(hours=-6)),
             ),
-            datetime.datetime(2026, 7, 28, 16, 0, tzinfo=datetime.UTC),
+            datetime.datetime(2026, 7, 28, 16, 0, tzinfo=datetime.timezone.utc),
         ),
     ],
 )
@@ -107,12 +107,12 @@ async def test_sync_metadata_normalizes_watermarks_to_utc(
     metadata = SyncMetadata(domain="transactions", last_synced_at=timestamp)
 
     assert metadata.last_synced_at == expected
-    assert metadata.last_synced_at.tzinfo is datetime.UTC
+    assert metadata.last_synced_at.tzinfo is datetime.timezone.utc
 
     stored = await database.upsert_sync_metadata(metadata)
 
     assert stored.last_synced_at == expected
-    assert stored.last_synced_at.tzinfo is datetime.UTC
+    assert stored.last_synced_at.tzinfo is datetime.timezone.utc
     assert (await database.get_sync_metadata("transactions")) == stored
 
 
@@ -122,7 +122,7 @@ async def test_incremental_sync_subtracts_requested_safety_margin(
     client: AsyncMock,
 ) -> None:
     """Query from the stored watermark minus an explicit overlap margin."""
-    watermark = datetime.datetime(2026, 7, 28, 12, 0, tzinfo=datetime.UTC)
+    watermark = datetime.datetime(2026, 7, 28, 12, 0, tzinfo=datetime.timezone.utc)
     await database.upsert_sync_metadata(
         SyncMetadata(domain="transactions", last_synced_at=watermark)
     )
@@ -149,7 +149,7 @@ async def test_incremental_sync_uses_configured_safety_margin(
     """Use the configured overlap when the request omits an override."""
     sync_module = importlib.import_module("lunchmoney_mcp.app.sync")
 
-    watermark = datetime.datetime(2026, 7, 28, 12, 0, tzinfo=datetime.UTC)
+    watermark = datetime.datetime(2026, 7, 28, 12, 0, tzinfo=datetime.timezone.utc)
     await database.upsert_sync_metadata(
         SyncMetadata(domain="transactions", last_synced_at=watermark)
     )
@@ -220,7 +220,7 @@ async def test_successful_incremental_sync_creates_watermark_after_upsert(
 
     monkeypatch.setattr(database, "upsert_many", tracked_upsert_many)
     monkeypatch.setattr(database, "upsert_sync_metadata", tracked_upsert_metadata)
-    started_at = datetime.datetime.now(datetime.UTC)
+    started_at = datetime.datetime.now(datetime.timezone.utc)
 
     await sync_database(
         db=database,
@@ -230,7 +230,11 @@ async def test_successful_incremental_sync_creates_watermark_after_upsert(
 
     stored = await database.get_sync_metadata("transactions")
     assert stored is not None
-    assert started_at <= stored.last_synced_at <= datetime.datetime.now(datetime.UTC)
+    assert (
+        started_at
+        <= stored.last_synced_at
+        <= datetime.datetime.now(datetime.timezone.utc)
+    )
     assert events == ["records", "watermark"]
 
 
@@ -240,7 +244,7 @@ async def test_failed_incremental_sync_does_not_advance_watermark(
     client: AsyncMock,
 ) -> None:
     """Preserve an existing watermark when the transaction refresh fails."""
-    watermark = datetime.datetime(2026, 7, 28, 12, 0, tzinfo=datetime.UTC)
+    watermark = datetime.datetime(2026, 7, 28, 12, 0, tzinfo=datetime.timezone.utc)
     await database.upsert_sync_metadata(
         SyncMetadata(domain="transactions", last_synced_at=watermark)
     )

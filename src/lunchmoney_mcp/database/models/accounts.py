@@ -3,7 +3,9 @@
 from builtins import type as builtin_type
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, ClassVar, Self, cast
+from typing import Any, ClassVar, cast
+
+from typing_extensions import Self
 
 from lunchmoney.models import (
     AccountTypeEnum,

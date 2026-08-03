@@ -3,7 +3,11 @@ name = "lunchmoney-mcp"
 version = "0.1.0"
 description = "Lunch Money Application"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
+authors = [
+  {name = "Justin Flannery", email = "juftin@juftin.com"}
+]
+license = "MIT"
 dependencies = [
   "fastapi[standard]==0.139.2",
   "lunchmoney-python-async==2.25.0",
@@ -17,8 +21,25 @@ dependencies = [
   "redis>=8.0.1",
   "gunicorn>=23.0.0,<24",
   "uvicorn-worker>=0.4.0,<1",
-  "apscheduler==3.11.2"
+  "apscheduler==3.11.2",
+  "typing-extensions>=4.12.2"
 ]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython"
+]
+
+[project.urls]
+Documentation = "https://juftin.github.io/lunchmoney-mcp"
+Issues = "https://github.com/juftin/lunchmoney-mcp/issues"
+Source = "https://github.com/juftin/lunchmoney-mcp"
 
 [project.scripts]
 lunchmoney-mcp = "lunchmoney_mcp.cli:main"
@@ -30,9 +51,30 @@ openapi_spec_package = "@lunch-money/v2-api-spec"
 openapi_spec_version = "2.9.4"
 
 [tool.pytest.ini_options]
+addopts = [
+  "-v",
+  "--cov=src/lunchmoney_mcp",
+  "--cov-report=term-missing",
+  "--cov-report=xml:coverage.xml",
+  "--junitxml=pytest.xml"
+]
 markers = [
   "upstream_contract: tests that call Lunch Money's official static mock service"
 ]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:"
+]
+
+[tool.coverage.run]
+branch = true
+omit = [
+  "src/lunchmoney_mcp/__about__.py"
+]
+parallel = true
 
 [build-system]
 requires = ["hatchling"]
@@ -40,7 +82,7 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-  "marimo>=0.23.15",
+  "marimo>=0.23.16",
   "pre-commit>=4.6.1",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
@@ -48,4 +90,16 @@ dev = [
   "pyyaml==6.0.3",
   "ruff>=0.15.22",
   "ty>=0.0.61"
+]
+docs = [
+  "markdown-callouts~=0.4.0",
+  "markdown-exec~=1.11.0",
+  "mkdocs~=1.6.1",
+  "mkdocs-autorefs~=1.4.3",
+  "mkdocs-gen-files~=0.5.0",
+  "mkdocs-literate-nav~=0.6.2",
+  "mkdocs-material>=9.7,<10",
+  "mkdocs-section-index~=0.3.10",
+  "mkdocstrings[python]~=0.30.0",
+  "pymdown-extensions>=11,<12"
 ]

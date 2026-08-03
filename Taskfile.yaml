@@ -1,51 +1,160 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
 version: "3"
 
+env:
+  UV_LOCKED: 1
 vars:
-  PYTHON_SRC: src/
-  PYTHON_TESTS: tests/
-  PYTHON_NOTEBOOKS: notebooks/
-  PYTHON_SCRIPTS: scripts/
-  IMAGE_NAME: lunchmoney-mcp
+  SOURCE_CODE: src/lunchmoney_mcp
+  DOCKER_REPO: juftin/lunchmoney-mcp
 
 tasks:
+  default:
+    desc: Install project and list tasks
+    cmds:
+      - task --list-all
+    deps: [sync]
+
   install:
-    desc: Install project and development dependencies and git hooks
+    desc: Install project and development dependencies
     cmds:
-      - uv sync {{.CLI_ARGS}}
-      - uv run pre-commit install
-
-  lock:
-    desc: Regenerate uv.lock
-    cmds:
-      - uv lock {{.CLI_ARGS}}
-
-  fix:
-    desc: Code quality auto-fix - formatting + linting
-    cmds:
-      - uv run ruff format {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.PYTHON_SCRIPTS}} {{.CLI_ARGS}}
-      - uv run ruff check --fix {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.PYTHON_SCRIPTS}} {{.CLI_ARGS}}
-
-  lint:
-    desc: Code quality check - formatting + linting
-    cmds:
-      - uv run ruff format --check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.PYTHON_SCRIPTS}} {{.CLI_ARGS}}
-      - uv run ruff check {{.PYTHON_SRC}} {{.PYTHON_TESTS}} {{.PYTHON_NOTEBOOKS}} {{.PYTHON_SCRIPTS}} {{.CLI_ARGS}}
-
-  check:
-    desc: Code quality check - type checking
-    cmds:
-      - uv run ty check {{.CLI_ARGS}}
+      - task: pre-commit-install
+      - task: sync
 
   security:
     desc: Audit locked production Python dependencies for known vulnerabilities
     cmds:
-      - uv audit --preview-features audit --frozen --no-group dev {{.CLI_ARGS}}
+      - uv audit --preview-features audit --locked --no-group dev {{.CLI_ARGS}}
 
   test:
-    desc: Testing - PyTest
+    desc: Run tests
     cmds:
-      - uv run pytest {{.CLI_ARGS}}
+      - uv run -- pytest {{.CLI_ARGS}}
+    deps:
+      - task: sync
+        vars:
+          UV_PYTHON: "{{.UV_PYTHON}}"
+          CLI_ARGS: --quiet
+    env:
+      UV_MANAGED_PYTHON: 1
+      UV_PYTHON: "{{.UV_PYTHON}}"
 
+  test:matrix:
+    desc: Run tests for supported Python versions
+    cmds:
+      - for:
+          matrix:
+            PYTHON: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        task: test
+        vars:
+          UV_PYTHON: "{{.ITEM.PYTHON}}"
+
+  lint:
+    desc: Run code linters
+    cmds:
+      - uv run -- ruff check {{.CLI_ARGS | default .ROOT_DIR}}
+      - task: fmt
+        vars:
+          CLI_ARGS: --check
+    deps: [sync]
+
+  fmt:
+    desc: Run code formatters
+    cmds:
+      - uv run -- ruff format {{.CLI_ARGS | default .ROOT_DIR}}
+    deps: [sync]
+
+  fix:
+    desc: Fix code with linters and formatters
+    cmds:
+      - task: fmt
+      - uv run -- ruff check --fix {{.CLI_ARGS | default .ROOT_DIR}}
+    deps: [sync]
+
+  check:
+    desc: Run static type checks
+    cmds:
+      - uv run -- ty check {{.CLI_ARGS | default .SOURCE_CODE}}
+    requires:
+      vars: [SOURCE_CODE]
+
+  dist:
+    desc: Build project artifacts
+    cmds:
+      - cmd: rm -rf {{.ROOT_DIR}}/dist
+      - cmd: uv build
+
+  docker:
+    desc: Build Docker image
+    cmd: |
+      docker buildx build \
+        --tag {{.DOCKER_REPO}}:{{.RELEASE_VERSION}} \
+        --tag {{.DOCKER_REPO}}:latest \
+        --file {{.ROOT_DIR}}/Dockerfile \
+        {{.CLI_ARGS | default ""}} \
+        {{.ROOT_DIR}}
+    vars:
+      RELEASE_VERSION:
+        ref: .RELEASE_VERSION | default "local"
+    requires:
+      vars: [DOCKER_REPO]
+    status:
+      - test ! -f {{.ROOT_DIR}}/{{.DOCKERFILE | default "Dockerfile"}}
+
+  build:
+    desc: Build project artifacts
+    cmds:
+      - task: dist
+      - task: docker
+
+  publish:
+    desc: Publish project artifacts
+    cmds:
+      - task: docker
+        vars:
+          CLI_ARGS: --push
+    requires:
+      vars: [CI, RELEASE_VERSION]
+    status:
+      - test ! -f {{.ROOT_DIR}}/{{.DOCKERFILE | default "Dockerfile"}}
+
+  docs:
+    desc: Generate documentation
+    cmds:
+      - uv run --group docs -- mkdocs {{.CLI_ARGS | default "serve"}}
+
+  run:
+    desc: Run command within the project (requires "--")
+    interactive: true
+    cmds:
+      - uv run -- {{.CLI_ARGS}}
+
+  docker-run:
+    desc: Run command within Docker container (supports "--")
+    interactive: true
+    cmds:
+      - |
+        docker run \
+          --rm -it \
+          {{.DOCKER_REPO}}:{{.DOCKER_TAG_PREFIX}}{{.RELEASE_VERSION}} \
+          {{.CLI_ARGS}}
+    deps: [docker]
+    vars:
+      RELEASE_VERSION:
+        ref: .RELEASE_VERSION | default "local"
+    status:
+      - test ! -f {{.ROOT_DIR}}/{{.DOCKERFILE | default "Dockerfile"}}
+    requires:
+      vars: [DOCKER_REPO]
+
+  lock:
+    desc: Regenerate the project lockfile
+    cmds:
+      - uv lock
+    env:
+      UV_LOCKED: "0"
+
+  # Lunch Money-specific workflows.
   upstream:check:
     desc: Verify the pinned Lunch Money OpenAPI specification and generated client
     cmds:
@@ -62,11 +171,6 @@ tasks:
       - task upstream:check
       - RUN_LUNCHMONEY_CONTRACT_TESTS=1 uv run pytest -m upstream_contract
 
-  build:
-    desc: Artifact building - Docker image
-    cmds:
-      - docker build -t {{.IMAGE_NAME}}:latest . {{.CLI_ARGS}}
-
   compose:
     desc: Run application and infrastructure services with Docker Compose
     cmds:
@@ -78,16 +182,32 @@ tasks:
       - docker compose down {{.CLI_ARGS}}
 
   dev:
-    desc: Run local FastAPI server with Pydantic settings CLI flags
+    desc: Run local FastAPI development server
     cmds:
       - uv run lunchmoney-mcp serve {{.CLI_ARGS}}
 
   notebook:
-    desc: Run interactive marimo notebook
+    desc: Run interactive Marimo notebook
     cmds:
       - uv run marimo edit notebooks/example_usage.py {{.CLI_ARGS}}
 
-  run:
-    desc: Run a command in the project environment
+  sync:
+    desc: Install project dependencies
+    internal: true
     cmds:
-      - uv run {{.CLI_ARGS}}
+      - uv sync --all-extras {{.CLI_ARGS}}
+    env:
+      UV_MANAGED_PYTHON: 1
+      UV_PYTHON: "{{.UV_PYTHON}}"
+
+  pre-commit-install:
+    desc: Install pre-commit hooks
+    internal: true
+    cmds:
+      - cmd: |
+          if [ "{{.CI | default 0}}" = "0" ]; then
+            uv tool run --isolated pre-commit install --install-hooks
+          fi
+        silent: true
+    status:
+      - test ! -f {{.ROOT_DIR}}/.pre-commit-config.yaml

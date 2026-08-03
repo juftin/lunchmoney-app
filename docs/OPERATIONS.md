@@ -46,7 +46,7 @@ Run the following before publishing a release or after changing a dependency:
 task security
 ```
 
-This audits the frozen production Python dependency set with `uv audit` and
+This audits the locked production Python dependency set with `uv audit` and
 fails when it finds a known vulnerability. It does not inspect the operating
 system, container configuration, or secrets; CI continues to use Trivy for
 those release-image and repository checks.

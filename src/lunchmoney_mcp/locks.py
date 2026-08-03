@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import Self
+from typing_extensions import Self
 
 from filelock import FileLock as PyFileLock, Timeout as FileLockTimeout
 import redis
