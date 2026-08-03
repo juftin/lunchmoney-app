@@ -33,7 +33,6 @@ from lunchmoney_mcp.logging_config import apply_logging_config
 from lunchmoney_mcp.mcp import mcp
 from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.observability import log_event, metrics
-from lunchmoney_mcp.schemas import RootResponse
 
 apply_logging_config()
 
@@ -109,23 +108,6 @@ def _record_request(
 
 
 fastapi_app.middleware("http")(observe_request)
-
-
-@fastapi_app.get(
-    path="/",
-    response_model=RootResponse,
-    tags=["Health"],
-    operation_id="get_root",
-)
-async def root() -> RootResponse:
-    """Root endpoint returning status message.
-
-    Returns
-    -------
-    RootResponse
-        Health status message object.
-    """
-    return RootResponse(message="Hello World")
 
 
 fastapi_app.include_router(sync_router)

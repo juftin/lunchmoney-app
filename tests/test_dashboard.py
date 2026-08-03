@@ -131,8 +131,8 @@ def test_dashboard_requires_api_key_and_renders_populated_content(
     _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
     try:
         with TestClient(fastapi_app, base_url="http://localhost") as client:
-            assert client.get("/dashboard").status_code == 401
-            response = client.get("/dashboard", headers={"X-API-Key": "dashboard-key"})
+            assert client.get("/").status_code == 401
+            response = client.get("/", headers={"X-API-Key": "dashboard-key"})
     finally:
         fastapi_app.dependency_overrides.clear()
 
@@ -179,7 +179,7 @@ def test_dashboard_renders_empty_and_unavailable_states(
     _configure_dashboard(monkeypatch=monkeypatch, data=data)
     try:
         with TestClient(fastapi_app, base_url="http://localhost") as client:
-            response = client.get("/dashboard", headers={"X-API-Key": "dashboard-key"})
+            response = client.get("/", headers={"X-API-Key": "dashboard-key"})
     finally:
         fastapi_app.dependency_overrides.clear()
 
