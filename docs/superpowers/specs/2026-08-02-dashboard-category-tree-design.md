@@ -16,6 +16,8 @@ category as an expandable group with its child categories nested beneath it.
   individual totals, and proportional meters.
 - Preserve the active Income or Expenses filter while showing or hiding whole
   category groups.
+- Add the supplied Lunch Money mascot beside the dashboard welcome heading as a
+  decorative local asset.
 
 ## Design
 
@@ -30,6 +32,11 @@ Child meters use the same income or expense total as the surrounding parent
 row, so their length is comparable with every category shown in that view. The
 parent's meter continues to show the roll-up total. CSS supplies the visual
 indentation and connector; no new dashboard API or persistence is needed.
+
+The supplied mascot is downloaded into the dashboard static assets and rendered
+beside the welcome heading with empty alternative text. This preserves the
+heading as the page's accessible name and avoids a dependency on an external
+request during dashboard rendering.
 
 ## Error handling
 
