@@ -39,6 +39,10 @@ class DashboardData:
         First date included in the live budget summary.
     period_end : datetime.date
         Last date included in the live budget summary.
+    previous_period_start : datetime.date
+        First date of the previous calendar month for period navigation.
+    next_period_start : datetime.date | None
+        First date of the next calendar month, unless that month is in the future.
     transaction_last_synced_at : datetime.datetime | None
         Most recent persisted transaction-sync watermark.
     accounts : AccountsSummary | None
@@ -59,6 +63,8 @@ class DashboardData:
 
     period_start: datetime.date
     period_end: datetime.date
+    previous_period_start: datetime.date
+    next_period_start: datetime.date | None
     transaction_last_synced_at: datetime.datetime | None
     accounts: AccountsSummary | None
     budget_summary: SummaryResponseObject | None
@@ -92,7 +98,7 @@ def _available(
 async def fetch_dashboard_data(
     db: LunchMoneyDatabase,
     client: LunchMoneyApp,
-    days: int = 30,
+    period_start: datetime.date | None = None,
     transaction_limit: int = 10,
 ) -> DashboardData:
     """Load the independent dashboard sections without duplicating domain logic.
@@ -103,8 +109,8 @@ async def fetch_dashboard_data(
         Database used by cached account, spending, transaction, and sync queries.
     client : LunchMoneyApp
         Lunch Money client used by live summary and budget-setting queries.
-    days : int
-        Cached spending and transaction lookback window.
+    period_start : datetime.date | None
+        Any date in the calendar month to render. Defaults to the current month.
     transaction_limit : int
         Maximum number of recent transactions to render.
 
@@ -113,8 +119,16 @@ async def fetch_dashboard_data(
     DashboardData
         Data for every successfully loaded section plus safe unavailable-section labels.
     """
-    period_end = datetime.date.today()
-    period_start = period_end.replace(day=1)
+    today = datetime.date.today()
+    resolved_period_start = min(period_start or today, today).replace(day=1)
+    next_month_start = (
+        resolved_period_start.replace(day=28) + datetime.timedelta(days=4)
+    ).replace(day=1)
+    period_end = min(next_month_start - datetime.timedelta(days=1), today)
+    previous_period_start = (
+        resolved_period_start - datetime.timedelta(days=1)
+    ).replace(day=1)
+    future_period_start = next_month_start if next_month_start <= today else None
     (
         sync_metadata_result,
         accounts_result,
@@ -129,18 +143,26 @@ async def fetch_dashboard_data(
         _capture(
             fetch_account_summary(
                 client=client,
-                start_date=period_start,
+                start_date=resolved_period_start,
                 end_date=period_end,
                 include_totals=True,
             )
         ),
         _capture(fetch_budget_settings(client=client)),
-        _capture(fetch_category_spending(db=db, days=days)),
+        _capture(
+            fetch_category_spending(
+                db=db,
+                start_date=resolved_period_start,
+                end_date=period_end,
+                days=None,
+            )
+        ),
         _capture(
             fetch_recent_transactions(
                 db=db,
-                days=days,
                 limit=transaction_limit,
+                start_date=resolved_period_start,
+                end_date=period_end,
             )
         ),
         _capture(get_scheduled_sync_status(db=db)),
@@ -152,8 +174,10 @@ async def fetch_dashboard_data(
         unavailable_sections=unavailable_sections,
     )
     return DashboardData(
-        period_start=period_start,
+        period_start=resolved_period_start,
         period_end=period_end,
+        previous_period_start=previous_period_start,
+        next_period_start=future_period_start,
         transaction_last_synced_at=(
             sync_metadata.last_synced_at if sync_metadata is not None else None
         ),
