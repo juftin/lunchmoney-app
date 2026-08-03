@@ -78,7 +78,7 @@ task test
 For tasks that need additional arguments, use `--` to pass them:
 
 ```bash
-task run -- python -m browsr --help
+task run -- python --version
 ```
 
 You can also run tasks from subdirectories, and Task will automatically
