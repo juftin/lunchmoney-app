@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from typing import cast
 
 import uvicorn
 from pydantic import ValidationError
@@ -22,6 +23,7 @@ from lunchmoney_mcp.config import (
     export_runtime_settings,
     parse_cli_settings,
 )
+from lunchmoney_mcp.completion import CompletionShell, render_completion
 from lunchmoney_mcp.doctor import build_doctor_report
 from lunchmoney_mcp.logging_config import LOG_CONFIG
 from lunchmoney_mcp.mcp import server as mcp_server
@@ -39,7 +41,13 @@ def main(argv: list[str] | None = None) -> None:
     """
     arguments = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(description="Lunch Money MCP runtime commands.")
-    commands = parser.add_subparsers(dest="command", required=True)
+    parser.add_argument(
+        "--print-completion",
+        choices=("bash", "zsh"),
+        metavar="SHELL",
+        help="Print a Bash or Zsh completion script and exit.",
+    )
+    commands = parser.add_subparsers(dest="command")
     commands.add_parser(
         "mcp",
         help="Run the standalone MCP server.",
@@ -71,6 +79,13 @@ def main(argv: list[str] | None = None) -> None:
         add_help=False,
     )
     parsed, runtime_arguments = parser.parse_known_args(arguments)
+    if parsed.print_completion is not None:
+        if parsed.command is not None or runtime_arguments:
+            parser.error("--print-completion does not accept a runtime command")
+        print(render_completion(cast(CompletionShell, parsed.print_completion)))
+        return
+    if parsed.command is None:
+        parser.error("the following arguments are required: command")
     if parsed.command == "mcp":
         mcp_parser = mcp_server.create_argument_parser()
         settings = parse_cli_settings(

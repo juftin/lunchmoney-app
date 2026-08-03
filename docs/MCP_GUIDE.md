@@ -72,19 +72,39 @@ mutually exclusive.
 
 ### 1.3 Shell completion and command discovery
 
-`mcp` is one of the top-level `lunchmoney-mcp` commands. The executable does
-not install shell completion automatically, so enable completion for the wrapper
-that launches it (such as `uvx`) and keep `mcp` as the first argument after the
-executable. Use the built-in help as the authoritative completion fallback:
+`mcp` is one of the top-level `lunchmoney-mcp` commands. Generate completion
+for the installed executable and source it in the current shell:
 
 ```bash
-lunchmoney-mcp --help
-lunchmoney-mcp mcp --help
+# Bash
+source <(lunchmoney-mcp --print-completion bash)
+
+# Zsh
+source <(lunchmoney-mcp --print-completion zsh)
+```
+
+Install Bash completion for future shells with:
+
+```bash
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+lunchmoney-mcp --print-completion bash \
+  > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/lunchmoney-mcp"
+```
+
+For Zsh, configure `fpath=(~/.zfunc $fpath)` and
+`autoload -Uz compinit && compinit` in `~/.zshrc`, then install the generated
+function:
+
+```bash
+mkdir -p ~/.zfunc
+lunchmoney-mcp --print-completion zsh > ~/.zfunc/_lunchmoney-mcp
 ```
 
 The default remains `lunchmoney-mcp mcp` over stdio. Do not add an HTTP flag
 just to run a local desktop client: stdio communicates over the parent process'
 standard input and output, and avoids opening a listening socket.
+
+Use `lunchmoney-mcp <subcommand> --help` for the authoritative option list.
 
 ### 1.4 Client Configuration Snippets
 

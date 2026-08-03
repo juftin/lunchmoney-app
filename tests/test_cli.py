@@ -198,3 +198,26 @@ def test_cli_prints_installed_version(
     cli.main(["version"])
 
     assert capsys.readouterr().out == f"{cli.__application__} {cli.__version__}\n"
+
+
+def test_cli_prints_requested_shell_completion(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Generate the requested completion script without selecting a runtime."""
+    import lunchmoney_mcp.cli as cli
+
+    cli.main(["--print-completion", "bash"])
+
+    completion_script = capsys.readouterr().out
+    assert "complete -F _lunchmoney_mcp lunchmoney-mcp" in completion_script
+    assert "mcp serve schedule sync doctor version" in completion_script
+
+
+def test_cli_rejects_shell_completion_with_a_runtime_command() -> None:
+    """Keep completion generation separate from command execution."""
+    import lunchmoney_mcp.cli as cli
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(["--print-completion", "zsh", "mcp"])
+
+    assert error.value.code == 2

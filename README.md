@@ -89,11 +89,35 @@ package version.
 
 ### Shell completion
 
-The CLI uses standard `--help` output and does not install shell completion
-automatically. Enable completion for the shell wrapper you use (for example,
-`uvx` or your package manager) and delegate arguments to `lunchmoney-mcp`; the
-subcommand is the first argument. Completion is convenience only—use
-`lunchmoney-mcp <subcommand> --help` as the authoritative option list.
+Generate a completion script for the installed executable, then source it in
+the current shell:
+
+```bash
+# Bash
+source <(lunchmoney-mcp --print-completion bash)
+
+# Zsh
+source <(lunchmoney-mcp --print-completion zsh)
+```
+
+To install Bash completion for future shells, write the generated script to the
+standard user completion directory:
+
+```bash
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+lunchmoney-mcp --print-completion bash \
+  > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/lunchmoney-mcp"
+```
+
+For Zsh, add `fpath=(~/.zfunc $fpath)` and `autoload -Uz compinit && compinit`
+to `~/.zshrc`, then install the generated function:
+
+```bash
+mkdir -p ~/.zfunc
+lunchmoney-mcp --print-completion zsh > ~/.zfunc/_lunchmoney-mcp
+```
+
+Use `lunchmoney-mcp <subcommand> --help` for the authoritative option list.
 
 Use `task dev` for local FastAPI development; it runs the direct Uvicorn server
 with auto-reload enabled.
