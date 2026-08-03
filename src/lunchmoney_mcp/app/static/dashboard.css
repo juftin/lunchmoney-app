@@ -1,0 +1,106 @@
+:root {
+    color-scheme: light dark;
+    font-family: system-ui, sans-serif;
+    line-height: 1.5;
+}
+
+body {
+    margin: 0 auto;
+    max-width: 70rem;
+    padding: 1rem;
+}
+
+.site-header,
+.panel,
+.card,
+.notice {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid currentColor;
+    border-radius: 0.5rem;
+}
+
+.eyebrow {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.card-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.account-list,
+.summary-list {
+    padding: 0;
+    list-style: none;
+}
+
+.account-list li,
+.summary-list div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.summary-list dd {
+    margin: 0;
+    font-weight: 700;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.status-success {
+    color: #167c3a;
+    font-weight: 700;
+}
+
+.status-failed,
+.status-skipped,
+.notice {
+    color: #9e2a2b;
+}
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+}
+
+.skip-link:focus {
+    top: 0;
+    left: 0;
+    z-index: 1;
+    padding: 0.5rem;
+    background: Canvas;
+}
+
+@media (max-width: 40rem) {
+    body {
+        padding: 0.75rem;
+    }
+
+    .account-list li,
+    .summary-list div {
+        display: block;
+    }
+}

@@ -51,9 +51,9 @@ graph TD
 
 - **Database Engine**: Shared in-memory SQLite (`sqlite+aiosqlite:///file:memdb?mode=memory&cache=shared&uri=true`) configured with `StaticPool`.
 - **Sync Strategy**: **100% refreshed from Lunch Money v2 API on demand**. For every request or operation:
-  1. An in-memory SQLite database instance is initialized and schema tables are instantiated.
-  2. Data is fetched live from the Lunch Money API and loaded into memory.
-  3. The request/tool operation is executed against the fresh in-memory data graph.
+    1. An in-memory SQLite database instance is initialized and schema tables are instantiated.
+    2. Data is fetched live from the Lunch Money API and loaded into memory.
+    3. The request/tool operation is executed against the fresh in-memory data graph.
 - **Use Cases**: Ephemeral containers, serverless environments (AWS Lambda, Google Cloud Run, Vercel), security-restricted environments where storing financial data on disk is forbidden.
 
 ---
@@ -291,16 +291,16 @@ features.
 
 ### Sprint 11: Server-Rendered Financial Dashboard
 
-- [ ] Add a small, authenticated HTML dashboard served by FastAPI, using
+- [x] Add a small, authenticated HTML dashboard served by FastAPI, using
       server-rendered templates and semantic HTML/CSS—no separate JavaScript
       application or client-side financial-data store. Scope the first release to
       one authenticated user and one Lunch Money account.
-- [ ] Start with dashboard cards for cache freshness, account summary,
+- [x] Start with dashboard cards for cache freshness, account summary,
       category spending, budget status, recent transactions, and the last scheduled
       sync outcome.
-- [ ] Reuse existing services and schemas; dashboard routes remain thin
+- [x] Reuse existing services and schemas; dashboard routes remain thin
       delegators and do not introduce duplicate analytics logic.
-- [ ] Ensure accessible keyboard navigation, responsive layouts, CSRF-safe
+- [x] Ensure accessible keyboard navigation, responsive layouts, CSRF-safe
       forms for any future mutations, and integration tests for authorization and
       rendered empty/error states.
 
