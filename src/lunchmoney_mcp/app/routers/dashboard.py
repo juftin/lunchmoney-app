@@ -21,7 +21,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 
 @router.get(
-    path="/dashboard",
+    path="/",
     response_class=HTMLResponse,
     include_in_schema=False,
 )
