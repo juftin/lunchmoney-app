@@ -70,21 +70,37 @@ lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 9000
 `--host` and `--port` are invalid with `--stdio`. The four transport flags are
 mutually exclusive.
 
-### 1.3 Client Configuration Snippets
+### 1.3 Shell completion and command discovery
+
+`mcp` is one of the top-level `lunchmoney-mcp` commands. The executable does
+not install shell completion automatically, so enable completion for the wrapper
+that launches it (such as `uvx`) and keep `mcp` as the first argument after the
+executable. Use the built-in help as the authoritative completion fallback:
+
+```bash
+lunchmoney-mcp --help
+lunchmoney-mcp mcp --help
+```
+
+The default remains `lunchmoney-mcp mcp` over stdio. Do not add an HTTP flag
+just to run a local desktop client: stdio communicates over the parent process'
+standard input and output, and avoids opening a listening socket.
+
+### 1.4 Client Configuration Snippets
 
 #### Claude Desktop (`claude_desktop_config.json`)
 
 ```json
 {
-  "mcpServers": {
-    "lunchmoney": {
-      "command": "uvx",
-      "args": ["lunchmoney-mcp"],
-      "env": {
-        "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
-      }
+    "mcpServers": {
+        "lunchmoney": {
+            "command": "uvx",
+            "args": ["lunchmoney-mcp"],
+            "env": {
+                "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -92,20 +108,20 @@ mutually exclusive.
 
 ```json
 {
-  "mcpServers": {
-    "lunchmoney": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/path/to/lunchmoney-mcp",
-        "lunchmoney-mcp"
-      ],
-      "env": {
-        "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
-      }
+    "mcpServers": {
+        "lunchmoney": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--directory",
+                "/path/to/lunchmoney-mcp",
+                "lunchmoney-mcp"
+            ],
+            "env": {
+                "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
+            }
+        }
     }
-  }
 }
 ```
 

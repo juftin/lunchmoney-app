@@ -155,6 +155,10 @@ class StatelessSettings(BaseModel):
     """Safety overlap margin for incremental ETL queries."""
 
 
+class SyncCliSettings(StatelessSettings, RuntimeSettingsBase):
+    """CLI-visible settings for one foreground synchronization."""
+
+
 class ScheduleSettings(BaseModel):
     """Non-secret settings controlling periodic synchronization."""
 
@@ -350,14 +354,14 @@ class ServeCliSettings(
 _runtime_settings: RuntimeSettings | None = None
 """Process-local runtime settings supplied by Pydantic's CLI parser."""
 
-RuntimeMode = Literal["mcp", "schedule", "serve"]
+RuntimeMode = Literal["mcp", "schedule", "serve", "sync"]
 """The dedicated runtime command currently executing in this process."""
 
 _runtime_mode: RuntimeMode | None = None
 """Process-local runtime mode used to enforce command-level responsibilities."""
 
 
-CliSettings = McpCliSettings | ScheduleCliSettings | ServeCliSettings
+CliSettings = McpCliSettings | ScheduleCliSettings | ServeCliSettings | SyncCliSettings
 """A command-specific model that exposes only that command's safe CLI flags."""
 
 

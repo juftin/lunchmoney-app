@@ -17,11 +17,11 @@ This document serves as the **operational task tracker** for **`lunchmoney-mcp`*
 When a sprint contains independent, non-overlapping tasks (e.g. creating parallel service functions, adding independent endpoints, or writing unit tests), invoke subagents to execute them concurrently:
 
 1. **Define Subagents (`define_subagent`)**:
-   - Define specialized subagent roles (e.g., `EndpointBuilder`, `TestWriter`, `ServiceImplementor`).
+    - Define specialized subagent roles (e.g., `EndpointBuilder`, `TestWriter`, `ServiceImplementor`).
 2. **Invoke Subagents (`invoke_subagent`)**:
-   - Launch subagents with clear, self-contained prompts specifying the target files and verification expectations.
+    - Launch subagents with clear, self-contained prompts specifying the target files and verification expectations.
 3. **Reactive Notification (No Polling)**:
-   - After launching subagents, do NOT poll in a loop. Stop tool calls or proceed with independent work until the system automatically notifies you upon completion.
+    - After launching subagents, do NOT poll in a loop. Stop tool calls or proceed with independent work until the system automatically notifies you upon completion.
 
 ---
 
@@ -166,8 +166,8 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-finan
 
 _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-experience)
 
-- [ ] **CLI Subcommands**: Provide `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version` with safe configuration validation and meaningful exit codes.
-- [ ] **Deployment Docs**: Make Docker Compose the first-class deployment path and document package, scheduler, and upgrade workflows.
+- [x] **CLI Subcommands**: Provide `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version` with safe configuration validation and meaningful exit codes.
+- [x] **Deployment Docs**: Make Docker Compose the first-class deployment path and document package, scheduler, and upgrade workflows.
 
 ---
 

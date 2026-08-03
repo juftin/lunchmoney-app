@@ -41,11 +41,13 @@ the HTTP transports.
 
 ## Production deployment
 
-The container image runs the combined REST and MCP ASGI application with
-Gunicorn and `uvicorn-worker` on port 8000. Docker Compose uses that production
-command by default. The Compose stack binds HTTP only to loopback and requires
-explicit production credentials; see the [operations runbook](docs/OPERATIONS.md)
-for TLS, secrets, backups, restores, retention, and incident response.
+Docker Compose is the supported production deployment path. By default it runs
+the combined REST and streamable-HTTP MCP application with Gunicorn and
+`uvicorn-worker` on port 8000. The Compose stack binds HTTP only to loopback
+and requires explicit production credentials. See the
+[operations runbook](docs/OPERATIONS.md) for API-only, MCP-only, combined, and
+dedicated-scheduler topologies, plus TLS, secrets, backup, restore, retention,
+and upgrade procedures.
 
 ```bash
 export LUNCHMONEY_ACCESS_TOKEN="your-lunch-money-token"
@@ -56,6 +58,42 @@ export POSTGRES_DB="lunchmoney"
 export LUNCHMONEY_DATABASE_URL="postgresql+asyncpg://lunchmoney:use-a-long-random-password@postgres:5432/lunchmoney"
 task compose
 ```
+
+## Configuration and CLI
+
+The command-line interface provides `mcp`, `serve`, `schedule`, `sync`,
+`doctor`, and `version`. Use command help to see the options applicable to one
+runtime:
+
+```bash
+lunchmoney-mcp --help
+lunchmoney-mcp mcp --help
+```
+
+For safe, CLI-exposed runtime settings, precedence is **CLI flags > process
+environment > `.env` > built-in defaults**. For example, a `--port` flag wins
+over `LUNCHMONEY_PORT`, which wins over `LUNCHMONEY_PORT` in `.env`. Secrets
+and connection URLs are deliberately environment/`.env`-only and cannot be
+passed as command-line flags.
+
+Use a `.env` file for local development and a secret manager or the deployment
+environment in production. Docker Compose also reads its project `.env` file
+to interpolate the Compose file; values passed into the container are process
+environment values and therefore take precedence over an application `.env`
+file inside the image.
+
+`doctor` is local-only: it validates configuration and local prerequisites
+without making a Lunch Money API request. Its output redacts secret values.
+`sync` performs one foreground synchronization; `version` prints the installed
+package version.
+
+### Shell completion
+
+The CLI uses standard `--help` output and does not install shell completion
+automatically. Enable completion for the shell wrapper you use (for example,
+`uvx` or your package manager) and delegate arguments to `lunchmoney-mcp`; the
+subcommand is the first argument. Completion is convenience only—use
+`lunchmoney-mcp <subcommand> --help` as the authoritative option list.
 
 Use `task dev` for local FastAPI development; it runs the direct Uvicorn server
 with auto-reload enabled.
@@ -75,9 +113,11 @@ task run -- lunchmoney-mcp schedule \
 
 Pydantic Settings parses safe runtime flags only for the command that uses them:
 `mcp` exposes transport, OAuth, `--host`, and `--port`; `schedule` exposes
-scheduling and `--stateless`; and `serve` exposes its web-server, scheduler,
-sync, and OAuth options. Credentials and connection URLs are environment/dotenv-only;
-all settings use documented `LUNCHMONEY_` environment variables.
+scheduling and `--stateless`; `sync` exposes its foreground sync options and
+`--stateless`; and `serve` exposes its web-server, scheduler, sync, and OAuth
+options. `doctor` and `version` accept no runtime configuration flags.
+Credentials and connection URLs are environment/`.env`-only; all settings use
+documented `LUNCHMONEY_` environment variables.
 
 The scheduler reports its most recent outcome at `GET /sync/status` and through
 the `get_sync_status` MCP tool. It never runs in the Gunicorn web process. To
