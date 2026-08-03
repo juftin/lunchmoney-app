@@ -4,9 +4,11 @@ import logging
 import time
 import uuid
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.utilities.lifespan import combine_lifespans
 
@@ -17,6 +19,7 @@ from lunchmoney_mcp.app.routers import (
     accounts_router,
     budgets_router,
     categories_router,
+    dashboard_router,
     health_router,
     recurring_router,
     spending_router,
@@ -45,6 +48,11 @@ api_router = APIRouter(prefix="/api")
 """Router namespace for every public REST API operation."""
 
 fastapi_app.middleware("http")(verify_api_key)
+fastapi_app.mount(
+    "/static",
+    StaticFiles(directory=Path(__file__).parent / "static"),
+    name="dashboard_static",
+)
 
 
 async def observe_request(
@@ -134,6 +142,7 @@ api_router.include_router(recurring_router)
 api_router.include_router(spending_router)
 fastapi_app.include_router(api_router)
 fastapi_app.include_router(health_router)
+fastapi_app.include_router(dashboard_router)
 
 mcp_app: StarletteWithLifespan = mcp.http_app(path="/mcp")
 app = FastAPI(
