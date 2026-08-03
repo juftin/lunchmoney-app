@@ -51,9 +51,9 @@ graph TD
 
 - **Database Engine**: Shared in-memory SQLite (`sqlite+aiosqlite:///file:memdb?mode=memory&cache=shared&uri=true`) configured with `StaticPool`.
 - **Sync Strategy**: **100% refreshed from Lunch Money v2 API on demand**. For every request or operation:
-  1. An in-memory SQLite database instance is initialized and schema tables are instantiated.
-  2. Data is fetched live from the Lunch Money API and loaded into memory.
-  3. The request/tool operation is executed against the fresh in-memory data graph.
+    1. An in-memory SQLite database instance is initialized and schema tables are instantiated.
+    2. Data is fetched live from the Lunch Money API and loaded into memory.
+    3. The request/tool operation is executed against the fresh in-memory data graph.
 - **Use Cases**: Ephemeral containers, serverless environments (AWS Lambda, Google Cloud Run, Vercel), security-restricted environments where storing financial data on disk is forbidden.
 
 ---
@@ -306,13 +306,13 @@ features.
 
 ### Sprint 12: CLI, Packaging & Operator Experience
 
-- [ ] Replace the single-purpose argument parser with discoverable subcommands:
+- [x] Replace the single-purpose argument parser with discoverable subcommands:
       `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version`.
-- [ ] Keep MCP transport flags mutually exclusive under `mcp`; make the stdio
+- [x] Keep MCP transport flags mutually exclusive under `mcp`; make the stdio
       default explicit in generated help and shell-completion documentation.
-- [ ] Provide config precedence and validation (`environment > config file >
+- [x] Provide config precedence and validation (`CLI > environment > .env >
 defaults`), redacted `doctor` diagnostics, meaningful exit codes, and no
       secret values in output.
-- [ ] Publish Docker Compose as the first-class deployment path, with
+- [x] Publish Docker Compose as the first-class deployment path, with
       API-only, MCP-only, combined, and dedicated-scheduler examples; add
       release/versioning and upgrade documentation.

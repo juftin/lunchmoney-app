@@ -1,6 +1,6 @@
 """Tests for the command-line process dispatcher."""
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 
@@ -8,6 +8,7 @@ from lunchmoney_mcp.config import (
     McpCliSettings,
     ScheduleCliSettings,
     ServeCliSettings,
+    SyncCliSettings,
 )
 
 
@@ -119,3 +120,104 @@ def test_cli_runs_fastapi_with_pydantic_runtime_options(
         reload=True,
         log_config=cli.LOG_CONFIG,
     )
+
+
+def test_cli_runs_one_foreground_sync(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dispatch one-off sync arguments without exposing secret CLI flags."""
+    import lunchmoney_mcp.cli as cli
+
+    settings = Mock(sync_safety_margin_minutes=7)
+    parse_cli_settings = Mock(return_value=settings)
+    configure_runtime_settings = Mock()
+    configure_runtime_mode = Mock()
+    run_sync = AsyncMock()
+    monkeypatch.setattr(cli, "parse_cli_settings", parse_cli_settings)
+    monkeypatch.setattr(cli, "configure_runtime_settings", configure_runtime_settings)
+    monkeypatch.setattr(cli, "configure_runtime_mode", configure_runtime_mode)
+    monkeypatch.setattr(cli, "_run_sync", run_sync)
+
+    cli.main(["sync", "--days", "14", "--incremental"])
+
+    parse_cli_settings.assert_called_once_with(
+        ["--days", "14", "--incremental"],
+        SyncCliSettings,
+        root_parser=ANY,
+    )
+    configure_runtime_settings.assert_called_once_with(settings)
+    configure_runtime_mode.assert_called_once_with("sync")
+    run_sync.assert_awaited_once_with(
+        days=14,
+        incremental=True,
+        safety_margin_minutes=7,
+    )
+
+
+def test_cli_reports_local_doctor_failure_with_exit_code_one(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Return a meaningful failure when local doctor checks are unhealthy."""
+    import lunchmoney_mcp.cli as cli
+
+    report = Mock(is_healthy=False)
+    report.render.return_value = "redacted diagnostic"
+    monkeypatch.setattr(cli, "build_doctor_report", Mock(return_value=report))
+    monkeypatch.setattr(cli, "parse_cli_settings", Mock(return_value=Mock()))
+    monkeypatch.setattr(cli, "get_secret_settings", Mock(return_value=Mock()))
+
+    with pytest.raises(SystemExit, match="1"):
+        cli.main(["doctor"])
+
+    assert capsys.readouterr().out == "redacted diagnostic\n"
+
+
+def test_cli_reports_invalid_doctor_configuration_with_exit_code_two(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reject invalid local configuration without rendering its source values."""
+    import lunchmoney_mcp.cli as cli
+
+    monkeypatch.setenv("LUNCHMONEY_ALLOWED_HOSTS", "*")
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(["doctor"])
+
+    assert error.value.code == 2
+    assert "invalid local configuration" in capsys.readouterr().err
+
+
+def test_cli_prints_installed_version(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Print the distribution name and installed version without configuration."""
+    import lunchmoney_mcp.cli as cli
+
+    cli.main(["version"])
+
+    assert capsys.readouterr().out == f"{cli.__application__} {cli.__version__}\n"
+
+
+def test_cli_prints_requested_shell_completion(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Generate the requested completion script without selecting a runtime."""
+    import lunchmoney_mcp.cli as cli
+
+    cli.main(["--print-completion", "bash"])
+
+    completion_script = capsys.readouterr().out
+    assert "complete -F _lunchmoney_mcp lunchmoney-mcp" in completion_script
+    assert "mcp serve schedule sync doctor version" in completion_script
+
+
+def test_cli_rejects_shell_completion_with_a_runtime_command() -> None:
+    """Keep completion generation separate from command execution."""
+    import lunchmoney_mcp.cli as cli
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(["--print-completion", "zsh", "mcp"])
+
+    assert error.value.code == 2

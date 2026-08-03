@@ -13,6 +13,7 @@ from lunchmoney_mcp.config import (
     ScheduleCliSettings,
     SecretSettings,
     ServeCliSettings,
+    SyncCliSettings,
     configure_runtime_mode,
     export_runtime_settings,
     get_secret_settings,
@@ -274,17 +275,32 @@ def test_runtime_cli_options_share_mcp_transport_host_and_port() -> None:
     assert settings.port == 9000
 
 
+def test_mcp_help_makes_the_stdio_default_explicit(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Describe the default MCP transport in the command's generated help."""
+    from lunchmoney_mcp.mcp.server import create_argument_parser
+
+    with pytest.raises(SystemExit):
+        create_argument_parser().parse_args(["--help"])
+
+    assert "standard input/output transport (default)" in capsys.readouterr().out
+
+
 @pytest.mark.parametrize(
     ("settings_type", "expected", "unexpected"),
     [
         (McpCliSettings, "--host", "--schedule-cron"),
         (ScheduleCliSettings, "--schedule-cron", "--mcp-oauth-client-id"),
         (ServeCliSettings, "--embed-scheduler", "--access-token"),
+        (SyncCliSettings, "--sync-safety-margin-minutes", "--access-token"),
     ],
 )
 def test_command_cli_help_only_shows_relevant_options(
     capsys: pytest.CaptureFixture[str],
-    settings_type: type[McpCliSettings | ScheduleCliSettings | ServeCliSettings],
+    settings_type: type[
+        McpCliSettings | ScheduleCliSettings | ServeCliSettings | SyncCliSettings
+    ],
     expected: str,
     unexpected: str,
 ) -> None:

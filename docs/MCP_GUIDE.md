@@ -70,21 +70,57 @@ lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 9000
 `--host` and `--port` are invalid with `--stdio`. The four transport flags are
 mutually exclusive.
 
-### 1.3 Client Configuration Snippets
+### 1.3 Shell completion and command discovery
+
+`mcp` is one of the top-level `lunchmoney-mcp` commands. Generate completion
+for the installed executable and source it in the current shell:
+
+```bash
+# Bash
+source <(lunchmoney-mcp --print-completion bash)
+
+# Zsh
+source <(lunchmoney-mcp --print-completion zsh)
+```
+
+Install Bash completion for future shells with:
+
+```bash
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+lunchmoney-mcp --print-completion bash \
+  > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/lunchmoney-mcp"
+```
+
+For Zsh, configure `fpath=(~/.zfunc $fpath)` and
+`autoload -Uz compinit && compinit` in `~/.zshrc`, then install the generated
+function:
+
+```bash
+mkdir -p ~/.zfunc
+lunchmoney-mcp --print-completion zsh > ~/.zfunc/_lunchmoney-mcp
+```
+
+The default remains `lunchmoney-mcp mcp` over stdio. Do not add an HTTP flag
+just to run a local desktop client: stdio communicates over the parent process'
+standard input and output, and avoids opening a listening socket.
+
+Use `lunchmoney-mcp <subcommand> --help` for the authoritative option list.
+
+### 1.4 Client Configuration Snippets
 
 #### Claude Desktop (`claude_desktop_config.json`)
 
 ```json
 {
-  "mcpServers": {
-    "lunchmoney": {
-      "command": "uvx",
-      "args": ["lunchmoney-mcp"],
-      "env": {
-        "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
-      }
+    "mcpServers": {
+        "lunchmoney": {
+            "command": "uvx",
+            "args": ["lunchmoney-mcp"],
+            "env": {
+                "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -92,20 +128,20 @@ mutually exclusive.
 
 ```json
 {
-  "mcpServers": {
-    "lunchmoney": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/path/to/lunchmoney-mcp",
-        "lunchmoney-mcp"
-      ],
-      "env": {
-        "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
-      }
+    "mcpServers": {
+        "lunchmoney": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--directory",
+                "/path/to/lunchmoney-mcp",
+                "lunchmoney-mcp"
+            ],
+            "env": {
+                "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
+            }
+        }
     }
-  }
 }
 ```
 

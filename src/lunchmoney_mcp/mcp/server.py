@@ -112,6 +112,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
         action="store_const",
         const="stdio",
         dest="transport",
+        help="Use standard input/output transport (default).",
     )
     transport_group.add_argument(
         "--sse", action="store_const", const="sse", dest="transport"
