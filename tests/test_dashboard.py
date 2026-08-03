@@ -2,6 +2,7 @@
 
 import datetime
 import importlib
+from dataclasses import replace
 from types import SimpleNamespace
 from typing import cast
 from unittest.mock import ANY, AsyncMock, create_autospec
@@ -62,6 +63,7 @@ def _dashboard_data(*, unavailable_sections: tuple[str, ...] = ()) -> DashboardD
                     name="Checking",
                     balance=1250.50,
                     currency="usd",
+                    type_or_status="cash",
                 )
             ]
         ),
@@ -158,6 +160,187 @@ def test_dashboard_requires_api_key_and_renders_populated_content(
     assert "Tabler" in tabler_stylesheet.text
     assert script.status_code == 200
     assert "initializePanelSwitcher" in script.text
+
+
+def test_dashboard_groups_accounts_and_uses_currency_symbols(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Group accounts by financial type and prefix balances with their currency."""
+    data = _dashboard_data()
+    data = replace(
+        data,
+        accounts=AccountsSummary(
+            plaid_accounts=[
+                AccountInfo(
+                    id=1,
+                    name="Checking",
+                    display_name="Daily spending",
+                    balance=1250.50,
+                    currency="usd",
+                    type_or_status="cash",
+                ),
+                AccountInfo(
+                    id=2,
+                    name="Travel Card",
+                    display_name="Travel card",
+                    balance=210.25,
+                    currency="usd",
+                    type_or_status="credit",
+                ),
+                AccountInfo(
+                    id=5,
+                    name="Savings",
+                    display_name="Family savings",
+                    balance=3000,
+                    currency="usd",
+                    type_or_status="cash",
+                ),
+                AccountInfo(
+                    id=4,
+                    name="Dormant Account",
+                    balance=0,
+                    currency="usd",
+                    type_or_status="cash",
+                ),
+            ],
+            manual_accounts=[
+                AccountInfo(
+                    id=3,
+                    name="Brokerage",
+                    display_name=None,
+                    balance=5000,
+                    currency="usd",
+                    type_or_status="investment",
+                )
+            ],
+        ),
+    )
+    _configure_dashboard(monkeypatch=monkeypatch, data=data)
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get("/", headers={"X-API-Key": "dashboard-key"})
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "Cash (2)" in response.text
+    assert "Investment (1)" in response.text
+    assert "Credit (1)" in response.text
+    assert "$4,250.50" in response.text
+    assert "$5,000.00" in response.text
+    assert "$9,040.25" in response.text
+    assert "Daily spending" in response.text
+    assert "Family savings" in response.text
+    assert "Checking" not in response.text
+    assert response.text.index("Family savings") < response.text.index("Daily spending")
+    assert "Connected" not in response.text
+    assert "Manual" not in response.text
+    assert "Dormant Account" not in response.text
+
+
+def test_dashboard_renders_parent_categories_and_mascot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Render grouped spending and the local brand mascot."""
+    data = _dashboard_data()
+    assert data.category_spending is not None
+    data.category_spending.total_income = -100
+    data.category_spending.total_spending = 30
+    data.category_spending.categories = [
+        {
+            "category_id": 1,
+            "category_name": "Food",
+            "is_group": True,
+            "is_income": False,
+            "total_amount": 20,
+            "transaction_count": 1,
+            "children": [
+                {
+                    "category_id": 2,
+                    "category_name": "Groceries",
+                    "is_income": False,
+                    "total_amount": 20,
+                    "transaction_count": 1,
+                },
+                {
+                    "category_id": 5,
+                    "category_name": "No activity child",
+                    "is_income": False,
+                    "total_amount": 0,
+                    "transaction_count": 0,
+                },
+            ],
+        },
+        {
+            "category_id": 3,
+            "category_name": "Salary",
+            "is_group": False,
+            "is_income": True,
+            "total_amount": -100,
+            "transaction_count": 1,
+            "children": [],
+        },
+        {
+            "category_id": 6,
+            "category_name": "No activity category",
+            "is_group": False,
+            "is_income": False,
+            "total_amount": 0,
+            "transaction_count": 0,
+            "children": [],
+        },
+        {
+            "category_id": 4,
+            "category_name": "Dining",
+            "is_group": False,
+            "is_income": False,
+            "total_amount": 10,
+            "transaction_count": 1,
+            "children": [],
+        },
+    ]
+    _configure_dashboard(monkeypatch=monkeypatch, data=data)
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get("/", headers={"X-API-Key": "dashboard-key"})
+            css_response = client.get("/static/dashboard.css")
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert css_response.status_code == 200
+    assert 'class="category-item category-item--group' in response.text
+    assert (
+        '<details\n            open\n            class="category-item' in response.text
+    )
+    assert "category-disclosure" in response.text
+    assert "category-child__meter" in response.text
+    assert 'class="brand-mascot"' in response.text
+    assert "/static/mascot.png" in response.text
+    assert 'class="category-table"' in response.text
+    assert 'class="category-table__columns"' in response.text
+    assert 'class="category-section__heading">Income' in response.text
+    assert 'class="category-section__heading">Expenses' in response.text
+    assert "<em>100.0%</em>" in response.text
+    assert "<em>-100.0%</em>" not in response.text
+    assert 'class="category-name__label"' in response.text
+    assert ".category-child__name::before" in css_response.text
+    assert ".category-child__name::after" in css_response.text
+    assert "data-category-filter" not in response.text
+    assert response.text.index(">Salary</span") < response.text.index(">Food</span")
+    assert response.text.index(">Food</span") < response.text.index(">Dining</span")
+    assert "No activity category" not in response.text
+    assert "No activity child" not in response.text
+
+
+def test_dashboard_category_table_has_a_scrollable_region() -> None:
+    """Keep a long category report scrollable within the dashboard panel."""
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
+        response = client.get("/static/dashboard.css")
+
+    assert response.status_code == 200
+    assert ".category-table {\n    display: flex;" in response.text
+    assert ".category-explorer {\n    flex: 1;" in response.text
 
 
 def test_dashboard_renders_empty_and_unavailable_states(

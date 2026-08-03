@@ -165,6 +165,7 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-finan
 
 - [x] **HTML Dashboard**: Add authenticated, accessible single-user, single-account server-rendered summary, spending, budget, transaction, and sync-status views without a separate JavaScript application.
 - [x] **Service Reuse**: Keep dashboard routes as thin delegators to existing services and test authorized, empty, and error rendering.
+- [ ] **Interactive Category Tree**: Group dashboard spending by parent category with accessible child disclosure and a local mascot brand mark.
 
 ### 🧰 Sprint 12: CLI, Packaging & Operator Experience
 

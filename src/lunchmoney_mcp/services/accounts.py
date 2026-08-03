@@ -16,7 +16,6 @@ from lunchmoney_mcp.schemas import (
     ManualAccountUpdateRequest,
 )
 
-
 async def fetch_accounts(db: LunchMoneyDatabase) -> AccountsSummary:
     """Fetch complete manual and Plaid account collections in one response.
 

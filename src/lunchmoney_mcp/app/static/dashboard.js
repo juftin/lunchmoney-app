@@ -20,29 +20,4 @@ function initializePanelSwitcher() {
     }
 }
 
-/** Filter the category explorer between income and expense rows. */
-function initializeCategoryFilter() {
-    const buttons = document.querySelectorAll("[data-category-filter]");
-    const rows = document.querySelectorAll("[data-category-kind]");
-
-    for (const button of buttons) {
-        button.addEventListener("click", () => {
-            const kind = button.dataset.categoryFilter;
-            for (const currentButton of buttons) {
-                currentButton.classList.toggle(
-                    "is-active",
-                    currentButton === button,
-                );
-            }
-            for (const row of rows) {
-                row.classList.toggle(
-                    "is-hidden",
-                    row.dataset.categoryKind !== kind,
-                );
-            }
-        });
-    }
-}
-
 initializePanelSwitcher();
-initializeCategoryFilter();

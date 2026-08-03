@@ -113,6 +113,8 @@ class AccountInfo(BaseModel):
     """Unique account identifier."""
     name: str
     """Account display name."""
+    display_name: str | None = None
+    """Optional user-facing account name, preferred when present."""
     balance: float
     """Current account balance."""
     currency: str
