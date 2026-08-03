@@ -1,0 +1,48 @@
+# Project-specific tasks that extend the Copier template.
+
+version: "3"
+
+tasks:
+    ########################
+    # LUNCH MONEY WORKFLOWS
+    ########################
+    security:
+        desc: Audit locked production Python dependencies for known vulnerabilities
+        cmds:
+            - uv audit --preview-features audit --locked --no-group dev {{.CLI_ARGS}}
+    #######################################
+    upstream:check:
+        desc: Verify the pinned Lunch Money OpenAPI specification and generated client
+        cmds:
+            - uv run python scripts/check_upstream_contract.py
+    #######################################
+    upstream:refresh:
+        desc: Refresh the reviewed Lunch Money OpenAPI contract snapshot
+        cmds:
+            - uv run python scripts/check_upstream_contract.py --write
+    #######################################
+    contract:
+        desc: Run static and official mock-service compatibility checks
+        cmds:
+            - task upstream:check
+            - RUN_LUNCHMONEY_CONTRACT_TESTS=1 uv run pytest -m upstream_contract
+    #######################################
+    compose:
+        desc: Run application and infrastructure services with Docker Compose
+        cmds:
+            - docker compose up --build {{.CLI_ARGS}}
+    #######################################
+    compose:down:
+        desc: Stop Docker Compose services
+        cmds:
+            - docker compose down {{.CLI_ARGS}}
+    #######################################
+    dev:
+        desc: Run local FastAPI development server
+        cmds:
+            - uv run lunchmoney-mcp serve {{.CLI_ARGS}}
+    #######################################
+    notebook:
+        desc: Run interactive Marimo notebook
+        cmds:
+            - uv run marimo edit notebooks/example_usage.py

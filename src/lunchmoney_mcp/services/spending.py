@@ -2,6 +2,7 @@
 
 import datetime
 from decimal import Decimal
+from typing import Literal, cast
 
 from sqlalchemy.engine.result import ScalarResult
 from sqlmodel import select
@@ -17,9 +18,13 @@ from lunchmoney_mcp.schemas import (
 )
 
 
+TrendGranularity = Literal["daily", "weekly", "monthly"]
+"""Supported calendar intervals for spending trend aggregation."""
+
+
 def _trend_bucket_start(
     value: datetime.date,
-    granularity: str,
+    granularity: TrendGranularity,
 ) -> datetime.date:
     """Return the calendar start date for a requested trend granularity."""
     if granularity == "daily":
@@ -190,6 +195,7 @@ async def fetch_spending_trends(
     """
     if granularity not in {"daily", "weekly", "monthly"}:
         raise ValueError("granularity must be daily, weekly, or monthly")
+    resolved_granularity = cast(TrendGranularity, granularity)
 
     resolved_end = end_date or datetime.date.today()
     resolved_start = (
@@ -210,7 +216,10 @@ async def fetch_spending_trends(
 
     buckets: dict[datetime.date, dict[str, Decimal | int]] = {}
     for transaction in transactions:
-        bucket_start = _trend_bucket_start(transaction.var_date, granularity)
+        bucket_start = _trend_bucket_start(
+            transaction.var_date,
+            resolved_granularity,
+        )
         bucket = buckets.setdefault(
             bucket_start,
             {
@@ -219,7 +228,11 @@ async def fetch_spending_trends(
                 "transaction_count": 0,
             },
         )
-        category = categories.get(transaction.category_id)
+        category = (
+            categories.get(transaction.category_id)
+            if transaction.category_id is not None
+            else None
+        )
         amount_key = (
             "total_income"
             if category is not None and category.is_income
@@ -231,7 +244,7 @@ async def fetch_spending_trends(
     return SpendingTrendsResponse(
         start_date=resolved_start,
         end_date=resolved_end,
-        granularity=granularity,  # type: ignore[arg-type]
+        granularity=resolved_granularity,
         trends=[
             SpendingTrendPoint(
                 start_date=bucket_start,

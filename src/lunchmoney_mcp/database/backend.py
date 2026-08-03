@@ -699,8 +699,8 @@ class LunchMoneyDatabase:
         async with self.session_factory() as session:
             async with session.begin():
                 await _detach_claimed_children(session, requested)
-                for _, record in ordered:
-                    await _upsert_record(session, record)
+                for _, ordered_record in ordered:
+                    await _upsert_record(session, ordered_record)
                 await session.flush()
                 session.expunge_all()
                 for index, record in enumerate(requested):
@@ -715,7 +715,7 @@ class LunchMoneyDatabase:
                             f"{_record_primary_key(record)} could not be reloaded"
                         )
                         raise RuntimeError(msg)
-                    stored_by_index[index] = stored
+                    stored_by_index[index] = cast(RecordT, stored)
         return [stored_by_index[index] for index in range(len(requested))]
 
     async def get(

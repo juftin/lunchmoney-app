@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v1.0.0
+_commit: v1.1.1
 _src_path: https://github.com/juftin/cookiecutter-python.git
 build_docker_image: true
 default_branch: main

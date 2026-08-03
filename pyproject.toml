@@ -83,13 +83,13 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
   "marimo>=0.23.16",
+  "mypy>=1,<2",
   "pre-commit>=4.6.1",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
   "pytest-cov>=7.1.0",
   "pyyaml==6.0.3",
-  "ruff>=0.15.22",
-  "ty>=0.0.61"
+  "ruff>=0.15.22"
 ]
 docs = [
   "markdown-callouts~=0.4.0",
