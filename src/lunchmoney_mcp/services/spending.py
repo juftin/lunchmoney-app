@@ -238,8 +238,8 @@ async def fetch_spending_trends(
             if category is not None and category.is_income
             else "total_spending"
         )
-        bucket[amount_key] += transaction.amount  # type: ignore[operator]
-        bucket["transaction_count"] += 1  # type: ignore[operator]
+        bucket[amount_key] += transaction.amount
+        bucket["transaction_count"] += 1
 
     return SpendingTrendsResponse(
         start_date=resolved_start,

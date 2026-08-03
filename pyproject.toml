@@ -76,6 +76,16 @@ omit = [
 ]
 parallel = true
 
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+follow_imports = "silent"
+ignore_missing_imports = true
+no_implicit_reexport = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

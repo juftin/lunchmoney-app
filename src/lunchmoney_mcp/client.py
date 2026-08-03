@@ -13,7 +13,7 @@ from typing import Any, Callable, ClassVar, NamedTuple, TypeVar, overload
 
 import lunchmoney
 from lunchmoney import GetAllTransactions200Response
-from lunchmoney.models import (  # type: ignore[attr-defined]
+from lunchmoney.models import (
     CategoryObject,
     ChildCategoryObject,
     ManualAccountObject,

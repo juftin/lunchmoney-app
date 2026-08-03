@@ -55,6 +55,14 @@ _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
 PROJECT_ROOT: Path = Path(__file__).parents[3]
 """Repository root containing the Alembic configuration."""
 
+__all__ = [
+    "DEFAULT_DATABASE_URL",
+    "IN_MEMORY_DATABASE_URL",
+    "LunchMoneyDatabase",
+    "resolve_database_url",
+    "run_migrations",
+]
+
 
 def resolve_database_url(database_url: str | None = None) -> str:
     """Resolve an explicit, environment-provided, or default database URL."""
@@ -715,7 +723,7 @@ class LunchMoneyDatabase:
                             f"{_record_primary_key(record)} could not be reloaded"
                         )
                         raise RuntimeError(msg)
-                    stored_by_index[index] = cast(RecordT, stored)
+                    stored_by_index[index] = stored
         return [stored_by_index[index] for index in range(len(requested))]
 
     async def get(
