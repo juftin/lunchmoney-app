@@ -3,7 +3,12 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Lunch Money dashboard</title>
+        <meta name="theme-color" content="#17372e" />
+        <title>Dashboard · Lunch Money</title>
+        <link
+            rel="stylesheet"
+            href="{{ url_for('dashboard_static', path='/vendor/tabler/tabler.min.css') }}"
+        />
         <link
             rel="stylesheet"
             href="{{ url_for('dashboard_static', path='/dashboard.css') }}"
@@ -13,228 +18,521 @@
         <a class="skip-link" href="#dashboard-content"
             >Skip to dashboard content</a
         >
-        <header class="site-header">
-            <p class="eyebrow">Lunch Money MCP</p>
-            <h1>Financial dashboard</h1>
-            <p>
-                Read-only overview for {{ dashboard.period_start }} to {{
-                dashboard.period_end }}.
-            </p>
-        </header>
-        <main id="dashboard-content" tabindex="-1">
-            {% if dashboard.unavailable_sections %}
-            <section
-                class="notice"
-                role="status"
-                aria-labelledby="availability-title"
-            >
-                <h2 id="availability-title">Some data is unavailable</h2>
-                <p>
-                    The following sections could not be loaded: {{
-                    dashboard.unavailable_sections | join(', ') }}.
-                </p>
-            </section>
-            {% endif %}
-
-            <section class="card-grid" aria-label="Dashboard status">
-                <article class="card">
-                    <h2>Cache freshness</h2>
-                    {% if dashboard.transaction_last_synced_at %}
-                    <p>
-                        <time
-                            datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}"
-                            >{{ dashboard.transaction_last_synced_at }}</time
+        <div class="page dashboard-shell">
+            <aside class="navbar navbar-vertical dashboard-sidebar">
+                <div class="container-fluid">
+                    <a class="navbar-brand dashboard-brand" href="/dashboard">
+                        <span class="brand-mark" aria-hidden="true">LM</span>
+                        <span>Lunch Money</span>
+                    </a>
+                    <nav class="navbar-nav" aria-label="Dashboard navigation">
+                        <a
+                            class="nav-link active"
+                            href="/dashboard"
+                            aria-current="page"
                         >
-                    </p>
-                    {% else %}
-                    <p>No transaction sync watermark has been recorded.</p>
-                    {% endif %}
-                </article>
-                <article class="card">
-                    <h2>Last scheduled sync</h2>
-                    {% if dashboard.scheduled_sync %}
-                    <p class="status-{{ dashboard.scheduled_sync.status }}">
-                        {{ dashboard.scheduled_sync.status | capitalize }}
-                    </p>
-                    <p>
-                        Started
-                        <time
-                            datetime="{{ dashboard.scheduled_sync.started_at.isoformat() }}"
-                            >{{ dashboard.scheduled_sync.started_at }}</time
-                        >.
-                    </p>
-                    {% if dashboard.scheduled_sync.message %}
-                    <p>{{ dashboard.scheduled_sync.message }}</p>
-                    {% endif %} {% else %}
-                    <p>No scheduled sync has run yet.</p>
-                    {% endif %}
-                </article>
-                <article class="card">
-                    <h2>Budget period</h2>
-                    {% if dashboard.budget_settings %}
-                    <p>
-                        {{ dashboard.budget_settings.budget_period_quantity }}
-                        {{ dashboard.budget_settings.budget_period_granularity
-                        }} period{% if
-                        dashboard.budget_settings.budget_period_quantity != 1
-                        %}s{% endif %}.
-                    </p>
-                    <p>
-                        Anchored {{
-                        dashboard.budget_settings.budget_period_anchor_date }}.
-                    </p>
-                    {% else %}
-                    <p>Budget settings are unavailable.</p>
-                    {% endif %}
-                </article>
-            </section>
-
-            <section class="panel" aria-labelledby="accounts-title">
-                <h2 id="accounts-title">Account summary</h2>
-                {% if dashboard.accounts and (dashboard.accounts.plaid_accounts
-                or dashboard.accounts.manual_accounts) %}
-                <ul class="account-list">
-                    {% for account in dashboard.accounts.plaid_accounts %}
-                    <li>
-                        <span>{{ account.name }}</span
-                        ><span
-                            >{{ account.balance }} {{ account.currency | upper
-                            }}</span
-                        >
-                    </li>
-                    {% endfor %} {% for account in
-                    dashboard.accounts.manual_accounts %}
-                    <li>
-                        <span>{{ account.name }}</span
-                        ><span
-                            >{{ account.balance }} {{ account.currency | upper
-                            }}</span
-                        >
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p>
-                    No cached accounts are available. Run a sync to populate
-                    this section.
-                </p>
-                {% endif %}
-            </section>
-
-            <section class="panel" aria-labelledby="budget-title">
-                <h2 id="budget-title">Budget status</h2>
-                {% if dashboard.budget_summary %}
-                <dl class="summary-list">
-                    <div>
-                        <dt>Period alignment</dt>
-                        <dd>
-                            {% if dashboard.budget_summary.aligned %}Aligned{%
-                            else %}Not aligned{% endif %}
-                        </dd>
+                            <span class="nav-link-title">Overview</span>
+                            <span class="nav-dot" aria-hidden="true"></span>
+                        </a>
+                        <a class="nav-link" href="#transactions-title">
+                            <span class="nav-link-title">Transactions</span>
+                        </a>
+                        <a class="nav-link" href="#spending-title">
+                            <span class="nav-link-title">Spending</span>
+                        </a>
+                        <a class="nav-link" href="#budget-title">
+                            <span class="nav-link-title">Budget</span>
+                        </a>
+                    </nav>
+                    <div class="sidebar-foot">
+                        <p class="sidebar-label">Data freshness</p>
+                        {% if dashboard.transaction_last_synced_at %}
+                        <p>
+                            Synced
+                            <time
+                                datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}"
+                                >{{ dashboard.transaction_last_synced_at
+                                }}</time
+                            >
+                        </p>
+                        {% else %}
+                        <p>Waiting for first transaction sync.</p>
+                        {% endif %}
                     </div>
-                    <div>
-                        <dt>Tracked categories</dt>
-                        <dd>
-                            {{ dashboard.budget_summary.categories | length }}
-                        </dd>
-                    </div>
-                    {% if dashboard.budget_summary.totals and
-                    dashboard.budget_summary.totals.inflow %}
-                    <div>
-                        <dt>Inflow activity</dt>
-                        <dd>
-                            {{
-                            dashboard.budget_summary.totals.inflow.other_activity
-                            | default('—', true) }}
-                        </dd>
-                    </div>
-                    {% endif %} {% if dashboard.budget_summary.totals and
-                    dashboard.budget_summary.totals.outflow %}
-                    <div>
-                        <dt>Outflow activity</dt>
-                        <dd>
-                            {{
-                            dashboard.budget_summary.totals.outflow.other_activity
-                            | default('—', true) }}
-                        </dd>
-                    </div>
-                    {% endif %}
-                </dl>
-                {% else %}
-                <p>Budget status is unavailable.</p>
-                {% endif %}
-            </section>
-
-            <section class="panel" aria-labelledby="spending-title">
-                <h2 id="spending-title">Category spending</h2>
-                {% if dashboard.category_spending and
-                dashboard.category_spending.categories %}
-                <p>
-                    Total spending: {{
-                    dashboard.category_spending.total_spending }}. Total income:
-                    {{ dashboard.category_spending.total_income }}.
-                </p>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th scope="col">Category</th>
-                                <th scope="col">Transactions</th>
-                                <th scope="col">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for category in
-                            dashboard.category_spending.categories if not
-                            category.is_income %}
-                            <tr>
-                                <td>{{ category.category_name }}</td>
-                                <td>{{ category.transaction_count }}</td>
-                                <td>{{ category.total_amount }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
                 </div>
-                {% else %}
-                <p>
-                    No categorized spending is available for the last 30 days.
-                </p>
-                {% endif %}
-            </section>
+            </aside>
 
-            <section class="panel" aria-labelledby="transactions-title">
-                <h2 id="transactions-title">Recent transactions</h2>
-                {% if dashboard.transactions %}
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th scope="col">Date</th>
-                                <th scope="col">Payee</th>
-                                <th scope="col">Amount</th>
-                                <th scope="col">Currency</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for transaction in dashboard.transactions %}
-                            <tr>
-                                <td>{{ transaction.date }}</td>
-                                <td>{{ transaction.payee }}</td>
-                                <td>{{ transaction.amount }}</td>
-                                <td>{{ transaction.currency | upper }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p>
-                    No recent transactions are available. Run a sync to populate
-                    this section.
-                </p>
-                {% endif %}
-            </section>
-        </main>
+            <div class="page-wrapper dashboard-page">
+                <header class="dashboard-topbar">
+                    <div class="container-xl">
+                        <div class="topbar-content">
+                            <div>
+                                <p class="eyebrow">Your financial picture</p>
+                                <h1>Good to see you.</h1>
+                            </div>
+                            <div class="period-chip">
+                                <span
+                                    class="period-chip__dot"
+                                    aria-hidden="true"
+                                ></span>
+                                {{ dashboard.period_start }} — {{
+                                dashboard.period_end }}
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <main id="dashboard-content" class="container-xl" tabindex="-1">
+                    {% if dashboard.unavailable_sections %}
+                    <section
+                        class="alert dashboard-alert"
+                        role="status"
+                        aria-labelledby="availability-title"
+                    >
+                        <div>
+                            <p class="eyebrow">A gentle heads-up</p>
+                            <h2 id="availability-title">
+                                Some live details are taking a breath.
+                            </h2>
+                            <p>
+                                {{ dashboard.unavailable_sections | join(', ')
+                                }} will return on the next refresh. Your cached
+                                financial picture is still here.
+                            </p>
+                        </div>
+                    </section>
+                    {% endif %}
+
+                    <section
+                        class="dashboard-hero"
+                        aria-labelledby="hero-title"
+                    >
+                        <div class="dashboard-hero__copy">
+                            <p class="eyebrow">This month so far</p>
+                            <h2 id="hero-title">Your money, at a glance.</h2>
+                            {% if dashboard.category_spending %}
+                            <p class="hero-summary">
+                                You’ve moved
+                                <strong
+                                    >{{ dashboard.category_spending.total_income
+                                    }}</strong
+                                >
+                                in and
+                                <strong
+                                    >{{
+                                    dashboard.category_spending.total_spending
+                                    }}</strong
+                                >
+                                out across {{
+                                dashboard.category_spending.categories | length
+                                }} categories.
+                            </p>
+                            {% else %}
+                            <p class="hero-summary">
+                                Run a sync to turn your financial activity into
+                                a clear monthly story.
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="hero-orbit" aria-hidden="true">
+                            <div
+                                class="hero-orbit__ring hero-orbit__ring--outer"
+                            ></div>
+                            <div
+                                class="hero-orbit__ring hero-orbit__ring--inner"
+                            ></div>
+                            <span>30<br /><small>days</small></span>
+                        </div>
+                    </section>
+
+                    <section
+                        class="dashboard-metrics"
+                        aria-label="Financial summary"
+                    >
+                        <article class="card metric-card metric-card--spending">
+                            <div class="metric-card__header">
+                                <p>Money out</p>
+                                <span class="metric-glyph" aria-hidden="true"
+                                    >↗</span
+                                >
+                            </div>
+                            {% if dashboard.category_spending %}
+                            <strong
+                                >{{ dashboard.category_spending.total_spending
+                                }}</strong
+                            >
+                            <span>Across the last 30 days</span>
+                            {% else %}
+                            <strong>—</strong
+                            ><span>Awaiting synchronized activity</span>
+                            {% endif %}
+                        </article>
+                        <article class="card metric-card metric-card--income">
+                            <div class="metric-card__header">
+                                <p>Money in</p>
+                                <span class="metric-glyph" aria-hidden="true"
+                                    >↙</span
+                                >
+                            </div>
+                            {% if dashboard.category_spending %}
+                            <strong
+                                >{{ dashboard.category_spending.total_income
+                                }}</strong
+                            >
+                            <span>Across the last 30 days</span>
+                            {% else %}
+                            <strong>—</strong
+                            ><span>Awaiting synchronized activity</span>
+                            {% endif %}
+                        </article>
+                        <article class="card metric-card metric-card--sync">
+                            <div class="metric-card__header">
+                                <p>Last scheduled sync</p>
+                                <span
+                                    class="sync-pulse"
+                                    aria-hidden="true"
+                                ></span>
+                            </div>
+                            {% if dashboard.scheduled_sync %}
+                            <strong
+                                class="sync-status sync-status--{{ dashboard.scheduled_sync.status }}"
+                            >
+                                {{ dashboard.scheduled_sync.status | capitalize
+                                }}
+                            </strong>
+                            <span>
+                                <time
+                                    datetime="{{ dashboard.scheduled_sync.finished_at.isoformat() }}"
+                                    >{{ dashboard.scheduled_sync.finished_at
+                                    }}</time
+                                >
+                            </span>
+                            {% else %}
+                            <strong>Not yet run</strong
+                            ><span
+                                >Your first scheduled sync will appear
+                                here.</span
+                            >
+                            {% endif %}
+                        </article>
+                    </section>
+
+                    <section class="dashboard-grid dashboard-grid--primary">
+                        <article
+                            class="card dashboard-card spending-card"
+                            aria-labelledby="spending-title"
+                        >
+                            <div class="dashboard-card__header">
+                                <div>
+                                    <p class="eyebrow">Where it went</p>
+                                    <h2 id="spending-title">Spending rhythm</h2>
+                                </div>
+                                <span class="quiet-label">Last 30 days</span>
+                            </div>
+                            {% if dashboard.category_spending and
+                            dashboard.category_spending.categories %} {% set
+                            activity_total =
+                            dashboard.category_spending.total_spending +
+                            dashboard.category_spending.total_income %} {% if
+                            activity_total > 0 %}
+                            <div
+                                class="cashflow-bar"
+                                aria-label="Income and spending activity"
+                            >
+                                <span
+                                    class="cashflow-bar__income"
+                                    style="width: {{ ((dashboard.category_spending.total_income / activity_total) * 100) | round }}%"
+                                ></span>
+                                <span
+                                    class="cashflow-bar__spending"
+                                    style="width: {{ ((dashboard.category_spending.total_spending / activity_total) * 100) | round }}%"
+                                ></span>
+                            </div>
+                            <div class="cashflow-legend">
+                                <span
+                                    ><i
+                                        class="legend-dot legend-dot--income"
+                                    ></i
+                                    >Inflow</span
+                                >
+                                <span
+                                    ><i
+                                        class="legend-dot legend-dot--spending"
+                                    ></i
+                                    >Outflow</span
+                                >
+                            </div>
+                            {% endif %}
+                            <div class="category-list">
+                                {% for category in
+                                dashboard.category_spending.categories if not
+                                category.is_income %}
+                                <div class="category-row">
+                                    <div class="category-row__label">
+                                        <span
+                                            class="category-swatch category-swatch--{{ loop.index0 % 4 }}"
+                                            aria-hidden="true"
+                                        ></span>
+                                        <span
+                                            >{{ category.category_name }}</span
+                                        >
+                                    </div>
+                                    <div class="category-row__activity">
+                                        <progress
+                                            max="{{ dashboard.category_spending.total_spending if dashboard.category_spending.total_spending > 0 else 1 }}"
+                                            value="{{ category.total_amount }}"
+                                        >
+                                            {{ category.total_amount }}
+                                        </progress>
+                                        <strong
+                                            >{{ category.total_amount }}</strong
+                                        >
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="empty-state">
+                                <span
+                                    class="empty-state__mark"
+                                    aria-hidden="true"
+                                    >◎</span
+                                >
+                                <p>No categorized spending yet.</p>
+                                <span
+                                    >Your first sync will give this view some
+                                    shape.</span
+                                >
+                            </div>
+                            {% endif %}
+                        </article>
+
+                        <article
+                            class="card dashboard-card budget-card"
+                            aria-labelledby="budget-title"
+                        >
+                            <div class="dashboard-card__header">
+                                <div>
+                                    <p class="eyebrow">Plan with intention</p>
+                                    <h2 id="budget-title">Budget pulse</h2>
+                                </div>
+                                {% if dashboard.budget_summary %}
+                                <span
+                                    class="status-lozenge {% if dashboard.budget_summary.aligned %}status-lozenge--good{% else %}status-lozenge--quiet{% endif %}"
+                                >
+                                    {% if dashboard.budget_summary.aligned
+                                    %}Aligned{% else %}In progress{% endif %}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if dashboard.budget_summary %}
+                            <div class="budget-orb" aria-hidden="true">
+                                <span
+                                    >{{ dashboard.budget_summary.categories |
+                                    length }}</span
+                                >
+                                <small>categories</small>
+                            </div>
+                            <dl class="budget-details">
+                                <div>
+                                    <dt>Budget cadence</dt>
+                                    <dd>
+                                        {% if dashboard.budget_settings %} {{
+                                        dashboard.budget_settings.budget_period_quantity
+                                        }} {{
+                                        dashboard.budget_settings.budget_period_granularity
+                                        }} {% else %}Not available{% endif %}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt>Budget window</dt>
+                                    <dd>
+                                        {{ dashboard.period_start }} — {{
+                                        dashboard.period_end }}
+                                    </dd>
+                                </div>
+                            </dl>
+                            {% else %}
+                            <div class="empty-state">
+                                <span
+                                    class="empty-state__mark"
+                                    aria-hidden="true"
+                                    >◌</span
+                                >
+                                <p>Budget status is unavailable.</p>
+                                <span
+                                    >We’ll surface your budget rhythm when the
+                                    live summary returns.</span
+                                >
+                            </div>
+                            {% endif %}
+                        </article>
+                    </section>
+
+                    <section class="dashboard-grid dashboard-grid--secondary">
+                        <article
+                            class="card dashboard-card accounts-card"
+                            aria-labelledby="accounts-title"
+                        >
+                            <div class="dashboard-card__header">
+                                <div>
+                                    <p class="eyebrow">Your foundations</p>
+                                    <h2 id="accounts-title">Accounts</h2>
+                                </div>
+                                {% if dashboard.accounts %}
+                                <span class="quiet-label"
+                                    >{{ dashboard.accounts.plaid_accounts |
+                                    length + dashboard.accounts.manual_accounts
+                                    | length }} connected</span
+                                >
+                                {% endif %}
+                            </div>
+                            {% if dashboard.accounts and
+                            (dashboard.accounts.plaid_accounts or
+                            dashboard.accounts.manual_accounts) %}
+                            <ul class="account-list list-unstyled">
+                                {% for account in
+                                dashboard.accounts.plaid_accounts %}
+                                <li>
+                                    <span
+                                        class="avatar account-avatar account-avatar--{{ loop.index0 % 4 }}"
+                                        >{{ account.name[:1] | upper }}</span
+                                    >
+                                    <span class="account-list__name"
+                                        >{{ account.name }}</span
+                                    >
+                                    <strong
+                                        >{{ account.balance }}
+                                        <small
+                                            >{{ account.currency | upper
+                                            }}</small
+                                        ></strong
+                                    >
+                                </li>
+                                {% endfor %} {% for account in
+                                dashboard.accounts.manual_accounts %}
+                                <li>
+                                    <span
+                                        class="avatar account-avatar account-avatar--{{ loop.index0 % 4 }}"
+                                        >{{ account.name[:1] | upper }}</span
+                                    >
+                                    <span class="account-list__name"
+                                        >{{ account.name }}</span
+                                    >
+                                    <strong
+                                        >{{ account.balance }}
+                                        <small
+                                            >{{ account.currency | upper
+                                            }}</small
+                                        ></strong
+                                    >
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <div class="empty-state empty-state--compact">
+                                <p>No cached accounts yet.</p>
+                                <span
+                                    >Run a sync to bring your accounts
+                                    home.</span
+                                >
+                            </div>
+                            {% endif %}
+                        </article>
+
+                        <article
+                            class="card dashboard-card transactions-card"
+                            aria-labelledby="transactions-title"
+                        >
+                            <div class="dashboard-card__header">
+                                <div>
+                                    <p class="eyebrow">
+                                        Fresh from your ledger
+                                    </p>
+                                    <h2 id="transactions-title">
+                                        Recent activity
+                                    </h2>
+                                </div>
+                                <span class="quiet-label">Last 10</span>
+                            </div>
+                            {% if dashboard.transactions %}
+                            <div class="table-responsive">
+                                <table
+                                    class="table table-vcenter transactions-table"
+                                >
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Merchant</th>
+                                            <th scope="col">When</th>
+                                            <th scope="col" class="text-end">
+                                                Amount
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for transaction in
+                                        dashboard.transactions %}
+                                        <tr>
+                                            <td>
+                                                <div class="merchant-cell">
+                                                    <span
+                                                        class="merchant-avatar"
+                                                        >{{
+                                                        transaction.payee[:1] |
+                                                        upper }}</span
+                                                    >
+                                                    <span>
+                                                        <strong
+                                                            >{{
+                                                            transaction.payee
+                                                            }}</strong
+                                                        >
+                                                        <small>
+                                                            {% if
+                                                            transaction.category_id
+                                                            %}Category #{{
+                                                            transaction.category_id
+                                                            }}{% else
+                                                            %}Uncategorized{%
+                                                            endif %}
+                                                        </small>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <time
+                                                    datetime="{{ transaction.date.isoformat() }}"
+                                                    >{{ transaction.date
+                                                    }}</time
+                                                >
+                                            </td>
+                                            <td
+                                                class="text-end transaction-amount"
+                                            >
+                                                {{ transaction.amount }}
+                                                <small
+                                                    >{{ transaction.currency |
+                                                    upper }}</small
+                                                >
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="empty-state empty-state--compact">
+                                <p>Your ledger is quiet.</p>
+                                <span
+                                    >Recent transactions will appear after a
+                                    sync.</span
+                                >
+                            </div>
+                            {% endif %}
+                        </article>
+                    </section>
+                </main>
+            </div>
+        </div>
     </body>
 </html>
