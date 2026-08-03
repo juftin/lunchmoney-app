@@ -384,7 +384,7 @@ def parse_cli_settings(
         Complete non-secret configuration populated from the command's CLI flags,
         environment variables, and `.env`.
     """
-    source = CliSettingsSource(
+    source: Any = CliSettingsSource(
         settings_type,
         cli_parse_args=arguments,
         root_parser=root_parser,

@@ -76,6 +76,20 @@ omit = [
 ]
 parallel = true
 
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+follow_imports = "silent"
+ignore_missing_imports = true
+no_implicit_reexport = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = "lunchmoney.models"
+no_implicit_reexport = false
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -83,13 +97,13 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
   "marimo>=0.23.16",
+  "mypy>=1,<2",
   "pre-commit>=4.6.1",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
   "pytest-cov>=7.1.0",
   "pyyaml==6.0.3",
-  "ruff>=0.15.22",
-  "ty>=0.0.61"
+  "ruff>=0.15.22"
 ]
 docs = [
   "markdown-callouts~=0.4.0",

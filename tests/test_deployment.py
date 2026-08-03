@@ -52,19 +52,24 @@ def test_ci_scans_release_artifacts_and_smoke_tests_compose() -> None:
 
 
 def test_security_task_audits_locked_production_dependencies() -> None:
-    """Audit the locked runtime dependency set instead of an ad hoc environment."""
+    """Keep project-specific audit tasks in the flattened taskfile include."""
     taskfile = (PROJECT_ROOT / "Taskfile.yaml").read_text()
+    project_taskfile = (PROJECT_ROOT / "tasks/ProjectTaskfile.yaml").read_text()
 
-    assert "security:" in taskfile
-    assert "uv audit --preview-features audit --locked --no-group dev" in taskfile
+    assert "taskfile: ./tasks/ProjectTaskfile.yaml" in taskfile
+    assert "flatten: true" in taskfile
+    assert "security:" in project_taskfile
+    assert (
+        "uv audit --preview-features audit --locked --no-group dev" in project_taskfile
+    )
 
 
-def test_test_matrix_covers_supported_versions_and_defaults_locally_to_python_313() -> (
+def test_ci_matrix_covers_supported_versions_and_defaults_locally_to_python_313() -> (
     None
 ):
-    """Keep CI coverage aligned with supported runtimes and local defaults."""
+    """Keep unified CI coverage aligned with supported runtimes and local defaults."""
     taskfile = (PROJECT_ROOT / "Taskfile.yaml").read_text()
-    workflow = (PROJECT_ROOT / ".github/workflows/test.yaml").read_text()
+    workflow = (PROJECT_ROOT / ".github/workflows/ci.yaml").read_text()
     pyproject = (PROJECT_ROOT / "pyproject.toml").read_text()
 
     assert (PROJECT_ROOT / ".python-version").read_text().strip() == "3.13"

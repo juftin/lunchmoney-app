@@ -55,6 +55,14 @@ _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
 PROJECT_ROOT: Path = Path(__file__).parents[3]
 """Repository root containing the Alembic configuration."""
 
+__all__ = [
+    "DEFAULT_DATABASE_URL",
+    "IN_MEMORY_DATABASE_URL",
+    "LunchMoneyDatabase",
+    "resolve_database_url",
+    "run_migrations",
+]
+
 
 def resolve_database_url(database_url: str | None = None) -> str:
     """Resolve an explicit, environment-provided, or default database URL."""
@@ -699,8 +707,8 @@ class LunchMoneyDatabase:
         async with self.session_factory() as session:
             async with session.begin():
                 await _detach_claimed_children(session, requested)
-                for _, record in ordered:
-                    await _upsert_record(session, record)
+                for _, ordered_record in ordered:
+                    await _upsert_record(session, ordered_record)
                 await session.flush()
                 session.expunge_all()
                 for index, record in enumerate(requested):
