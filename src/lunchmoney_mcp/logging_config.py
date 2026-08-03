@@ -84,10 +84,10 @@ LOG_CONFIG["loggers"]["gunicorn.access"] = {
 }
 
 
-def apply() -> None:
+def apply_logging_config() -> None:
     """Apply unified logging config and patch uvicorn defaults for Gunicorn workers."""
     uvicorn.config.LOGGING_CONFIG = LOG_CONFIG
     logging.config.dictConfig(LOG_CONFIG)
 
 
-__all__ = ["LOG_CONFIG", "apply"]
+__all__ = ["LOG_CONFIG", "apply_logging_config"]
