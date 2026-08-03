@@ -139,13 +139,18 @@ def test_dashboard_requires_api_key_and_renders_populated_content(
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
     assert 'id="dashboard-content"' in response.text
+    assert "dashboard-sidebar" in response.text
+    assert "Spending rhythm" in response.text
     assert "Checking" in response.text
     assert "Groceries" in response.text
     assert "&lt;Synthetic payee&gt;" in response.text
     with TestClient(fastapi_app, base_url="http://localhost") as client:
         stylesheet = client.get("/static/dashboard.css")
+        tabler_stylesheet = client.get("/static/vendor/tabler/tabler.min.css")
     assert stylesheet.status_code == 200
-    assert "card-grid" in stylesheet.text
+    assert "dashboard-hero" in stylesheet.text
+    assert tabler_stylesheet.status_code == 200
+    assert "Tabler" in tabler_stylesheet.text
 
 
 def test_dashboard_renders_empty_and_unavailable_states(
@@ -179,9 +184,9 @@ def test_dashboard_renders_empty_and_unavailable_states(
         fastapi_app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    assert "Some data is unavailable" in response.text
-    assert "No cached accounts are available" in response.text
-    assert "No recent transactions are available" in response.text
+    assert "Some live details are taking a breath" in response.text
+    assert "No cached accounts yet" in response.text
+    assert "Your ledger is quiet" in response.text
 
 
 @pytest.mark.asyncio

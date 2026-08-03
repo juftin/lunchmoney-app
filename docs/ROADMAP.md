@@ -322,6 +322,8 @@ features.
 - [x] Ensure accessible keyboard navigation, responsive layouts, CSRF-safe
       forms for any future mutations, and integration tests for authorization and
       rendered empty/error states.
+- [x] Establish Tabler as the locally served dashboard UI foundation, with a
+      custom financial visual system layered over server-rendered templates.
 
 ### Sprint 12: CLI, Packaging & Operator Experience
 
