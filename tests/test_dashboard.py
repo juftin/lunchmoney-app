@@ -4,7 +4,7 @@ import datetime
 import importlib
 from types import SimpleNamespace
 from typing import cast
-from unittest.mock import AsyncMock, create_autospec
+from unittest.mock import ANY, AsyncMock, create_autospec
 
 import pytest
 from lunchmoney.models import BudgetSettingsResponseObject, SummaryResponseObject
@@ -50,6 +50,8 @@ def _dashboard_data(*, unavailable_sections: tuple[str, ...] = ()) -> DashboardD
     return DashboardData(
         period_start=datetime.date(2026, 8, 1),
         period_end=datetime.date(2026, 8, 2),
+        previous_period_start=datetime.date(2026, 7, 1),
+        next_period_start=None,
         transaction_last_synced_at=datetime.datetime(
             2026, 8, 2, 12, tzinfo=datetime.timezone.utc
         ),
@@ -139,18 +141,23 @@ def test_dashboard_requires_api_key_and_renders_populated_content(
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
     assert 'id="dashboard-content"' in response.text
-    assert "dashboard-sidebar" in response.text
-    assert "Spending rhythm" in response.text
+    assert "cockpit-layout" in response.text
+    assert "Spending breakdown" in response.text
+    assert "dashboard.js" in response.text
+    assert "Period summary" in response.text
     assert "Checking" in response.text
     assert "Groceries" in response.text
     assert "&lt;Synthetic payee&gt;" in response.text
     with TestClient(fastapi_app, base_url="http://localhost") as client:
         stylesheet = client.get("/static/dashboard.css")
         tabler_stylesheet = client.get("/static/vendor/tabler/tabler.min.css")
+        script = client.get("/static/dashboard.js")
     assert stylesheet.status_code == 200
-    assert "dashboard-hero" in stylesheet.text
+    assert "spending-workspace" in stylesheet.text
     assert tabler_stylesheet.status_code == 200
     assert "Tabler" in tabler_stylesheet.text
+    assert script.status_code == 200
+    assert "initializePanelSwitcher" in script.text
 
 
 def test_dashboard_renders_empty_and_unavailable_states(
@@ -161,6 +168,8 @@ def test_dashboard_renders_empty_and_unavailable_states(
     data = DashboardData(
         period_start=data.period_start,
         period_end=data.period_end,
+        previous_period_start=data.previous_period_start,
+        next_period_start=data.next_period_start,
         transaction_last_synced_at=None,
         accounts=AccountsSummary(),
         budget_summary=None,
@@ -184,9 +193,30 @@ def test_dashboard_renders_empty_and_unavailable_states(
         fastapi_app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    assert "Some live details are taking a breath" in response.text
+    assert "Partial data" in response.text
     assert "No cached accounts yet" in response.text
     assert "Your ledger is quiet" in response.text
+
+
+def test_dashboard_passes_the_requested_period_to_its_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Forward a requested period date to the dashboard data loader."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get(
+                "/?period=2026-07-16", headers={"X-API-Key": "dashboard-key"}
+            )
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    dashboard_router.fetch_dashboard_data.assert_awaited_once_with(
+        db=ANY,
+        client=ANY,
+        period_start=datetime.date(2026, 7, 16),
+    )
 
 
 @pytest.mark.asyncio
@@ -244,9 +274,24 @@ async def test_dashboard_service_keeps_other_sections_available_on_failure(
     data = await dashboard_service.fetch_dashboard_data(
         db=database,
         client=cast(LunchMoneyApp, object()),
+        period_start=datetime.date(2026, 7, 16),
     )
 
     assert data.budget_summary is None
     assert data.accounts == accounts
     assert data.transaction_last_synced_at is not None
     assert data.unavailable_sections == ("Budget status",)
+    assert data.period_start == datetime.date(2026, 7, 1)
+    assert data.period_end == datetime.date(2026, 7, 31)
+    dashboard_service.fetch_category_spending.assert_awaited_once_with(
+        db=database,
+        start_date=datetime.date(2026, 7, 1),
+        end_date=datetime.date(2026, 7, 31),
+        days=None,
+    )
+    dashboard_service.fetch_recent_transactions.assert_awaited_once_with(
+        db=database,
+        limit=10,
+        start_date=datetime.date(2026, 7, 1),
+        end_date=datetime.date(2026, 7, 31),
+    )

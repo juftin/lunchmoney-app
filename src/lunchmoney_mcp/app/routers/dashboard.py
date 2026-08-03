@@ -1,9 +1,10 @@
 """Server-rendered financial dashboard endpoint."""
 
+import datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -29,9 +30,10 @@ async def dashboard(
     request: Request,
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    period: Annotated[datetime.date | None, Query()] = None,
 ) -> HTMLResponse:
-    """Render the authenticated, read-only Lunch Money dashboard."""
-    data = await fetch_dashboard_data(db=db, client=client)
+    """Render the authenticated, read-only Lunch Money dashboard for one month."""
+    data = await fetch_dashboard_data(db=db, client=client, period_start=period)
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
