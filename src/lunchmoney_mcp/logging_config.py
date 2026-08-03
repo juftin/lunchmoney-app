@@ -33,9 +33,7 @@ class _DefaultFormatter(logging.Formatter):
         style: Literal["%", "{", "$"] = "%",
         use_colors: bool | None = None,
     ) -> None:
-        self.use_colors = (
-            use_colors if use_colors is not None else sys.stderr.isatty()
-        )
+        self.use_colors = use_colors if use_colors is not None else sys.stderr.isatty()
         super().__init__(fmt=fmt, datefmt=datefmt, style=style)
 
     def formatMessage(self, record: logging.LogRecord) -> str:
