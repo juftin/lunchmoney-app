@@ -41,7 +41,7 @@ def test_compose_keeps_data_services_private_and_hardens_app_processes() -> None
 
 def test_ci_scans_release_artifacts_and_smoke_tests_compose() -> None:
     """Keep security scans and a production liveness/readiness check in CI."""
-    workflow = (PROJECT_ROOT / ".github/workflows/ci.yaml").read_text()
+    workflow = (PROJECT_ROOT / ".github/workflows/security.yaml").read_text()
 
     assert "run: task security" in workflow
     assert "aquasecurity/trivy-action@v0.36.0" in workflow
@@ -53,11 +53,31 @@ def test_ci_scans_release_artifacts_and_smoke_tests_compose() -> None:
 
 
 def test_security_task_audits_locked_production_dependencies() -> None:
-    """Audit the frozen runtime dependency set instead of an ad hoc environment."""
+    """Keep project-specific audit tasks in the flattened taskfile include."""
     taskfile = (PROJECT_ROOT / "Taskfile.yaml").read_text()
+    project_taskfile = (PROJECT_ROOT / "tasks/ProjectTaskfile.yaml").read_text()
 
-    assert "security:" in taskfile
-    assert "uv audit --preview-features audit --frozen --no-group dev" in taskfile
+    assert "taskfile: ./tasks/ProjectTaskfile.yaml" in taskfile
+    assert "flatten: true" in taskfile
+    assert "security:" in project_taskfile
+    assert (
+        "uv audit --preview-features audit --locked --no-group dev" in project_taskfile
+    )
+
+
+def test_ci_matrix_covers_supported_versions_and_defaults_locally_to_python_313() -> (
+    None
+):
+    """Keep unified CI coverage aligned with supported runtimes and local defaults."""
+    taskfile = (PROJECT_ROOT / "Taskfile.yaml").read_text()
+    workflow = (PROJECT_ROOT / ".github/workflows/ci.yaml").read_text()
+    pyproject = (PROJECT_ROOT / "pyproject.toml").read_text()
+
+    assert (PROJECT_ROOT / ".python-version").read_text().strip() == "3.13"
+    assert 'requires-python = ">=3.10"' in pyproject
+    assert 'PYTHON: ["3.10", "3.11", "3.12", "3.13", "3.14"]' in taskfile
+    for version in ("3.10", "3.11", "3.12", "3.13", "3.14"):
+        assert f'python: "{version}"' in workflow
 
 
 def test_production_server_dependencies_are_declared() -> None:

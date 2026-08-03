@@ -4,6 +4,7 @@ import argparse
 import datetime
 import json
 import sys
+from typing import Literal, cast
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.app.auth import get_mcp_oauth_provider
@@ -28,6 +29,10 @@ from lunchmoney_mcp.mcp.tools import (
     user,
 )
 from lunchmoney_mcp.services import fetch_account_summary, fetch_categories
+
+
+Transport = Literal["stdio", "http", "sse", "streamable-http"]
+"""Transport values accepted by the standalone MCP server."""
 
 # Explicitly reference imported tool modules to ensure registration
 _ = (
@@ -140,7 +145,7 @@ def run_from_args(
     settings: RuntimeSettings,
 ) -> None:
     """Run FastMCP using arguments parsed by :func:`create_argument_parser`."""
-    transport = args.transport or "stdio"
+    transport = cast(Transport, args.transport or "stdio")
     if transport == "stdio":
         if hasattr(args, "host") or hasattr(args, "port"):
             parser.error("--host and --port require an HTTP transport")

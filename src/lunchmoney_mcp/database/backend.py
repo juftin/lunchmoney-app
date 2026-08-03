@@ -7,7 +7,9 @@ from contextlib import asynccontextmanager
 from heapq import heappop, heappush
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Self, cast
+from typing import Any, TypeVar, cast
+
+from typing_extensions import Self
 
 from alembic import command
 from alembic.config import Config
@@ -40,6 +42,10 @@ from lunchmoney_mcp.database.models import (
     User,
 )
 
+
+RecordT = TypeVar("RecordT", bound=SQLModel)
+"""A database record subtype used by record-loading helpers."""
+
 _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
     {User, PlaidAccount, ManualAccount, Category, Tag, Transaction}
 )
@@ -48,6 +54,14 @@ _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
 
 PROJECT_ROOT: Path = Path(__file__).parents[3]
 """Repository root containing the Alembic configuration."""
+
+__all__ = [
+    "DEFAULT_DATABASE_URL",
+    "IN_MEMORY_DATABASE_URL",
+    "LunchMoneyDatabase",
+    "resolve_database_url",
+    "run_migrations",
+]
 
 
 def resolve_database_url(database_url: str | None = None) -> str:
@@ -536,7 +550,7 @@ async def _detach_claimed_children(
         )
 
 
-async def _load_record[RecordT: SQLModel](
+async def _load_record(
     session: AsyncSession,
     model: type[RecordT],
     primary_key: int,
@@ -672,11 +686,11 @@ class LunchMoneyDatabase:
             result = await session.exec(statement)
             return result.first()
 
-    async def upsert[RecordT: SQLModel](self, record: RecordT) -> RecordT:
+    async def upsert(self, record: RecordT) -> RecordT:
         """Atomically insert or update one supported record and its owned graph."""
         return (await self.upsert_many((record,)))[0]
 
-    async def upsert_many[RecordT: SQLModel](
+    async def upsert_many(
         self,
         records: Iterable[RecordT],
     ) -> list[RecordT]:
@@ -693,8 +707,8 @@ class LunchMoneyDatabase:
         async with self.session_factory() as session:
             async with session.begin():
                 await _detach_claimed_children(session, requested)
-                for _, record in ordered:
-                    await _upsert_record(session, record)
+                for _, ordered_record in ordered:
+                    await _upsert_record(session, ordered_record)
                 await session.flush()
                 session.expunge_all()
                 for index, record in enumerate(requested):
@@ -712,7 +726,7 @@ class LunchMoneyDatabase:
                     stored_by_index[index] = stored
         return [stored_by_index[index] for index in range(len(requested))]
 
-    async def get[RecordT: SQLModel](
+    async def get(
         self,
         model: type[RecordT],
         primary_key: int,
@@ -722,7 +736,7 @@ class LunchMoneyDatabase:
         async with self.session_factory() as session:
             return await _load_record(session, model, primary_key)
 
-    async def list[RecordT: SQLModel](
+    async def list(
         self,
         model: type[RecordT],
     ) -> list[RecordT]:
@@ -738,7 +752,7 @@ class LunchMoneyDatabase:
             result = await session.exec(statement)
             return list(result.all())
 
-    async def delete[RecordT: SQLModel](
+    async def delete(
         self,
         model: type[RecordT],
         primary_key: int,

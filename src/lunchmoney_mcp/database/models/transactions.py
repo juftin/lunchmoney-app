@@ -4,8 +4,9 @@ from builtins import type as builtin_type
 from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import Decimal
-from enum import StrEnum
-from typing import Any, ClassVar, Optional, Self, cast
+from typing import Any, ClassVar, Optional, cast
+
+from typing_extensions import Self
 
 from lunchmoney.models import (
     ChildTransactionObject,
@@ -20,6 +21,7 @@ from lunchmoney_mcp.database.models._datetime import (
     datetime_offset_minutes,
     restore_datetime_shape,
 )
+from lunchmoney_mcp._compat import StrEnum
 from lunchmoney_mcp.database.models.accounts import ManualAccount, PlaidAccount
 from lunchmoney_mcp.database.models.categories import Category
 from lunchmoney_mcp.database.models.tags import Tag
