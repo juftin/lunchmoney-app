@@ -144,22 +144,22 @@ def test_dashboard_requires_api_key_and_renders_populated_content(
     assert response.headers["content-type"].startswith("text/html")
     assert 'id="dashboard-content"' in response.text
     assert "cockpit-layout" in response.text
-    assert "Spending breakdown" in response.text
+    assert "Spending Breakdown" in response.text
     assert "dashboard.js" in response.text
     assert "Period summary" in response.text
     assert "Checking" in response.text
     assert "Groceries" in response.text
     assert "&lt;Synthetic payee&gt;" in response.text
+    assert "vendor/htmx/htmx.min.js" in response.text
+    assert "vendor/alpine/alpine.min.js" in response.text
+    assert "vendor/pico/pico.min.css" in response.text
     with TestClient(fastapi_app, base_url="http://localhost") as client:
         stylesheet = client.get("/static/dashboard.css")
-        tabler_stylesheet = client.get("/static/vendor/tabler/tabler.min.css")
         script = client.get("/static/dashboard.js")
     assert stylesheet.status_code == 200
     assert "spending-workspace" in stylesheet.text
-    assert tabler_stylesheet.status_code == 200
-    assert "Tabler" in tabler_stylesheet.text
     assert script.status_code == 200
-    assert "initializePanelSwitcher" in script.text
+    assert "Alpine" in script.text
 
 
 def test_dashboard_groups_accounts_and_uses_currency_symbols(
@@ -310,9 +310,7 @@ def test_dashboard_renders_parent_categories_and_mascot(
     assert response.status_code == 200
     assert css_response.status_code == 200
     assert 'class="category-item category-item--group' in response.text
-    assert (
-        '<details\n            open\n            class="category-item' in response.text
-    )
+    assert "<details open" in response.text
     assert "category-disclosure" in response.text
     assert "category-child__meter" in response.text
     assert 'class="brand-mascot"' in response.text
@@ -381,6 +379,68 @@ def test_dashboard_renders_empty_and_unavailable_states(
     assert "Your ledger is quiet" in response.text
 
 
+def test_dashboard_htmx_request_returns_content_partial(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Return only the content-area partial when HTMX sends HX-Request header."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get(
+                "/",
+                headers={"X-API-Key": "dashboard-key", "HX-Request": "true"},
+            )
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "<!doctype html>" not in response.text.lower()
+    assert "spending-workspace" in response.text
+    assert "Spending Breakdown" in response.text
+
+
+def test_dashboard_htmx_targeted_request_returns_spending_workspace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Return only spending workspace partial when HTMX targets spending-workspace."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get(
+                "/",
+                headers={
+                    "X-API-Key": "dashboard-key",
+                    "HX-Request": "true",
+                    "HX-Target": "spending-workspace",
+                },
+            )
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "spending-workspace" in response.text
+    assert "Spending Breakdown" in response.text
+
+
+def test_dashboard_htmx_request_excludes_full_page_shell(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exclude <html>, <head>, and <body> tags from the HTMX partial response."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get(
+                "/",
+                headers={"X-API-Key": "dashboard-key", "HX-Request": "true"},
+            )
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert "<html" not in response.text
+    assert "<head" not in response.text
+    assert "<body" not in response.text
+
+
 def test_dashboard_passes_the_requested_period_to_its_service(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -399,6 +459,45 @@ def test_dashboard_passes_the_requested_period_to_its_service(
         db=ANY,
         client=ANY,
         period_start=datetime.date(2026, 7, 16),
+    )
+
+
+def test_dashboard_htmx_request_includes_oob_period_control(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Include out-of-band period control in HTMX partial response."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get(
+                "/",
+                headers={"X-API-Key": "dashboard-key", "HX-Request": "true"},
+            )
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert 'aria-label="Previous month"' in response.text
+
+
+def test_dashboard_supports_month_format_period_parameter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Support YYYY-MM month string format for period query parameter."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get(
+                "/?period=2026-05", headers={"X-API-Key": "dashboard-key"}
+            )
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    dashboard_router.fetch_dashboard_data.assert_awaited_once_with(
+        db=ANY,
+        client=ANY,
+        period_start=datetime.date(2026, 5, 1),
     )
 
 
