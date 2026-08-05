@@ -6,7 +6,11 @@ from collections.abc import Awaitable
 from dataclasses import dataclass
 from typing import TypeVar, cast
 
-from lunchmoney.models import BudgetSettingsResponseObject, SummaryResponseObject
+from lunchmoney.models import (
+    BudgetSettingsResponseObject,
+    SummaryResponseObject,
+    TransactionObject,
+)
 
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
@@ -15,7 +19,6 @@ from lunchmoney_mcp.schemas import (
     AccountsSummary,
     GroupedSpendingResponse,
     ScheduledSyncStatus,
-    TransactionInfo,
 )
 from lunchmoney_mcp.services.accounts import fetch_accounts
 from lunchmoney_mcp.services.budgets import fetch_budget_settings
@@ -53,7 +56,7 @@ class DashboardData:
         Live budget-period settings, when the upstream request succeeded.
     category_spending : GroupedSpendingResponse | None
         Cached category spending for the recent analysis window.
-    transactions : list[TransactionInfo] | None
+    transactions : list[TransactionObject] | None
         Recent cached transactions, when available.
     scheduled_sync : ScheduledSyncStatus | None
         Last persisted scheduled-sync outcome, if one exists.
@@ -70,7 +73,7 @@ class DashboardData:
     budget_summary: SummaryResponseObject | None
     budget_settings: BudgetSettingsResponseObject | None
     category_spending: GroupedSpendingResponse | None
-    transactions: list[TransactionInfo] | None
+    transactions: list[TransactionObject] | None
     scheduled_sync: ScheduledSyncStatus | None
     unavailable_sections: tuple[str, ...]
 
@@ -208,7 +211,7 @@ async def fetch_dashboard_data(
             unavailable_sections=unavailable_sections,
         ),
         transactions=_available(
-            result=cast(list[TransactionInfo] | Exception, transactions_result),
+            result=cast(list[TransactionObject] | Exception, transactions_result),
             section_name="Recent transactions",
             unavailable_sections=unavailable_sections,
         ),

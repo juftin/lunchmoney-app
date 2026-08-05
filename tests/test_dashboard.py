@@ -17,13 +17,16 @@ from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import SyncMetadata
 from lunchmoney_mcp.schemas import (
-    AccountInfo,
     AccountsSummary,
     GroupedSpendingResponse,
     ScheduledSyncStatus,
-    TransactionInfo,
 )
 from lunchmoney_mcp.services.dashboard import DashboardData
+from database.factories import (
+    manual_account_object,
+    plaid_account_object,
+    transaction_object,
+)
 
 
 auth_module = importlib.import_module("lunchmoney_mcp.app.auth")
@@ -58,12 +61,16 @@ def _dashboard_data(*, unavailable_sections: tuple[str, ...] = ()) -> DashboardD
         ),
         accounts=AccountsSummary(
             plaid_accounts=[
-                AccountInfo(
-                    id=1,
-                    name="Checking",
-                    balance=1250.50,
-                    currency="usd",
-                    type_or_status="cash",
+                plaid_account_object().model_copy(
+                    update={
+                        "id": 1,
+                        "name": "Checking",
+                        "display_name": None,
+                        "type": "cash",
+                        "balance": "1250.5000",
+                        "currency": "usd",
+                        "to_base": 1250.50,
+                    }
                 )
             ]
         ),
@@ -91,13 +98,13 @@ def _dashboard_data(*, unavailable_sections: tuple[str, ...] = ()) -> DashboardD
             }
         ),
         transactions=[
-            TransactionInfo(
-                id=1,
-                date=datetime.date(2026, 8, 2),
-                payee="<Synthetic payee>",
-                amount=20,
-                currency="usd",
-                status="cleared",
+            transaction_object(transaction_id=1).model_copy(
+                update={
+                    "var_date": datetime.date(2026, 8, 2),
+                    "payee": "<Synthetic payee>",
+                    "amount": "20.0000",
+                    "to_base": 20,
+                }
             )
         ],
         scheduled_sync=ScheduledSyncStatus(
@@ -171,46 +178,61 @@ def test_dashboard_groups_accounts_and_uses_currency_symbols(
         data,
         accounts=AccountsSummary(
             plaid_accounts=[
-                AccountInfo(
-                    id=1,
-                    name="Checking",
-                    display_name="Daily spending",
-                    balance=1250.50,
-                    currency="usd",
-                    type_or_status="cash",
+                plaid_account_object().model_copy(
+                    update={
+                        "id": 1,
+                        "name": "Checking",
+                        "display_name": "Daily spending",
+                        "type": "cash",
+                        "balance": "1250.5000",
+                        "currency": "usd",
+                        "to_base": 1250.50,
+                    }
                 ),
-                AccountInfo(
-                    id=2,
-                    name="Travel Card",
-                    display_name="Travel card",
-                    balance=210.25,
-                    currency="usd",
-                    type_or_status="credit",
+                plaid_account_object().model_copy(
+                    update={
+                        "id": 2,
+                        "name": "Travel Card",
+                        "display_name": "Travel card",
+                        "type": "credit",
+                        "balance": "210.2500",
+                        "currency": "usd",
+                        "to_base": 210.25,
+                    }
                 ),
-                AccountInfo(
-                    id=5,
-                    name="Savings",
-                    display_name="Family savings",
-                    balance=3000,
-                    currency="usd",
-                    type_or_status="cash",
+                plaid_account_object().model_copy(
+                    update={
+                        "id": 5,
+                        "name": "Savings",
+                        "display_name": "Family savings",
+                        "type": "cash",
+                        "balance": "3000.0000",
+                        "currency": "usd",
+                        "to_base": 3000,
+                    }
                 ),
-                AccountInfo(
-                    id=4,
-                    name="Dormant Account",
-                    balance=0,
-                    currency="usd",
-                    type_or_status="cash",
+                plaid_account_object().model_copy(
+                    update={
+                        "id": 4,
+                        "name": "Dormant Account",
+                        "display_name": None,
+                        "type": "cash",
+                        "balance": "0.0000",
+                        "currency": "usd",
+                        "to_base": 0,
+                    }
                 ),
             ],
             manual_accounts=[
-                AccountInfo(
-                    id=3,
-                    name="Brokerage",
-                    display_name=None,
-                    balance=5000,
-                    currency="usd",
-                    type_or_status="investment",
+                manual_account_object().model_copy(
+                    update={
+                        "name": "Brokerage",
+                        "display_name": None,
+                        "type": "investment",
+                        "balance": "5000.0000",
+                        "currency": "usd",
+                        "to_base": 5000,
+                    }
                 )
             ],
         ),

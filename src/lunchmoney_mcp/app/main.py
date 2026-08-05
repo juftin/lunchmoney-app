@@ -33,6 +33,7 @@ from lunchmoney_mcp.logging_config import apply_logging_config
 from lunchmoney_mcp.mcp import mcp
 from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.observability import log_event, metrics
+from lunchmoney_mcp.schemas import RootResponse
 
 apply_logging_config()
 
