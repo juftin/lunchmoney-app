@@ -80,6 +80,18 @@ def test_ci_matrix_covers_supported_versions_and_defaults_locally_to_python_313(
         assert f'python: "{version}"' in workflow
 
 
+def test_project_tasks_keep_integration_checks_opt_in_and_on_ci() -> None:
+    """Run external mock-service checks only through their explicit task and workflow."""
+    project_taskfile = (PROJECT_ROOT / "tasks/ProjectTaskfile.yaml").read_text()
+    workflow = (PROJECT_ROOT / ".github/workflows/upstream-contract.yaml").read_text()
+
+    assert "test:unit:" in project_taskfile
+    assert '-m "not integration"' in project_taskfile
+    assert "test:integration:" in project_taskfile
+    assert "RUN_LUNCHMONEY_CONTRACT_TESTS=1" in project_taskfile
+    assert "run: task contract" in workflow
+
+
 def test_production_server_dependencies_are_declared() -> None:
     """Install the Gunicorn runtime and maintained worker package in releases."""
     pyproject = (PROJECT_ROOT / "pyproject.toml").read_text()

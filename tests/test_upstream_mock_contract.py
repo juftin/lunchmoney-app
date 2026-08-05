@@ -14,6 +14,7 @@ SYNTHETIC_TOKEN = "mock-contract-token"
 
 
 @pytest.mark.upstream_contract
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_mock_service_supports_every_read_only_endpoint_group() -> None:
     """Exercise all read-only endpoint groups without accessing a real budget."""
