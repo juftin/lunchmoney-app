@@ -329,7 +329,7 @@ def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Trigger migrations and sync via the /sync endpoint."""
+    """Trigger migrations and sync via the /api/sync endpoint."""
     from starlette.testclient import TestClient
 
     migrations_ran = False

@@ -123,6 +123,19 @@ def _matches_persisted_transaction(
     return not (query.include_split_parents is not True and transaction.is_split_parent)
 
 
+def _as_transaction_object(transaction: Transaction) -> TransactionObject:
+    """Expose a cached parent or grouped child as a collection response object."""
+    api_transaction = transaction.to_api()
+    if isinstance(api_transaction, TransactionObject):
+        return api_transaction
+    return TransactionObject.model_validate(
+        {
+            **api_transaction.model_dump(mode="python"),
+            "children": None,
+        }
+    )
+
+
 async def _fetch_persisted_transactions(
     db: LunchMoneyDatabase,
     query: TransactionQuery,
@@ -139,16 +152,20 @@ async def _fetch_persisted_transactions(
 
     transactions = await db.list(Transaction)
     matching = [
-        transaction.to_api()
+        _as_transaction_object(transaction)
         for transaction in transactions
         if transaction.kind == TransactionKind.PARENT
+        or (
+            query.include_group_children is True
+            and transaction.kind == TransactionKind.CHILD
+            and transaction.group_parent_id is not None
+        )
     ]
     return sorted(
         (
             transaction
             for transaction in matching
-            if isinstance(transaction, TransactionObject)
-            and _matches_persisted_transaction(
+            if _matches_persisted_transaction(
                 transaction=transaction,
                 query=query,
                 category_ids=category_ids,

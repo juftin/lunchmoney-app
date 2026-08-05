@@ -47,7 +47,7 @@ class SyncDetails(BaseModel):
 
 
 class SyncResponse(BaseModel):
-    """FastAPI POST /sync response schema."""
+    """FastAPI POST /api/sync response schema."""
 
     message: str = Field(default="Synchronization complete")
     """Status message summarizing synchronization execution."""

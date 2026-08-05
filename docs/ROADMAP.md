@@ -44,7 +44,7 @@ graph TD
 ### 1. Persistent Cached Mode (Default)
 
 - **Database Engine**: Persistent SQLite file (`lunchmoney.db`) or PostgreSQL database (`postgresql+asyncpg://`).
-- **Sync Strategy**: Background worker or explicit `/sync` calls fetch upstream updates and upsert changes into the database. Reads are served instantaneously from local disk/database cache.
+- **Sync Strategy**: Background worker or explicit `/api/sync` calls fetch upstream updates and upsert changes into the database. Reads are served instantaneously from local disk/database cache.
 - **Use Cases**: Local CLI usage, long-running MCP servers, home-server deployments (Docker Compose).
 
 ### 2. Stateless In-Memory Mode (`LUNCHMONEY_STATELESS=true`)

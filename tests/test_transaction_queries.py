@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, create_autospec
 
 import pytest
 
-from database.factories import transaction_object
+from database.factories import child_transaction_object, transaction_object
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import Transaction
@@ -102,3 +102,35 @@ async def test_persisted_transaction_query_applies_filters_and_returns_all_resul
         older.id,
     ]
     assert database.list.await_args_list[0].args == (Transaction,)
+
+
+@pytest.mark.asyncio
+async def test_persisted_transaction_query_includes_group_children_when_requested() -> (
+    None
+):
+    """Include cached group children for the matching account only when requested."""
+    group_child = child_transaction_object(
+        transaction_id=101,
+        split_parent_id=None,
+        group_parent_id=100,
+    )
+    group_parent = Transaction.from_api(
+        transaction_object(
+            children=[group_child],
+            is_split_parent=False,
+            is_group_parent=True,
+        )
+    )
+    database = create_autospec(LunchMoneyDatabase, instance=True)
+    database.list = AsyncMock(return_value=[group_parent, *group_parent.group_children])
+
+    transactions = await fetch_transactions(
+        client=create_autospec(LunchMoneyApp, instance=True),
+        db=database,
+        query=TransactionQuery(manual_account_id=3, include_group_children=True),
+        live=False,
+    )
+
+    assert [transaction.id for transaction in transactions] == [group_child.id]
+    assert transactions[0].group_parent_id == group_parent.id
+    assert transactions[0].children is None
