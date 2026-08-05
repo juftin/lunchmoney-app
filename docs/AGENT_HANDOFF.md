@@ -75,7 +75,7 @@ Completed: single and bulk transaction CRUD, transaction grouping, transaction s
 
 ### Sprint 4: Budgets & Spending Trends
 
-Completed: `GET /budgets/settings`, `PUT /budgets`, `DELETE /budgets`, and `GET /spending/trends`.
+Completed: `GET /api/budgets/settings`, `PUT /api/budgets`, `DELETE /api/budgets`, and `GET /api/spending/trends`.
 
 ### Sprint 5: Production Security & CI/CD
 

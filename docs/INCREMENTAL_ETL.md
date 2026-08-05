@@ -11,7 +11,7 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > [!IMPORTANT]
 > **1. Incremental Transaction Sync is Opt-In**:
 >
-> - Default behavior for `POST /sync` and `sync_data` FastMCP tool: `incremental: bool = False`.
+> - Default behavior for `POST /api/sync` and `sync_data` FastMCP tool: `incremental: bool = False`.
 > - When `incremental=False`, transactions use the standard rolling date window from `days: int = 30` (or explicit service-layer `start_date` / `end_date`) and no watermark is written.
 > - When `incremental=True`, only transactions consult `SyncMetadata(domain="transactions")`. An existing watermark produces `updated_since = last_synced_at - timedelta(minutes=safety_margin)`; a missing watermark falls back to the standard date window.
 > - User, Plaid account, manual account, category, and tag refreshes are full refreshes in both modes.
@@ -46,7 +46,7 @@ sequenceDiagram
     participant DB as SQLModel State DB
     participant API as Lunch Money v2 API
 
-    Client->>Service: POST /sync or sync_data(incremental=True)
+    Client->>Service: POST /api/sync or sync_data(incremental=True)
     alt Stateless in-memory storage
         Service->>DB: Create tables on cached database instance
     else Persistent storage
@@ -87,7 +87,7 @@ An explicit constructor URL, `LUNCHMONEY_DATABASE_URL`, or a dotenv-provided dat
 ### Transport Interfaces
 
 ```text
-POST /sync?days=30&incremental=true&safety_margin_minutes=5
+POST /api/sync?days=30&incremental=true&safety_margin_minutes=5
 ```
 
 ```python

@@ -81,11 +81,11 @@ def _recurring_item() -> RecurringObject:
 def _collection_contract_app() -> FastAPI:
     """Build a lifespan-free app containing only collection endpoint routers."""
     app = FastAPI()
-    app.include_router(categories_router_module.router)
-    app.include_router(accounts_router_module.router)
-    app.include_router(tags_router_module.router)
-    app.include_router(recurring_router_module.router)
-    app.include_router(transactions_router_module.router)
+    app.include_router(categories_router_module.router, prefix="/api")
+    app.include_router(accounts_router_module.router, prefix="/api")
+    app.include_router(tags_router_module.router, prefix="/api")
+    app.include_router(recurring_router_module.router, prefix="/api")
+    app.include_router(transactions_router_module.router, prefix="/api")
     app.dependency_overrides[get_database] = lambda: object()
     app.dependency_overrides[get_lunchmoney_app] = lambda: object()
     return app
@@ -95,12 +95,12 @@ def test_rest_collection_response_contracts_are_flat_arrays() -> None:
     """Publish direct collection endpoints as arrays of complete resource objects."""
     openapi = fastapi_app.openapi()
     expected_items = {
-        "/categories": "CategoryObject",
-        "/manual_accounts": "ManualAccountObject",
-        "/plaid_accounts": "PlaidAccountObject",
-        "/tags": "TagObject",
-        "/recurring_items": "RecurringObject",
-        "/transactions": "TransactionObject",
+        "/api/categories": "CategoryObject",
+        "/api/manual_accounts": "ManualAccountObject",
+        "/api/plaid_accounts": "PlaidAccountObject",
+        "/api/tags": "TagObject",
+        "/api/recurring_items": "RecurringObject",
+        "/api/transactions": "TransactionObject",
     }
 
     for path, item_schema in expected_items.items():
@@ -111,10 +111,18 @@ def test_rest_collection_response_contracts_are_flat_arrays() -> None:
         assert schema["items"] == {"$ref": f"#/components/schemas/{item_schema}"}
 
 
+def test_public_rest_routes_are_namespaced_under_api() -> None:
+    """Publish every documented REST operation below the shared API prefix."""
+    assert all(
+        path == "/api" or path.startswith("/api/")
+        for path in fastapi_app.openapi()["paths"]
+    )
+
+
 def test_accounts_is_the_only_combined_collection_envelope() -> None:
     """Keep the shared accounts response as two named complete collections."""
     openapi = fastapi_app.openapi()
-    schema = openapi["paths"]["/accounts"]["get"]["responses"]["200"]["content"][
+    schema = openapi["paths"]["/api/accounts"]["get"]["responses"]["200"]["content"][
         "application/json"
     ]["schema"]
     assert schema == {"$ref": "#/components/schemas/AccountsSummary"}
@@ -129,7 +137,7 @@ def test_account_routes_match_upstream_paths_and_parameter_names() -> None:
     """Expose account operation paths and IDs with Lunch Money's exact spelling."""
     paths = fastapi_app.openapi()["paths"]
 
-    for path in ("/manual_accounts/{id}", "/plaid_accounts/{id}"):
+    for path in ("/api/manual_accounts/{id}", "/api/plaid_accounts/{id}"):
         assert path in paths
         for operation in paths[path].values():
             parameters = operation.get("parameters", [])
@@ -140,7 +148,7 @@ def test_account_routes_match_upstream_paths_and_parameter_names() -> None:
             ]
             assert path_parameter_names == ["id"]
 
-    fetch_parameters = paths["/plaid_accounts/fetch"]["post"]["parameters"]
+    fetch_parameters = paths["/api/plaid_accounts/fetch"]["post"]["parameters"]
     assert "id" in {parameter["name"] for parameter in fetch_parameters}
 
 
@@ -211,12 +219,12 @@ def test_rest_collection_endpoints_serialize_their_runtime_contracts(
     )
 
     expected_collections = {
-        "/categories": [category],
-        "/manual_accounts": [manual_account],
-        "/plaid_accounts": [plaid_account],
-        "/tags": [tag],
-        "/recurring_items": [recurring_item],
-        "/transactions": [transaction],
+        "/api/categories": [category],
+        "/api/manual_accounts": [manual_account],
+        "/api/plaid_accounts": [plaid_account],
+        "/api/tags": [tag],
+        "/api/recurring_items": [recurring_item],
+        "/api/transactions": [transaction],
     }
     app = _collection_contract_app()
 
@@ -228,7 +236,7 @@ def test_rest_collection_endpoints_serialize_their_runtime_contracts(
                 item.model_dump(mode="json", by_alias=True) for item in expected
             ]
 
-        accounts_response = client.get("/accounts")
+        accounts_response = client.get("/api/accounts")
 
     assert accounts_response.status_code == 200
     assert accounts_response.json() == accounts.model_dump(mode="json", by_alias=True)

@@ -90,8 +90,8 @@ def test_tag_mutation_routes_are_registered() -> None:
     """Publish all tag mutation endpoints in the generated OpenAPI document."""
     paths = fastapi_app.openapi()["paths"]
 
-    assert {"post"} <= set(paths["/tags"])
-    assert {"put", "delete"} <= set(paths["/tags/{tag_id}"])
+    assert {"post"} <= set(paths["/api/tags"])
+    assert {"put", "delete"} <= set(paths["/api/tags/{tag_id}"])
 
 
 @pytest.mark.asyncio

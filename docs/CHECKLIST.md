@@ -37,7 +37,7 @@ _Reference Spec_: [`docs/INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`docs/AGENT
 - [x] **Alembic Migration**: Add migration `0002_add_sync_metadata_table.py` for `sync_metadata`.
 - [x] **Stateless In-Memory Database**: Update [`src/lunchmoney_mcp/database/backend.py`](../src/lunchmoney_mcp/database/backend.py) to support `StaticPool` in-memory SQLite and `create_tables()` helper.
 - [x] **Opt-In Incremental Sync Logic**: Update [`src/lunchmoney_mcp/app/sync.py`](../src/lunchmoney_mcp/app/sync.py) & [`src/lunchmoney_mcp/services/sync.py`](../src/lunchmoney_mcp/services/sync.py) to handle transaction-only `incremental: bool = False` and `updated_since` timestamp filtering.
-- [x] **Router & Tool Integration**: Expose `incremental` and `safety_margin_minutes` parameters on `POST /sync` and `sync_data` FastMCP tool.
+- [x] **Router & Tool Integration**: Expose `incremental` and `safety_margin_minutes` parameters on `POST /api/sync` and `sync_data` FastMCP tool.
 - [x] **Test Suite**: Cover stateless configuration, database initialization, migrations, incremental transaction policy, and transport delegation in `tests/test_config.py`, `tests/database/test_backend.py`, `tests/database/test_migrations.py`, `tests/test_incremental_sync.py`, `tests/test_app.py`, and `tests/test_mcp.py`.
 
 ---
@@ -46,12 +46,12 @@ _Reference Spec_: [`docs/INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`docs/AGENT
 
 _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#1-user--account-summary-me-summary) & [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-1-complete-read-only-100-v2-api-coverage)
 
-- [x] **Account Summary**: Implement `fetch_account_summary`, `GET /summary`, and `get_account_summary` FastMCP tool.
-- [x] **Tags Queries**: Implement `fetch_tags`, `fetch_tag_by_id`, `GET /tags`, `GET /tags/{id}`, `list_tags`, and `get_tag` tools.
-- [x] **Recurring Items Queries**: Implement `fetch_recurring_items`, `fetch_recurring_item_by_id`, `GET /recurring_items`, `GET /recurring_items/{id}`, `list_recurring_items`, and `get_recurring_item` tools.
-- [x] **Single-ID Category Lookup**: Implement `GET /categories/{id}` and `get_category` FastMCP tool.
-- [x] **Single-ID Account Lookups**: Implement `GET /manual_accounts/{id}` (`get_manual_account`) and `GET /plaid_accounts/{id}` (`get_plaid_account`).
-- [x] **Single-ID Transaction Lookup**: Implement `GET /transactions/{id}` and `get_transaction` FastMCP tool.
+- [x] **Account Summary**: Implement `fetch_account_summary`, `GET /api/summary`, and `get_account_summary` FastMCP tool.
+- [x] **Tags Queries**: Implement `fetch_tags`, `fetch_tag_by_id`, `GET /api/tags`, `GET /api/tags/{id}`, `list_tags`, and `get_tag` tools.
+- [x] **Recurring Items Queries**: Implement `fetch_recurring_items`, `fetch_recurring_item_by_id`, `GET /api/recurring_items`, `GET /api/recurring_items/{id}`, `list_recurring_items`, and `get_recurring_item` tools.
+- [x] **Single-ID Category Lookup**: Implement `GET /api/categories/{id}` and `get_category` FastMCP tool.
+- [x] **Single-ID Account Lookups**: Implement `GET /api/manual_accounts/{id}` (`get_manual_account`) and `GET /api/plaid_accounts/{id}` (`get_plaid_account`).
+- [x] **Single-ID Transaction Lookup**: Implement `GET /api/transactions/{id}` and `get_transaction` FastMCP tool.
 - [x] **Test Suite**: Add tests for all read-only endpoints in `tests/test_read_only.py`.
 
 ---
@@ -60,13 +60,13 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#1-user--account-summary-me-summ
 
 _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-2-category--manual-account-mutations)
 
-- [x] **Category Creation**: Implement Upstream-First `create_category` service, `POST /categories`, and FastMCP tool.
-- [x] **Category Update**: Implement Upstream-First `update_category` service, `PUT /categories/{id}`, and FastMCP tool.
-- [x] **Category Deletion**: Implement Upstream-First `delete_category` service, `DELETE /categories/{id}`, and FastMCP tool.
-- [x] **Manual Account Creation**: Implement Upstream-First `create_manual_account` service, `POST /manual_accounts`, and FastMCP tool.
-- [x] **Manual Account Update**: Implement Upstream-First `update_manual_account` service, `PUT /manual_accounts/{id}`, and FastMCP tool.
-- [x] **Manual Account Deletion**: Implement Upstream-First `delete_manual_account` service, `DELETE /manual_accounts/{id}`, and FastMCP tool.
-- [x] **Plaid Fetch Trigger**: Implement `trigger_plaid_fetch` service, `POST /plaid_accounts/fetch`, and FastMCP tool.
+- [x] **Category Creation**: Implement Upstream-First `create_category` service, `POST /api/categories`, and FastMCP tool.
+- [x] **Category Update**: Implement Upstream-First `update_category` service, `PUT /api/categories/{id}`, and FastMCP tool.
+- [x] **Category Deletion**: Implement Upstream-First `delete_category` service, `DELETE /api/categories/{id}`, and FastMCP tool.
+- [x] **Manual Account Creation**: Implement Upstream-First `create_manual_account` service, `POST /api/manual_accounts`, and FastMCP tool.
+- [x] **Manual Account Update**: Implement Upstream-First `update_manual_account` service, `PUT /api/manual_accounts/{id}`, and FastMCP tool.
+- [x] **Manual Account Deletion**: Implement Upstream-First `delete_manual_account` service, `DELETE /api/manual_accounts/{id}`, and FastMCP tool.
+- [x] **Plaid Fetch Trigger**: Implement `trigger_plaid_fetch` service, `POST /api/plaid_accounts/fetch`, and FastMCP tool.
 - [x] **Test Suite**: Add unit and integration tests in `tests/test_category_account_mutations.py`.
 
 ---
@@ -75,14 +75,14 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-2-category--
 
 _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-3-transaction-mutations-grouping-splitting--attachments)
 
-- [x] **Single Transaction Insert**: Implement `create_transactions` (`POST /transactions`).
-- [x] **Bulk Transaction Update**: Implement `bulk_update_transactions` (`PUT /transactions`).
-- [x] **Bulk Transaction Delete**: Implement `bulk_delete_transactions` (`DELETE /transactions`).
-- [x] **Single Transaction Update**: Implement `update_transaction` (`PUT /transactions/{id}`).
-- [x] **Single Transaction Delete**: Implement `delete_transaction` (`DELETE /transactions/{id}`).
-- [x] **Transaction Grouping**: Implement `group_transactions` (`POST /transactions/group`) and `ungroup_transactions` (`DELETE /transactions/group/{id}`).
-- [x] **Transaction Splitting**: Implement `split_transaction` (`POST /transactions/split/{id}`) and `unsplit_transaction` (`DELETE /transactions/split/{id}`).
-- [x] **Transaction Attachments**: Implement attachment upload (`POST /transactions/{id}/attachments`), download (`GET /transactions/attachments/{file_id}`), and delete (`DELETE /transactions/attachments/{file_id}`).
+- [x] **Single Transaction Insert**: Implement `create_transactions` (`POST /api/transactions`).
+- [x] **Bulk Transaction Update**: Implement `bulk_update_transactions` (`PUT /api/transactions`).
+- [x] **Bulk Transaction Delete**: Implement `bulk_delete_transactions` (`DELETE /api/transactions`).
+- [x] **Single Transaction Update**: Implement `update_transaction` (`PUT /api/transactions/{id}`).
+- [x] **Single Transaction Delete**: Implement `delete_transaction` (`DELETE /api/transactions/{id}`).
+- [x] **Transaction Grouping**: Implement `group_transactions` (`POST /api/transactions/group`) and `ungroup_transactions` (`DELETE /api/transactions/group/{id}`).
+- [x] **Transaction Splitting**: Implement `split_transaction` (`POST /api/transactions/split/{id}`) and `unsplit_transaction` (`DELETE /api/transactions/split/{id}`).
+- [x] **Transaction Attachments**: Implement attachment upload (`POST /api/transactions/{id}/attachments`), download (`GET /api/transactions/attachments/{file_id}`), and delete (`DELETE /api/transactions/attachments/{file_id}`).
 - [x] **Test Suite**: Add comprehensive test suite in `tests/test_transaction_mutations.py`.
 
 ---
@@ -91,10 +91,10 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-3-transactio
 
 _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-4-budgets--spending-trends)
 
-- [x] **Budget Settings**: Implement `fetch_budget_settings`, `GET /budgets/settings`, and `get_budget_settings` tool.
-- [x] **Budget Upsert**: Implement `set_budget_value`, `PUT /budgets`, and `upsert_budget` tool.
-- [x] **Budget Clear**: Implement `clear_budget_value`, `DELETE /budgets`, and `clear_budget` tool.
-- [x] **Spending Trends Analysis**: Implement `fetch_spending_trends` (daily/weekly/monthly time-series aggregation), `GET /spending/trends`, and `get_spending_trends` tool.
+- [x] **Budget Settings**: Implement `fetch_budget_settings`, `GET /api/budgets/settings`, and `get_budget_settings` tool.
+- [x] **Budget Upsert**: Implement `set_budget_value`, `PUT /api/budgets`, and `upsert_budget` tool.
+- [x] **Budget Clear**: Implement `clear_budget_value`, `DELETE /api/budgets`, and `clear_budget` tool.
+- [x] **Spending Trends Analysis**: Implement `fetch_spending_trends` (daily/weekly/monthly time-series aggregation), `GET /api/spending/trends`, and `get_spending_trends` tool.
 - [x] **Test Suite**: Add test suite in `tests/test_budgets_trends.py`.
 
 ---
@@ -122,9 +122,9 @@ _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`
 
 ### 🏷️ Sprint 7: Tag Mutations & API Coverage Completion
 
-- [x] **Tag Creation**: Implement Upstream-First `create_tag`, `POST /tags`, and FastMCP tool.
-- [x] **Tag Update**: Implement Upstream-First `update_tag`, `PUT /tags/{id}`, and FastMCP tool.
-- [x] **Tag Deletion**: Implement Upstream-First `delete_tag`, `DELETE /tags/{id}`, and FastMCP tool with cached transaction-link reconciliation.
+- [x] **Tag Creation**: Implement Upstream-First `create_tag`, `POST /api/tags`, and FastMCP tool.
+- [x] **Tag Update**: Implement Upstream-First `update_tag`, `PUT /api/tags/{id}`, and FastMCP tool.
+- [x] **Tag Deletion**: Implement Upstream-First `delete_tag`, `DELETE /api/tags/{id}`, and FastMCP tool with cached transaction-link reconciliation.
 - [x] **Test Suite**: Add regression coverage for tag mutation delegation, cache updates, routes, and MCP tools.
 
 ---
@@ -147,8 +147,8 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-9-upstream-api-compatibi
 - [x] **Coverage Manifest**: Verify every supported upstream operation has a service, REST, and MCP mapping.
 - [x] **Upstream Contract Tests**: Exercise the mock service or a disposable test budget without real financial data.
 - [x] **Response Fidelity**: Return complete generated Lunch Money resource models from cached REST and MCP endpoints; retain derived summaries only for analytics and sync operations.
-- [x] **Transaction Query Fidelity**: Make `GET /transactions` select the configured live or persisted source, apply Lunch Money filters, consume upstream pagination internally, and return every match in one flat collection.
-- [x] **Category Query Fidelity**: Make `GET /categories` select the configured live or persisted source, accept Lunch Money's hierarchy and group controls, and return a flat collection.
+- [x] **Transaction Query Fidelity**: Make `GET /api/transactions` select the configured live or persisted source, apply Lunch Money filters, consume upstream pagination internally, and return every match in one flat collection.
+- [x] **Category Query Fidelity**: Make `GET /api/categories` select the configured live or persisted source, accept Lunch Money's hierarchy and group controls, and return a flat collection.
 - [x] **Collection Response Simplicity**: Return flat collections for direct collection endpoints; reserve the combined `/accounts` envelope for its two account sources.
 
 ### 🛡️ Sprint 10: Operational Hardening & Observability

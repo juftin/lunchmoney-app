@@ -299,18 +299,18 @@ def test_read_only_routes_are_registered() -> None:
     """Publish every Sprint 1 REST endpoint in the generated OpenAPI document."""
     paths = fastapi_app.openapi()["paths"]
 
-    assert "/summary" in paths
-    assert "/tags" in paths
-    assert "/tags/{tag_id}" in paths
-    assert "/recurring_items" in paths
-    assert "/recurring_items/{recurring_item_id}" in paths
-    assert "/categories/{category_id}" in paths
-    assert "/manual_accounts" in paths
-    assert "/plaid_accounts" in paths
-    assert "/accounts" in paths
-    assert "/manual_accounts/{id}" in paths
-    assert "/plaid_accounts/{id}" in paths
-    assert "/transactions/{transaction_id}" in paths
+    assert "/api/summary" in paths
+    assert "/api/tags" in paths
+    assert "/api/tags/{tag_id}" in paths
+    assert "/api/recurring_items" in paths
+    assert "/api/recurring_items/{recurring_item_id}" in paths
+    assert "/api/categories/{category_id}" in paths
+    assert "/api/manual_accounts" in paths
+    assert "/api/plaid_accounts" in paths
+    assert "/api/accounts" in paths
+    assert "/api/manual_accounts/{id}" in paths
+    assert "/api/plaid_accounts/{id}" in paths
+    assert "/api/transactions/{transaction_id}" in paths
 
 
 @pytest.mark.asyncio

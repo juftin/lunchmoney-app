@@ -126,7 +126,7 @@ def test_metrics_include_safe_http_and_mcp_counters(
     get_secret_settings.cache_clear()
     try:
         with TestClient(fastapi_app) as client:
-            response = client.get("/", headers={"X-API-Key": "synthetic-api-key"})
+            response = client.get("/api", headers={"X-API-Key": "synthetic-api-key"})
             metrics_response = client.get(
                 "/metrics", headers={"X-API-Key": "synthetic-api-key"}
             )
@@ -135,7 +135,7 @@ def test_metrics_include_safe_http_and_mcp_counters(
         assert metrics_response.status_code == 200
         assert metrics_response.headers["content-type"].startswith("text/plain")
         assert (
-            'lunchmoney_mcp_http_requests_total{method="GET",path="/",status="200"}'
+            'lunchmoney_mcp_http_requests_total{method="GET",path="/api",status="200"}'
             in metrics_response.text
         )
         assert "lunchmoney_mcp_mcp_requests_total" in metrics_response.text

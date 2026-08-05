@@ -258,13 +258,13 @@ def test_transaction_mutation_routes_are_registered() -> None:
     """Publish every Sprint 3 REST endpoint in the generated OpenAPI document."""
     paths = fastapi_app.openapi()["paths"]
 
-    assert {"post", "put", "delete"} <= set(paths["/transactions"])
-    assert {"put", "delete"} <= set(paths["/transactions/{transaction_id}"])
-    assert {"post"} <= set(paths["/transactions/group"])
-    assert {"delete"} <= set(paths["/transactions/group/{transaction_id}"])
-    assert {"post", "delete"} <= set(paths["/transactions/split/{transaction_id}"])
-    assert {"post"} <= set(paths["/transactions/{transaction_id}/attachments"])
-    assert {"get", "delete"} <= set(paths["/transactions/attachments/{file_id}"])
+    assert {"post", "put", "delete"} <= set(paths["/api/transactions"])
+    assert {"put", "delete"} <= set(paths["/api/transactions/{transaction_id}"])
+    assert {"post"} <= set(paths["/api/transactions/group"])
+    assert {"delete"} <= set(paths["/api/transactions/group/{transaction_id}"])
+    assert {"post", "delete"} <= set(paths["/api/transactions/split/{transaction_id}"])
+    assert {"post"} <= set(paths["/api/transactions/{transaction_id}/attachments"])
+    assert {"get", "delete"} <= set(paths["/api/transactions/attachments/{file_id}"])
 
 
 @pytest.mark.asyncio

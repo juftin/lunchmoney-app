@@ -5,7 +5,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 
-from fastapi import FastAPI, Request, Response
+from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.utilities.lifespan import combine_lifespans
@@ -41,6 +41,8 @@ fastapi_app = FastAPI(
     description="Lunch Money Model Context Protocol Server & API",
     lifespan=lifespan,
 )
+api_router = APIRouter(prefix="/api")
+"""Router namespace for every public REST API operation."""
 
 fastapi_app.middleware("http")(verify_api_key)
 
@@ -104,7 +106,7 @@ fastapi_app.middleware("http")(observe_request)
 
 
 @fastapi_app.get(
-    path="/",
+    path="/api",
     response_model=RootResponse,
     tags=["Health"],
     operation_id="get_root",
@@ -120,17 +122,18 @@ async def root() -> RootResponse:
     return RootResponse(message="Hello World")
 
 
-fastapi_app.include_router(sync_router)
+api_router.include_router(sync_router)
+api_router.include_router(user_router)
+api_router.include_router(summary_router)
+api_router.include_router(budgets_router)
+api_router.include_router(categories_router)
+api_router.include_router(accounts_router)
+api_router.include_router(transactions_router)
+api_router.include_router(tags_router)
+api_router.include_router(recurring_router)
+api_router.include_router(spending_router)
+fastapi_app.include_router(api_router)
 fastapi_app.include_router(health_router)
-fastapi_app.include_router(user_router)
-fastapi_app.include_router(summary_router)
-fastapi_app.include_router(budgets_router)
-fastapi_app.include_router(categories_router)
-fastapi_app.include_router(accounts_router)
-fastapi_app.include_router(transactions_router)
-fastapi_app.include_router(tags_router)
-fastapi_app.include_router(recurring_router)
-fastapi_app.include_router(spending_router)
 
 mcp_app: StarletteWithLifespan = mcp.http_app(path="/mcp")
 app = FastAPI(

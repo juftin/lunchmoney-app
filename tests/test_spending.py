@@ -106,11 +106,11 @@ async def test_fetch_category_spending(
 
 
 def test_fastapi_spending_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify GET /spending/category endpoint returns 200."""
+    """Verify GET /api/spending/category endpoint returns 200."""
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 
     with TestClient(fastapi_app, base_url="http://localhost") as client:
-        response = client.get("/spending/category?days=30")
+        response = client.get("/api/spending/category?days=30")
         assert response.status_code == 200
         data = response.json()
         assert "total_spending" in data

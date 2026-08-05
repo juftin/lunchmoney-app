@@ -245,7 +245,7 @@ git commit -m "✨ Add opt-in incremental transaction sync"
 
 **Interfaces:**
 
-- Produces: `POST /sync?incremental=true&safety_margin_minutes=...` and
+- Produces: `POST /api/sync?incremental=true&safety_margin_minutes=...` and
   `sync_data(incremental=True, safety_margin_minutes=...)`.
 - Consumes: service-layer sync functions from Task 3.
 
@@ -308,4 +308,3 @@ git commit -m "✨ Expose incremental synchronization controls"
 - The plan has no unresolved implementation placeholders.
 - Each later interface is produced by an earlier task, and every behavior has a
   failing-test and passing-test checkpoint.
-
