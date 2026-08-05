@@ -249,11 +249,11 @@ def test_mutation_routes_are_registered() -> None:
     """Publish every Sprint 2 REST endpoint in the generated OpenAPI document."""
     paths = fastapi_app.openapi()["paths"]
 
-    assert {"post"} <= set(paths["/categories"])
-    assert {"put", "delete"} <= set(paths["/categories/{category_id}"])
-    assert {"post"} <= set(paths["/accounts/manual"])
-    assert {"put", "delete"} <= set(paths["/accounts/manual/{account_id}"])
-    assert {"post"} <= set(paths["/accounts/plaid/sync"])
+    assert {"post"} <= set(paths["/api/categories"])
+    assert {"put", "delete"} <= set(paths["/api/categories/{category_id}"])
+    assert {"post"} <= set(paths["/api/manual_accounts"])
+    assert {"put", "delete"} <= set(paths["/api/manual_accounts/{id}"])
+    assert {"post"} <= set(paths["/api/plaid_accounts/fetch"])
 
 
 @pytest.mark.asyncio

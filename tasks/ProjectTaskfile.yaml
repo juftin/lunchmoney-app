@@ -25,7 +25,31 @@ tasks:
         desc: Run static and official mock-service compatibility checks
         cmds:
             - task upstream:check
-            - RUN_LUNCHMONEY_CONTRACT_TESTS=1 uv run pytest -m upstream_contract
+            - task test:integration
+    #######################################
+    test:unit:
+        desc: Run unit tests without external Lunch Money services
+        cmds:
+            - uv run -- pytest -m "not integration" {{.CLI_ARGS}}
+        deps:
+            - task: sync
+              vars:
+                  UV_PYTHON: "{{.UV_PYTHON}}"
+                  CLI_ARGS: --quiet
+        env:
+            UV_PYTHON: "{{.UV_PYTHON}}"
+    #######################################
+    test:integration:
+        desc: Run opt-in tests against Lunch Money's static mock service
+        cmds:
+            - RUN_LUNCHMONEY_CONTRACT_TESTS=1 uv run -- pytest -m integration {{.CLI_ARGS}}
+        deps:
+            - task: sync
+              vars:
+                  UV_PYTHON: "{{.UV_PYTHON}}"
+                  CLI_ARGS: --quiet
+        env:
+            UV_PYTHON: "{{.UV_PYTHON}}"
     #######################################
     compose:
         desc: Run application and infrastructure services with Docker Compose

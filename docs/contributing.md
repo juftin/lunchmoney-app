@@ -38,7 +38,9 @@ manager) and **[task]** (task runner). Once both are installed, you can use
 | --------------------------------------------------------- | -------------------------- | ------------------------------------------------ |
 | List Available Tasks                                      | `task`                     | Lists tasks in alphanumeric order                |
 | Install Project + Dev Dependencies                        | `task install`             | Installs dependencies and pre-commit hooks       |
-| Run Tests                                                 | `task test`                | Runs tests with `pytest`                         |
+| Run Unit Tests                                            | `task test:unit`           | Runs tests without external services             |
+| Run Integration Tests                                     | `task test:integration`    | Calls Lunch Money's static mock service          |
+| Run Tests                                                 | `task test`                | Runs the existing default test suite             |
 | Run Tests across Python Versions                          | `task test:matrix`         | Runs tests on Python 3.10 through 3.14           |
 | Code Quality Check - Formatting                           | `task check:format`        | Checks formatting with `ruff`                    |
 | Code Quality Check - Linting                              | `task check:lint`          | Checks linting with `ruff`                       |

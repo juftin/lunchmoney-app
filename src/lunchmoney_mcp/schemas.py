@@ -11,6 +11,8 @@ from lunchmoney.models import (
     CreateManualAccountRequestObjectBalance,
     CreateManualAccountRequestObjectClosedOn,
     CurrencyEnum,
+    ManualAccountObject,
+    PlaidAccountObject,
     UpdateManualAccountRequestObject,
     UpdateManualAccountRequestObjectBalance,
     UpdateManualAccountRequestObjectClosedOn,
@@ -45,7 +47,7 @@ class SyncDetails(BaseModel):
 
 
 class SyncResponse(BaseModel):
-    """FastAPI POST /sync response schema."""
+    """FastAPI POST /api/sync response schema."""
 
     message: str = Field(default="Synchronization complete")
     """Status message summarizing synchronization execution."""
@@ -122,12 +124,62 @@ class AccountInfo(BaseModel):
 
 
 class AccountsSummary(BaseModel):
-    """Connected Plaid and manual accounts."""
+    """Complete synchronized manual and Plaid account collections."""
 
-    plaid_accounts: list[AccountInfo] = Field(default_factory=list)
-    """List of connected Plaid accounts."""
-    manual_accounts: list[AccountInfo] = Field(default_factory=list)
-    """List of user-managed manual accounts."""
+    plaid_accounts: list[PlaidAccountObject] = Field(default_factory=list)
+    """Complete objects for connected Plaid accounts."""
+    manual_accounts: list[ManualAccountObject] = Field(default_factory=list)
+    """Complete objects for user-managed manual accounts."""
+
+
+class TransactionQuery(BaseModel):
+    """Upstream-compatible transaction filters and pagination controls."""
+
+    start_date: datetime.date | None = None
+    """Inclusive transaction-date lower bound."""
+    end_date: datetime.date | None = None
+    """Inclusive transaction-date upper bound."""
+    created_since: datetime.datetime | datetime.date | None = None
+    """Inclusive ISO 8601 creation timestamp lower bound."""
+    updated_since: datetime.datetime | datetime.date | None = None
+    """Inclusive ISO 8601 update timestamp lower bound."""
+    manual_account_id: int | None = None
+    """Manual-account filter; zero selects transactions without one."""
+    plaid_account_id: int | None = None
+    """Plaid-account filter; zero selects transactions without one."""
+    recurring_id: int | None = None
+    """Recurring-item identifier to match."""
+    category_id: int | None = None
+    """Category identifier to match; zero selects uncategorized transactions."""
+    tag_id: int | None = None
+    """Tag identifier to match."""
+    is_group_parent: bool | None = None
+    """Optional group-parent state to match."""
+    status: str | None = None
+    """Optional Lunch Money transaction status to match."""
+    is_pending: bool | None = None
+    """Optional pending state to match."""
+    include_pending: bool | None = None
+    """Whether to include pending transactions when not filtering by pending state."""
+    include_metadata: bool | None = None
+    """Whether the live upstream request includes transaction metadata."""
+    include_split_parents: bool | None = None
+    """Whether to include transactions that have split children."""
+    include_group_children: bool | None = None
+    """Whether the live upstream request includes grouped child transactions."""
+    include_children: bool | None = None
+    """Whether the live upstream request includes nested transaction children."""
+    include_files: bool | None = None
+    """Whether the live upstream request includes transaction attachments."""
+
+
+class CategoryQuery(BaseModel):
+    """Upstream-compatible category collection filters."""
+
+    format: Literal["nested", "flattened"] | None = None
+    """Category hierarchy representation; omitted uses Lunch Money's default."""
+    is_group: bool | None = None
+    """Whether to return category groups or ungrouped non-group categories."""
 
 
 class ManualAccountCreateRequest(BaseModel):

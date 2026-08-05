@@ -50,7 +50,7 @@ request with `updated_since` filtering.
 
 ## Interfaces
 
-`POST /sync` and the `sync_data` MCP tool will accept `incremental: bool =
+`POST /api/sync` and the `sync_data` MCP tool will accept `incremental: bool =
 False` and `safety_margin_minutes: int | None = None`. The service layer owns
 the policy and forwards the resolved arguments to the application sync
 function; routers and MCP tools remain delegators.

@@ -3,12 +3,15 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from lunchmoney.models import CreateTagRequestObject, UpdateTagRequestObject
+from lunchmoney.models import (
+    CreateTagRequestObject,
+    TagObject,
+    UpdateTagRequestObject,
+)
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.schemas import TagInfo
 from lunchmoney_mcp.services import (
     create_tag as create_tag_service,
     delete_tag as delete_tag_service,
@@ -21,28 +24,28 @@ router = APIRouter(tags=["Tags"])
 """FastAPI APIRouter for synchronized transaction tag endpoints."""
 
 
-@router.get(path="/tags", response_model=list[TagInfo], operation_id="list_tags")
+@router.get(path="/tags", response_model=list[TagObject], operation_id="list_tags")
 async def list_tags(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> list[TagInfo]:
+) -> list[TagObject]:
     """List all synchronized transaction tags.
 
     **Parameters:**
 
     - **db**: Database manager instance.
 
-    **Returns:** All synchronized transaction tags.
+    **Returns:** Complete synchronized transaction tags.
     """
     return await fetch_tags(db=db)
 
 
 @router.get(
-    path="/tags/{tag_id}", response_model=TagInfo | None, operation_id="get_tag"
+    path="/tags/{tag_id}", response_model=TagObject | None, operation_id="get_tag"
 )
 async def get_tag(
     tag_id: int,
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> TagInfo | None:
+) -> TagObject | None:
     """Fetch one synchronized transaction tag.
 
     **Parameters:**
@@ -55,19 +58,19 @@ async def get_tag(
     return await fetch_tag_by_id(db=db, tag_id=tag_id)
 
 
-@router.post(path="/tags", response_model=TagInfo, operation_id="create_tag")
+@router.post(path="/tags", response_model=TagObject, operation_id="create_tag")
 async def create_tag(
     request: CreateTagRequestObject,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> TagInfo:
+) -> TagObject:
     """Create a transaction tag and store Lunch Money's canonical response."""
     return await create_tag_service(client=client, db=db, request=request)
 
 
 @router.put(
     path="/tags/{tag_id}",
-    response_model=TagInfo,
+    response_model=TagObject,
     operation_id="update_tag",
 )
 async def update_tag(
@@ -75,7 +78,7 @@ async def update_tag(
     request: UpdateTagRequestObject,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> TagInfo:
+) -> TagObject:
     """Update a transaction tag and store Lunch Money's canonical response."""
     return await update_tag_service(
         client=client,

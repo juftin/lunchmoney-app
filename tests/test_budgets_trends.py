@@ -213,13 +213,13 @@ async def test_spending_trends_aggregate_calendar_periods(
 
 def test_budget_settings_route_is_registered() -> None:
     """Publish the budget-settings endpoint in the OpenAPI document."""
-    operation = fastapi_app.openapi()["paths"]["/budgets/settings"]["get"]
+    operation = fastapi_app.openapi()["paths"]["/api/budgets/settings"]["get"]
 
     assert operation["operationId"] == "get_budget_settings"
     paths = fastapi_app.openapi()["paths"]
-    assert paths["/budgets"]["put"]["operationId"] == "upsert_budget"
-    assert paths["/budgets"]["delete"]["operationId"] == "clear_budget"
-    assert paths["/spending/trends"]["get"]["operationId"] == "get_spending_trends"
+    assert paths["/api/budgets"]["put"]["operationId"] == "upsert_budget"
+    assert paths["/api/budgets"]["delete"]["operationId"] == "clear_budget"
+    assert paths["/api/spending/trends"]["get"]["operationId"] == "get_spending_trends"
 
 
 @pytest.mark.asyncio

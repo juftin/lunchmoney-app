@@ -292,15 +292,15 @@ async def test_sync_database_populates_last_30_days(
         assert db_txn.payee == "Synthetic Parent Payee"
 
 
-def test_fastapi_root_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Return Hello World response from the root endpoint."""
+def test_fastapi_api_root_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Return the API greeting from the namespaced root endpoint."""
     from starlette.testclient import TestClient
 
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 
     with TestClient(fastapi_app, base_url="http://localhost") as client:
-        response = client.get("/")
+        response = client.get("/api")
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "Hello World"
@@ -319,9 +319,9 @@ def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
     get_settings.cache_clear()
 
     with TestClient(fastapi_app, base_url="http://localhost") as client:
-        assert client.get("/").status_code == 401
-        assert client.get("/", headers={"X-API-Key": "wrong"}).status_code == 401
-        response = client.get("/", headers={"X-API-Key": "rest-api-key"})
+        assert client.get("/api").status_code == 401
+        assert client.get("/api", headers={"X-API-Key": "wrong"}).status_code == 401
+        response = client.get("/api", headers={"X-API-Key": "rest-api-key"})
 
     assert response.status_code == 200
     get_secret_settings.cache_clear()
@@ -329,7 +329,7 @@ def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Trigger migrations and sync via the /sync endpoint."""
+    """Trigger migrations and sync via the /api/sync endpoint."""
     from starlette.testclient import TestClient
 
     migrations_ran = False
@@ -357,7 +357,7 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 
     with TestClient(fastapi_app, base_url="http://localhost") as client:
-        response = client.post("/sync?days=30")
+        response = client.post("/api/sync?days=30")
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "Synchronization complete"
@@ -392,7 +392,9 @@ def test_fastapi_sync_endpoint_forwards_incremental_options(
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
 
     with TestClient(fastapi_app, base_url="http://localhost") as client:
-        response = client.post("/sync?days=14&incremental=true&safety_margin_minutes=9")
+        response = client.post(
+            "/api/sync?days=14&incremental=true&safety_margin_minutes=9"
+        )
 
     assert response.status_code == 200
     mock_execute_sync.assert_awaited_once_with(
@@ -571,7 +573,7 @@ def test_fastapi_lifespan_migration_single_worker(
     monkeypatch.setattr(lifespan_module, "run_migrations", mock_migrations)
 
     with TestClient(fastapi_app, base_url="http://localhost") as client:
-        response = client.get("/")
+        response = client.get("/api")
         assert response.status_code == 200
         assert migrations_ran is True
 
@@ -632,9 +634,9 @@ def test_stateless_startup_syncs_and_persists_without_manual_schema_setup(
 
     try:
         with TestClient(fastapi_app, base_url="http://localhost") as client:
-            empty_user = client.get("/user")
-            sync_response = client.post("/sync?days=30")
-            persisted_user = client.get("/user")
+            empty_user = client.get("/api/user")
+            sync_response = client.post("/api/sync?days=30")
+            persisted_user = client.get("/api/user")
 
         assert empty_user.status_code == 200
         assert empty_user.json() is None

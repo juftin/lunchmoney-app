@@ -27,8 +27,10 @@ async def test_mcp_tools_registration() -> None:
     assert "get_sync_status" in tool_names
     assert "get_user_info" in tool_names
     assert "list_categories" in tool_names
+    assert "list_manual_accounts" in tool_names
+    assert "list_plaid_accounts" in tool_names
     assert "list_accounts" in tool_names
-    assert "get_recent_transactions" in tool_names
+    assert "list_transactions" in tool_names
     assert "get_account_summary" in tool_names
     assert "list_tags" in tool_names
     assert "get_tag" in tool_names

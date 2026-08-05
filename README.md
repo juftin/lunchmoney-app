@@ -143,7 +143,7 @@ options. `doctor` and `version` accept no runtime configuration flags.
 Credentials and connection URLs are environment/`.env`-only; all settings use
 documented `LUNCHMONEY_` environment variables.
 
-The scheduler reports its most recent outcome at `GET /sync/status` and through
+The scheduler reports its most recent outcome at `GET /api/sync/status` and through
 the `get_sync_status` MCP tool. It never runs in the Gunicorn web process. To
 include the dedicated scheduler with the Compose deployment, use:
 

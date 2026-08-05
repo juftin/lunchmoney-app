@@ -2,11 +2,14 @@
 
 from typing import TYPE_CHECKING
 
-from lunchmoney.models import CreateTagRequestObject, UpdateTagRequestObject
+from lunchmoney.models import (
+    CreateTagRequestObject,
+    TagObject,
+    UpdateTagRequestObject,
+)
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
-from lunchmoney_mcp.schemas import TagInfo
 from lunchmoney_mcp.services import (
     create_tag as create_tag_service,
     delete_tag as delete_tag_service,
@@ -20,20 +23,20 @@ if TYPE_CHECKING:
 
 
 @mcp.tool()
-async def list_tags() -> list[TagInfo]:
+async def list_tags() -> list[TagObject]:
     """List all synchronized transaction tags.
 
     Returns
     -------
-    list[TagInfo]
-        All synchronized transaction tags.
+    list[TagObject]
+        Complete synchronized transaction tags.
     """
     db: LunchMoneyDatabase = get_database()
     return await fetch_tags(db=db)
 
 
 @mcp.tool()
-async def get_tag(tag_id: int) -> TagInfo | None:
+async def get_tag(tag_id: int) -> TagObject | None:
     """Fetch one synchronized transaction tag.
 
     Parameters
@@ -43,7 +46,7 @@ async def get_tag(tag_id: int) -> TagInfo | None:
 
     Returns
     -------
-    TagInfo | None
+    TagObject | None
         Matching tag, or ``None`` when it has not been synchronized.
     """
     db: LunchMoneyDatabase = get_database()
@@ -51,7 +54,7 @@ async def get_tag(tag_id: int) -> TagInfo | None:
 
 
 @mcp.tool()
-async def create_tag(request: CreateTagRequestObject) -> TagInfo:
+async def create_tag(request: CreateTagRequestObject) -> TagObject:
     """Create a transaction tag and cache Lunch Money's canonical response."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
@@ -62,7 +65,7 @@ async def create_tag(request: CreateTagRequestObject) -> TagInfo:
 async def update_tag(
     tag_id: int,
     request: UpdateTagRequestObject,
-) -> TagInfo:
+) -> TagObject:
     """Update a transaction tag and cache Lunch Money's canonical response."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()

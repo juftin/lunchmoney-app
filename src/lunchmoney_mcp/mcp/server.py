@@ -13,9 +13,11 @@ from lunchmoney_mcp.config import (
     RuntimeSettings,
     configure_runtime_mode,
     configure_runtime_settings,
+    get_settings,
     parse_cli_settings,
 )
 from lunchmoney_mcp.mcp.app import mcp
+from lunchmoney_mcp.schemas import CategoryQuery
 from lunchmoney_mcp.mcp.tools import (
     accounts,
     budgets,
@@ -72,8 +74,13 @@ async def account_summary_resource() -> str:
     mime_type="application/json",
 )
 async def categories_resource() -> str:
-    """Render synchronized budget categories as a JSON resource."""
-    categories = await fetch_categories(db=get_database())
+    """Render configured categories as a flat JSON collection resource."""
+    categories = await fetch_categories(
+        client=get_lunchmoney_app(),
+        db=get_database(),
+        query=CategoryQuery(),
+        live=get_settings().stateless,
+    )
     return json.dumps([category.model_dump(mode="json") for category in categories])
 
 
