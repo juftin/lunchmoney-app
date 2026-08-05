@@ -1,15 +1,14 @@
 """Service logic for transaction queries and upstream-first mutations."""
 
-from sqlalchemy.engine.result import ScalarResult
-from typing import Sequence
-from sqlmodel.sql._expression_select_cls import SelectOfScalar
-
 import datetime
 
+from sqlalchemy.engine.result import ScalarResult
 from sqlmodel import col, select
+from sqlmodel.sql._expression_select_cls import SelectOfScalar
 
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney.models import (
+    ChildTransactionObject,
     CreateNewTransactionsRequest,
     DeleteTransactionsRequest,
     GetTransactionAttachmentUrl200Response,
@@ -22,73 +21,199 @@ from lunchmoney.models import (
 )
 
 from lunchmoney_mcp.client import LunchMoneyApp
-from lunchmoney_mcp.database.models import Tag, Transaction, TransactionAttachment
-from lunchmoney_mcp.schemas import TransactionInfo
-
-
-def _transaction_info(transaction: Transaction) -> TransactionInfo:
-    """Convert one persisted transaction into its public response schema."""
-    return TransactionInfo(
-        id=transaction.id,
-        date=transaction.var_date,
-        payee=transaction.payee,
-        amount=float(transaction.amount),
-        currency=transaction.currency,
-        category_id=transaction.category_id,
-        notes=transaction.notes,
-        status=transaction.status,
-    )
+from lunchmoney_mcp.database.models import (
+    Category,
+    Tag,
+    Transaction,
+    TransactionAttachment,
+    TransactionKind,
+)
+from lunchmoney_mcp.schemas import TransactionQuery
 
 
 async def _store_transactions(
     db: LunchMoneyDatabase,
     transactions: list[TransactionObject],
-) -> list[TransactionInfo]:
-    """Persist canonical transaction responses and return their public fields."""
+) -> list[TransactionObject]:
+    """Persist canonical transaction responses and preserve all their fields."""
     tags = await db.list(Tag)
     records = [
         Transaction.from_api(transaction, tags=tags) for transaction in transactions
     ]
-    stored = [await db.upsert(record) for record in records]
-    return [_transaction_info(transaction) for transaction in stored]
+    for record in records:
+        await db.upsert(record)
+    return transactions
+
+
+def _normalized_datetime(value: datetime.date | datetime.datetime) -> datetime.datetime:
+    """Convert a date or datetime to a comparable UTC timestamp."""
+    if isinstance(value, datetime.datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=datetime.UTC)
+        return value.astimezone(datetime.UTC)
+    return datetime.datetime.combine(value, datetime.time.min, tzinfo=datetime.UTC)
+
+
+def _matches_account_filter(account_id: int | None, filter_value: int | None) -> bool:
+    """Apply Lunch Money's account-ID and cash-transaction filter semantics."""
+    if filter_value is None:
+        return True
+    if filter_value == 0:
+        return account_id is None
+    return account_id == filter_value
+
+
+def _matches_persisted_transaction(
+    transaction: TransactionObject,
+    query: TransactionQuery,
+    category_ids: set[int],
+) -> bool:
+    """Apply the upstream transaction filter semantics to one cached object."""
+    if query.start_date is not None and transaction.var_date < query.start_date:
+        return False
+    if query.end_date is not None and transaction.var_date > query.end_date:
+        return False
+    if query.created_since is not None and _normalized_datetime(
+        transaction.created_at
+    ) < _normalized_datetime(query.created_since):
+        return False
+    if query.updated_since is not None and _normalized_datetime(
+        transaction.updated_at
+    ) < _normalized_datetime(query.updated_since):
+        return False
+    if not _matches_account_filter(
+        account_id=transaction.manual_account_id,
+        filter_value=query.manual_account_id,
+    ):
+        return False
+    if not _matches_account_filter(
+        account_id=transaction.plaid_account_id,
+        filter_value=query.plaid_account_id,
+    ):
+        return False
+    if (
+        query.recurring_id is not None
+        and transaction.recurring_id != query.recurring_id
+    ):
+        return False
+    if query.category_id == 0 and transaction.category_id is not None:
+        return False
+    if (
+        query.category_id not in (None, 0)
+        and transaction.category_id not in category_ids
+    ):
+        return False
+    if query.tag_id is not None and query.tag_id not in transaction.tag_ids:
+        return False
+    if (
+        query.is_group_parent is not None
+        and transaction.is_group_parent != query.is_group_parent
+    ):
+        return False
+    if query.status is not None and transaction.status != query.status:
+        return False
+    if query.is_pending is not None and transaction.is_pending != query.is_pending:
+        return False
+    if (
+        query.is_pending is None
+        and query.include_pending is not True
+        and transaction.is_pending
+    ):
+        return False
+    return not (query.include_split_parents is not True and transaction.is_split_parent)
+
+
+async def _fetch_persisted_transactions(
+    db: LunchMoneyDatabase,
+    query: TransactionQuery,
+) -> list[TransactionObject]:
+    """Return cached parent transactions after applying upstream-compatible filters."""
+    category_ids: set[int] = set()
+    category_id = query.category_id
+    if category_id is not None and category_id != 0:
+        category_ids.add(category_id)
+        categories = await db.list(Category)
+        category_ids.update(
+            category.id for category in categories if category.group_id == category_id
+        )
+
+    transactions = await db.list(Transaction)
+    matching = [
+        transaction.to_api()
+        for transaction in transactions
+        if transaction.kind == TransactionKind.PARENT
+    ]
+    return sorted(
+        (
+            transaction
+            for transaction in matching
+            if isinstance(transaction, TransactionObject)
+            and _matches_persisted_transaction(
+                transaction=transaction,
+                query=query,
+                category_ids=category_ids,
+            )
+        ),
+        key=lambda transaction: (transaction.var_date, transaction.id),
+        reverse=True,
+    )
+
+
+async def fetch_transactions(
+    client: LunchMoneyApp,
+    db: LunchMoneyDatabase,
+    query: TransactionQuery,
+    live: bool,
+) -> list[TransactionObject]:
+    """Return every matching transaction from the configured source.
+
+    Stateless servers retrieve every upstream page before responding. Persistent
+    servers apply the same filters to the synchronized cache. Both modes return
+    every match in one flat collection.
+    """
+    if live:
+        filters = query.model_dump(exclude_none=True)
+        transactions = list(
+            (
+                await client.refresh_transactions(
+                    cache=False,
+                    **filters,
+                )
+            ).values()
+        )
+    else:
+        transactions = await _fetch_persisted_transactions(db=db, query=query)
+
+    return transactions
 
 
 async def fetch_recent_transactions(
-    db: LunchMoneyDatabase, days: int = 30, limit: int = 50
-) -> list[TransactionInfo]:
-    """Fetch recent transactions from local database within specified date window.
-
-    Parameters
-    ----------
-    db : LunchMoneyDatabase
-        Database manager instance.
-    days : int
-        Number of days back from today to include. Default is 30.
-    limit : int
-        Maximum number of transactions to return. Default is 50.
-
-    Returns
-    -------
-    list[TransactionInfo]
-        Filtered list of matching transaction objects ordered by date descending.
-    """
+    db: LunchMoneyDatabase,
+    days: int = 30,
+    limit: int = 50,
+) -> list[TransactionObject]:
+    """Return a bounded recent cached list for backwards-compatible callers."""
     cutoff = datetime.date.today() - datetime.timedelta(days=days)
     async with db.session() as session:
         statement: SelectOfScalar[Transaction] = (
             select(Transaction)
             .where(Transaction.var_date >= cutoff)
+            .where(Transaction.kind == TransactionKind.PARENT)
             .order_by(col(Transaction.var_date).desc())
             .limit(limit)
         )
         results: ScalarResult[Transaction] = await session.exec(statement)
-        txns: Sequence[Transaction] = results.all()
-        return [_transaction_info(transaction) for transaction in txns]
+        return [
+            transaction
+            for transaction in (record.to_api() for record in results.all())
+            if isinstance(transaction, TransactionObject)
+        ]
 
 
 async def fetch_transaction_by_id(
     db: LunchMoneyDatabase,
     transaction_id: int,
-) -> TransactionInfo | None:
+) -> TransactionObject | ChildTransactionObject | None:
     """Fetch one synchronized transaction by identifier.
 
     Parameters
@@ -100,20 +225,20 @@ async def fetch_transaction_by_id(
 
     Returns
     -------
-    TransactionInfo | None
+    TransactionObject | ChildTransactionObject | None
         Matching transaction, or ``None`` when it has not been synchronized.
     """
     transaction = await db.get(Transaction, transaction_id)
     if transaction is None:
         return None
-    return _transaction_info(transaction)
+    return transaction.to_api()
 
 
 async def create_transactions(
     client: LunchMoneyApp,
     db: LunchMoneyDatabase,
     request: CreateNewTransactionsRequest,
-) -> list[TransactionInfo]:
+) -> list[TransactionObject]:
     """Create transactions upstream and cache every canonical response."""
     response = await client.client.transactions_bulk.create_new_transactions(
         create_new_transactions_request=request,
@@ -125,7 +250,7 @@ async def bulk_update_transactions(
     client: LunchMoneyApp,
     db: LunchMoneyDatabase,
     request: UpdateTransactionsRequest,
-) -> list[TransactionInfo]:
+) -> list[TransactionObject]:
     """Apply a bulk transaction update upstream and cache its responses."""
     response = await client.client.transactions_bulk.update_transactions(
         update_transactions_request=request,
@@ -152,7 +277,7 @@ async def update_transaction(
     transaction_id: int,
     request: UpdateTransactionObject,
     update_balance: bool | None = None,
-) -> TransactionInfo:
+) -> TransactionObject:
     """Update one transaction upstream and cache Lunch Money's response."""
     transaction = await client.client.transactions.update_transaction(
         id=transaction_id,
@@ -176,7 +301,7 @@ async def group_transactions(
     client: LunchMoneyApp,
     db: LunchMoneyDatabase,
     request: GroupTransactionsRequest,
-) -> TransactionInfo:
+) -> TransactionObject:
     """Create a transaction group upstream and cache its canonical graph."""
     transaction = await client.client.transactions_group.group_transactions(
         group_transactions_request=request,
@@ -207,7 +332,7 @@ async def split_transaction(
     db: LunchMoneyDatabase,
     transaction_id: int,
     request: SplitTransactionRequest,
-) -> TransactionInfo:
+) -> TransactionObject:
     """Split a transaction upstream and cache its canonical parent graph."""
     transaction = await client.client.transactions_split.split_transaction(
         id=transaction_id,

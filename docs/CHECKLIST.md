@@ -50,7 +50,7 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#1-user--account-summary-me-summ
 - [x] **Tags Queries**: Implement `fetch_tags`, `fetch_tag_by_id`, `GET /tags`, `GET /tags/{id}`, `list_tags`, and `get_tag` tools.
 - [x] **Recurring Items Queries**: Implement `fetch_recurring_items`, `fetch_recurring_item_by_id`, `GET /recurring_items`, `GET /recurring_items/{id}`, `list_recurring_items`, and `get_recurring_item` tools.
 - [x] **Single-ID Category Lookup**: Implement `GET /categories/{id}` and `get_category` FastMCP tool.
-- [x] **Single-ID Account Lookups**: Implement `GET /accounts/manual/{id}` (`get_manual_account`) and `GET /accounts/plaid/{id}` (`get_plaid_account`).
+- [x] **Single-ID Account Lookups**: Implement `GET /manual-accounts/{id}` (`get_manual_account`) and `GET /plaid-accounts/{id}` (`get_plaid_account`).
 - [x] **Single-ID Transaction Lookup**: Implement `GET /transactions/{id}` and `get_transaction` FastMCP tool.
 - [x] **Test Suite**: Add tests for all read-only endpoints in `tests/test_read_only.py`.
 
@@ -63,10 +63,10 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-2-category--
 - [x] **Category Creation**: Implement Upstream-First `create_category` service, `POST /categories`, and FastMCP tool.
 - [x] **Category Update**: Implement Upstream-First `update_category` service, `PUT /categories/{id}`, and FastMCP tool.
 - [x] **Category Deletion**: Implement Upstream-First `delete_category` service, `DELETE /categories/{id}`, and FastMCP tool.
-- [x] **Manual Account Creation**: Implement Upstream-First `create_manual_account` service, `POST /accounts/manual`, and FastMCP tool.
-- [x] **Manual Account Update**: Implement Upstream-First `update_manual_account` service, `PUT /accounts/manual/{id}`, and FastMCP tool.
-- [x] **Manual Account Deletion**: Implement Upstream-First `delete_manual_account` service, `DELETE /accounts/manual/{id}`, and FastMCP tool.
-- [x] **Plaid Fetch Trigger**: Implement `trigger_plaid_fetch` service, `POST /accounts/plaid/sync`, and FastMCP tool.
+- [x] **Manual Account Creation**: Implement Upstream-First `create_manual_account` service, `POST /manual-accounts`, and FastMCP tool.
+- [x] **Manual Account Update**: Implement Upstream-First `update_manual_account` service, `PUT /manual-accounts/{id}`, and FastMCP tool.
+- [x] **Manual Account Deletion**: Implement Upstream-First `delete_manual_account` service, `DELETE /manual-accounts/{id}`, and FastMCP tool.
+- [x] **Plaid Fetch Trigger**: Implement `trigger_plaid_fetch` service, `POST /plaid-accounts/sync`, and FastMCP tool.
 - [x] **Test Suite**: Add unit and integration tests in `tests/test_category_account_mutations.py`.
 
 ---
@@ -146,6 +146,10 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-9-upstream-api-compatibi
 - [x] **Spec Drift Detection**: Pin/regenerate the generated client and fail CI when endpoint, schema, or enum changes are not reconciled.
 - [x] **Coverage Manifest**: Verify every supported upstream operation has a service, REST, and MCP mapping.
 - [x] **Upstream Contract Tests**: Exercise the mock service or a disposable test budget without real financial data.
+- [x] **Response Fidelity**: Return complete generated Lunch Money resource models from cached REST and MCP endpoints; retain derived summaries only for analytics and sync operations.
+- [x] **Transaction Query Fidelity**: Make `GET /transactions` select the configured live or persisted source, apply Lunch Money filters, consume upstream pagination internally, and return every match in one flat collection.
+- [x] **Category Query Fidelity**: Make `GET /categories` select the configured live or persisted source, accept Lunch Money's hierarchy and group controls, and return a flat collection.
+- [x] **Collection Response Simplicity**: Return flat collections for direct collection endpoints; reserve the combined `/accounts` envelope for its two account sources.
 
 ### 🛡️ Sprint 10: Operational Hardening & Observability
 

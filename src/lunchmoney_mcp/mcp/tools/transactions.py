@@ -3,19 +3,22 @@
 from typing import TYPE_CHECKING
 
 from lunchmoney.models import (
+    ChildTransactionObject,
     CreateNewTransactionsRequest,
     DeleteTransactionsRequest,
     GetTransactionAttachmentUrl200Response,
     GroupTransactionsRequest,
     SplitTransactionRequest,
     TransactionAttachmentObject,
+    TransactionObject,
     UpdateTransactionObject,
     UpdateTransactionsRequest,
 )
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
+from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.mcp.app import mcp
-from lunchmoney_mcp.schemas import TransactionAttachmentUploadRequest, TransactionInfo
+from lunchmoney_mcp.schemas import TransactionAttachmentUploadRequest, TransactionQuery
 from lunchmoney_mcp.services import (
     bulk_delete_transactions as bulk_delete_transactions_service,
     bulk_update_transactions as bulk_update_transactions_service,
@@ -23,7 +26,7 @@ from lunchmoney_mcp.services import (
     delete_transaction as delete_transaction_service,
     delete_transaction_attachment as delete_transaction_attachment_service,
     fetch_attachment_by_id,
-    fetch_recent_transactions,
+    fetch_transactions,
     fetch_transaction_by_id,
     group_transactions as group_transactions_service,
     split_transaction as split_transaction_service,
@@ -38,17 +41,24 @@ if TYPE_CHECKING:
 
 
 @mcp.tool()
-async def get_recent_transactions(
-    days: int = 30,
-    limit: int = 50,
-) -> list[TransactionInfo]:
-    """Fetch recent transactions from the local database."""
+async def list_transactions(
+    query: TransactionQuery | None = None,
+) -> list[TransactionObject]:
+    """List filtered transactions from the configured live or persisted source."""
+    client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
-    return await fetch_recent_transactions(db=db, days=days, limit=limit)
+    return await fetch_transactions(
+        client=client,
+        db=db,
+        query=query or TransactionQuery(),
+        live=get_settings().stateless,
+    )
 
 
 @mcp.tool()
-async def get_transaction(transaction_id: int) -> TransactionInfo | None:
+async def get_transaction(
+    transaction_id: int,
+) -> TransactionObject | ChildTransactionObject | None:
     """Fetch one synchronized transaction from the local database."""
     db: LunchMoneyDatabase = get_database()
     return await fetch_transaction_by_id(db=db, transaction_id=transaction_id)
@@ -57,7 +67,7 @@ async def get_transaction(transaction_id: int) -> TransactionInfo | None:
 @mcp.tool()
 async def create_transactions(
     request: CreateNewTransactionsRequest,
-) -> list[TransactionInfo]:
+) -> list[TransactionObject]:
     """Create transactions upstream and cache their canonical responses."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
@@ -67,7 +77,7 @@ async def create_transactions(
 @mcp.tool()
 async def bulk_update_transactions(
     request: UpdateTransactionsRequest,
-) -> list[TransactionInfo]:
+) -> list[TransactionObject]:
     """Apply an upstream bulk transaction update and refresh local records."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
@@ -87,7 +97,7 @@ async def update_transaction(
     transaction_id: int,
     request: UpdateTransactionObject,
     update_balance: bool | None = None,
-) -> TransactionInfo:
+) -> TransactionObject:
     """Update one transaction upstream and cache Lunch Money's response."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
@@ -111,7 +121,7 @@ async def delete_transaction(transaction_id: int) -> None:
 
 
 @mcp.tool()
-async def group_transactions(request: GroupTransactionsRequest) -> TransactionInfo:
+async def group_transactions(request: GroupTransactionsRequest) -> TransactionObject:
     """Create a transaction group upstream and cache its returned graph."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
@@ -134,7 +144,7 @@ async def ungroup_transactions(transaction_id: int) -> None:
 async def split_transaction(
     transaction_id: int,
     request: SplitTransactionRequest,
-) -> TransactionInfo:
+) -> TransactionObject:
     """Split a transaction upstream and cache the returned parent graph."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
@@ -197,7 +207,7 @@ __all__ = [
     "delete_attachment",
     "delete_transaction",
     "get_attachment",
-    "get_recent_transactions",
+    "list_transactions",
     "get_transaction",
     "group_transactions",
     "split_transaction",

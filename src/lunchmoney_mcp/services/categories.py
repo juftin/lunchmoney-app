@@ -2,50 +2,124 @@
 
 from lunchmoney.models import (
     CategoryObject,
+    ChildCategoryObject,
     CreateCategoryRequestObject,
     UpdateCategoryRequestObject,
 )
 
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.database.models import Category, Transaction
-from lunchmoney_mcp.schemas import CategoryInfo
+from lunchmoney_mcp.database.models import Category, CategoryKind, Transaction
+from lunchmoney_mcp.schemas import CategoryQuery
 
 
-def _category_info(category: Category) -> CategoryInfo:
-    """Convert one persisted category into the public response schema."""
-    return CategoryInfo(
-        id=category.id,
-        name=category.name,
-        is_income=category.is_income,
-        exclude_from_budget=category.exclude_from_budget,
-        exclude_from_totals=category.exclude_from_totals,
-        is_group=category.is_group,
-        group_id=category.group_id,
-    )
-
-
-async def fetch_categories(db: LunchMoneyDatabase) -> list[CategoryInfo]:
-    """Fetch all budget categories and subcategories from database.
+async def fetch_categories(
+    client: LunchMoneyApp,
+    db: LunchMoneyDatabase,
+    query: CategoryQuery,
+    live: bool,
+) -> list[CategoryObject]:
+    """Return categories in the configured live or persisted representation.
 
     Parameters
     ----------
+    client
+        Configured Lunch Money API client for stateless requests.
     db : LunchMoneyDatabase
         Database manager instance.
+    query
+        Upstream-compatible category collection controls.
+    live
+        Whether the server should read the current upstream response.
 
     Returns
     -------
-    list[CategoryInfo]
-        List of all budget category objects in database.
+    list[CategoryObject]
+        Category objects in the requested hierarchy representation.
     """
+    if live:
+        response = await client.client.categories.get_all_categories(
+            **query.model_dump(exclude_none=True)
+        )
+        return response.categories or []
+
     categories = await db.list(Category)
-    return [_category_info(category) for category in categories]
+    return _filter_persisted_categories(categories=categories, query=query)
+
+
+def _category_sort_key(category: Category) -> tuple[bool, int, str]:
+    """Order cached categories like Lunch Money's collection response."""
+    return (
+        category.order is None,
+        category.order if category.order is not None else 0,
+        category.name.casefold(),
+    )
+
+
+def _as_flat_category(category: Category) -> CategoryObject:
+    """Convert a cached parent or child row into a flat upstream category object."""
+    category_object = category.to_api()
+    return CategoryObject.model_validate(
+        {
+            **category_object.model_dump(mode="python"),
+            "children": None,
+        }
+    )
+
+
+def _as_nested_category(category: Category) -> CategoryObject:
+    """Convert a cached top-level row into an upstream category object."""
+    return CategoryObject.model_validate(category.to_api().model_dump(mode="python"))
+
+
+def _filter_persisted_categories(
+    categories: list[Category],
+    query: CategoryQuery,
+) -> list[CategoryObject]:
+    """Apply Lunch Money category collection controls to cached category records."""
+    if query.is_group is True:
+        matching = [
+            category
+            for category in categories
+            if category.kind == CategoryKind.PARENT and category.is_group
+        ]
+        return [
+            _as_nested_category(category)
+            for category in sorted(matching, key=_category_sort_key)
+        ]
+
+    if query.is_group is False:
+        matching = [
+            category
+            for category in categories
+            if category.kind == CategoryKind.PARENT
+            and not category.is_group
+            and category.group_id is None
+        ]
+        return [
+            _as_nested_category(category)
+            for category in sorted(matching, key=_category_sort_key)
+        ]
+
+    if query.format == "flattened":
+        return [
+            _as_flat_category(category)
+            for category in sorted(categories, key=_category_sort_key)
+        ]
+
+    matching = [
+        category for category in categories if category.kind == CategoryKind.PARENT
+    ]
+    return [
+        _as_nested_category(category)
+        for category in sorted(matching, key=_category_sort_key)
+    ]
 
 
 async def fetch_category_by_id(
     db: LunchMoneyDatabase,
     category_id: int,
-) -> CategoryInfo | None:
+) -> CategoryObject | ChildCategoryObject | None:
     """Fetch one synchronized budget category by identifier.
 
     Parameters
@@ -57,29 +131,29 @@ async def fetch_category_by_id(
 
     Returns
     -------
-    CategoryInfo | None
+    CategoryObject | ChildCategoryObject | None
         Matching category, or ``None`` when it has not been synchronized.
     """
     category = await db.get(Category, category_id)
     if category is None:
         return None
-    return _category_info(category)
+    return category.to_api()
 
 
 async def _store_category(
     db: LunchMoneyDatabase,
     category: CategoryObject,
-) -> CategoryInfo:
-    """Persist an upstream category response and expose its public fields."""
-    stored = await db.upsert(Category.from_api(category))
-    return _category_info(stored)
+) -> CategoryObject:
+    """Persist an upstream category response and preserve all its fields."""
+    await db.upsert(Category.from_api(category))
+    return category
 
 
 async def create_category(
     client: LunchMoneyApp,
     db: LunchMoneyDatabase,
     request: CreateCategoryRequestObject,
-) -> CategoryInfo:
+) -> CategoryObject:
     """Create a category upstream before saving its canonical response locally.
 
     Parameters
@@ -93,7 +167,7 @@ async def create_category(
 
     Returns
     -------
-    CategoryInfo
+    CategoryObject
         Created category after its local cache has been updated.
     """
     category = await client.client.categories.create_category(
@@ -107,7 +181,7 @@ async def update_category(
     db: LunchMoneyDatabase,
     category_id: int,
     request: UpdateCategoryRequestObject,
-) -> CategoryInfo:
+) -> CategoryObject:
     """Update a category upstream before saving its canonical response locally.
 
     Parameters
@@ -123,7 +197,7 @@ async def update_category(
 
     Returns
     -------
-    CategoryInfo
+    CategoryObject
         Updated category after its local cache has been updated.
     """
     category = await client.client.categories.update_category(

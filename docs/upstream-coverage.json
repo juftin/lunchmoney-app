@@ -1,587 +1,595 @@
 {
-  "manifest_version": 1,
-  "upstream": {
-    "client_package": "lunchmoney-python-async",
-    "client_version": "2.25.0",
-    "openapi_spec_version": "2.9.4"
-  },
-  "operations": [
-    {
-      "id": "get_me",
-      "upstream": { "method": "GET", "path": "/me", "client": "me.get_me" },
-      "service": "lunchmoney_mcp.services.user:fetch_user_info",
-      "rest": {
-        "method": "GET",
-        "path": "/user",
-        "operation_id": "get_user_info"
-      },
-      "mcp": "get_user_info"
+    "manifest_version": 1,
+    "upstream": {
+        "client_package": "lunchmoney-python-async",
+        "client_version": "2.25.0",
+        "openapi_spec_version": "2.9.4"
     },
-    {
-      "id": "get_budget_summary",
-      "upstream": {
-        "method": "GET",
-        "path": "/summary",
-        "client": "summary.get_budget_summary"
-      },
-      "service": "lunchmoney_mcp.services.summary:fetch_account_summary",
-      "rest": {
-        "method": "GET",
-        "path": "/summary",
-        "operation_id": "get_account_summary"
-      },
-      "mcp": "get_account_summary"
-    },
-    {
-      "id": "get_all_categories",
-      "upstream": {
-        "method": "GET",
-        "path": "/categories",
-        "client": "categories.get_all_categories"
-      },
-      "service": "lunchmoney_mcp.services.categories:fetch_categories",
-      "rest": {
-        "method": "GET",
-        "path": "/categories",
-        "operation_id": "list_categories"
-      },
-      "mcp": "list_categories"
-    },
-    {
-      "id": "create_category",
-      "upstream": {
-        "method": "POST",
-        "path": "/categories",
-        "client": "categories.create_category"
-      },
-      "service": "lunchmoney_mcp.services.categories:create_category",
-      "rest": {
-        "method": "POST",
-        "path": "/categories",
-        "operation_id": "create_category"
-      },
-      "mcp": "create_category"
-    },
-    {
-      "id": "get_category",
-      "upstream": {
-        "method": "GET",
-        "path": "/categories/{id}",
-        "client": "categories.get_category_by_id"
-      },
-      "service": "lunchmoney_mcp.services.categories:fetch_category_by_id",
-      "rest": {
-        "method": "GET",
-        "path": "/categories/{category_id}",
-        "operation_id": "get_category"
-      },
-      "mcp": "get_category"
-    },
-    {
-      "id": "update_category",
-      "upstream": {
-        "method": "PUT",
-        "path": "/categories/{id}",
-        "client": "categories.update_category"
-      },
-      "service": "lunchmoney_mcp.services.categories:update_category",
-      "rest": {
-        "method": "PUT",
-        "path": "/categories/{category_id}",
-        "operation_id": "update_category"
-      },
-      "mcp": "update_category"
-    },
-    {
-      "id": "delete_category",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/categories/{id}",
-        "client": "categories.delete_category"
-      },
-      "service": "lunchmoney_mcp.services.categories:delete_category",
-      "rest": {
-        "method": "DELETE",
-        "path": "/categories/{category_id}",
-        "operation_id": "delete_category"
-      },
-      "mcp": "delete_category"
-    },
-    {
-      "id": "get_all_manual_accounts",
-      "upstream": {
-        "method": "GET",
-        "path": "/manual_accounts",
-        "client": "manual_accounts.get_all_manual_accounts"
-      },
-      "service": "lunchmoney_mcp.services.accounts:fetch_accounts",
-      "rest": {
-        "method": "GET",
-        "path": "/accounts",
-        "operation_id": "list_accounts"
-      },
-      "mcp": "list_accounts"
-    },
-    {
-      "id": "create_manual_account",
-      "upstream": {
-        "method": "POST",
-        "path": "/manual_accounts",
-        "client": "manual_accounts.create_manual_account"
-      },
-      "service": "lunchmoney_mcp.services.accounts:create_manual_account",
-      "rest": {
-        "method": "POST",
-        "path": "/accounts/manual",
-        "operation_id": "create_manual_account"
-      },
-      "mcp": "create_manual_account"
-    },
-    {
-      "id": "get_manual_account",
-      "upstream": {
-        "method": "GET",
-        "path": "/manual_accounts/{id}",
-        "client": "manual_accounts.get_manual_account_by_id"
-      },
-      "service": "lunchmoney_mcp.services.accounts:fetch_manual_account_by_id",
-      "rest": {
-        "method": "GET",
-        "path": "/accounts/manual/{account_id}",
-        "operation_id": "get_manual_account"
-      },
-      "mcp": "get_manual_account"
-    },
-    {
-      "id": "update_manual_account",
-      "upstream": {
-        "method": "PUT",
-        "path": "/manual_accounts/{id}",
-        "client": "manual_accounts.update_manual_account"
-      },
-      "service": "lunchmoney_mcp.services.accounts:update_manual_account",
-      "rest": {
-        "method": "PUT",
-        "path": "/accounts/manual/{account_id}",
-        "operation_id": "update_manual_account"
-      },
-      "mcp": "update_manual_account"
-    },
-    {
-      "id": "delete_manual_account",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/manual_accounts/{id}",
-        "client": "manual_accounts.delete_manual_account"
-      },
-      "service": "lunchmoney_mcp.services.accounts:delete_manual_account",
-      "rest": {
-        "method": "DELETE",
-        "path": "/accounts/manual/{account_id}",
-        "operation_id": "delete_manual_account"
-      },
-      "mcp": "delete_manual_account"
-    },
-    {
-      "id": "get_all_plaid_accounts",
-      "upstream": {
-        "method": "GET",
-        "path": "/plaid_accounts",
-        "client": "plaid.get_all_plaid_accounts"
-      },
-      "service": "lunchmoney_mcp.services.accounts:fetch_accounts",
-      "rest": {
-        "method": "GET",
-        "path": "/accounts",
-        "operation_id": "list_accounts"
-      },
-      "mcp": "list_accounts"
-    },
-    {
-      "id": "get_plaid_account",
-      "upstream": {
-        "method": "GET",
-        "path": "/plaid_accounts/{id}",
-        "client": "plaid.get_plaid_account_by_id"
-      },
-      "service": "lunchmoney_mcp.services.accounts:fetch_plaid_account_by_id",
-      "rest": {
-        "method": "GET",
-        "path": "/accounts/plaid/{account_id}",
-        "operation_id": "get_plaid_account"
-      },
-      "mcp": "get_plaid_account"
-    },
-    {
-      "id": "trigger_plaid_account_fetch",
-      "upstream": {
-        "method": "POST",
-        "path": "/plaid_accounts/fetch",
-        "client": "plaid.trigger_plaid_account_fetch"
-      },
-      "service": "lunchmoney_mcp.services.accounts:trigger_plaid_fetch",
-      "rest": {
-        "method": "POST",
-        "path": "/accounts/plaid/sync",
-        "operation_id": "trigger_plaid_fetch"
-      },
-      "mcp": "trigger_plaid_fetch"
-    },
-    {
-      "id": "get_all_transactions",
-      "upstream": {
-        "method": "GET",
-        "path": "/transactions",
-        "client": "transactions_bulk.get_all_transactions"
-      },
-      "service": "lunchmoney_mcp.services.transactions:fetch_recent_transactions",
-      "rest": {
-        "method": "GET",
-        "path": "/transactions",
-        "operation_id": "get_recent_transactions"
-      },
-      "mcp": "get_recent_transactions"
-    },
-    {
-      "id": "create_transactions",
-      "upstream": {
-        "method": "POST",
-        "path": "/transactions",
-        "client": "transactions_bulk.create_new_transactions"
-      },
-      "service": "lunchmoney_mcp.services.transactions:create_transactions",
-      "rest": {
-        "method": "POST",
-        "path": "/transactions",
-        "operation_id": "create_transactions"
-      },
-      "mcp": "create_transactions"
-    },
-    {
-      "id": "bulk_update_transactions",
-      "upstream": {
-        "method": "PUT",
-        "path": "/transactions",
-        "client": "transactions_bulk.update_transactions"
-      },
-      "service": "lunchmoney_mcp.services.transactions:bulk_update_transactions",
-      "rest": {
-        "method": "PUT",
-        "path": "/transactions",
-        "operation_id": "bulk_update_transactions"
-      },
-      "mcp": "bulk_update_transactions"
-    },
-    {
-      "id": "bulk_delete_transactions",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/transactions",
-        "client": "transactions_bulk.delete_transactions"
-      },
-      "service": "lunchmoney_mcp.services.transactions:bulk_delete_transactions",
-      "rest": {
-        "method": "DELETE",
-        "path": "/transactions",
-        "operation_id": "bulk_delete_transactions"
-      },
-      "mcp": "bulk_delete_transactions"
-    },
-    {
-      "id": "get_transaction",
-      "upstream": {
-        "method": "GET",
-        "path": "/transactions/{id}",
-        "client": "transactions.get_transaction_by_id"
-      },
-      "service": "lunchmoney_mcp.services.transactions:fetch_transaction_by_id",
-      "rest": {
-        "method": "GET",
-        "path": "/transactions/{transaction_id}",
-        "operation_id": "get_transaction"
-      },
-      "mcp": "get_transaction"
-    },
-    {
-      "id": "update_transaction",
-      "upstream": {
-        "method": "PUT",
-        "path": "/transactions/{id}",
-        "client": "transactions.update_transaction"
-      },
-      "service": "lunchmoney_mcp.services.transactions:update_transaction",
-      "rest": {
-        "method": "PUT",
-        "path": "/transactions/{transaction_id}",
-        "operation_id": "update_transaction"
-      },
-      "mcp": "update_transaction"
-    },
-    {
-      "id": "delete_transaction",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/transactions/{id}",
-        "client": "transactions.delete_transaction_by_id"
-      },
-      "service": "lunchmoney_mcp.services.transactions:delete_transaction",
-      "rest": {
-        "method": "DELETE",
-        "path": "/transactions/{transaction_id}",
-        "operation_id": "delete_transaction"
-      },
-      "mcp": "delete_transaction"
-    },
-    {
-      "id": "group_transactions",
-      "upstream": {
-        "method": "POST",
-        "path": "/transactions/group",
-        "client": "transactions_group.group_transactions"
-      },
-      "service": "lunchmoney_mcp.services.transactions:group_transactions",
-      "rest": {
-        "method": "POST",
-        "path": "/transactions/group",
-        "operation_id": "group_transactions"
-      },
-      "mcp": "group_transactions"
-    },
-    {
-      "id": "ungroup_transactions",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/transactions/group/{id}",
-        "client": "transactions_group.ungroup_transactions"
-      },
-      "service": "lunchmoney_mcp.services.transactions:ungroup_transactions",
-      "rest": {
-        "method": "DELETE",
-        "path": "/transactions/group/{transaction_id}",
-        "operation_id": "ungroup_transactions"
-      },
-      "mcp": "ungroup_transactions"
-    },
-    {
-      "id": "split_transaction",
-      "upstream": {
-        "method": "POST",
-        "path": "/transactions/split/{id}",
-        "client": "transactions_split.split_transaction"
-      },
-      "service": "lunchmoney_mcp.services.transactions:split_transaction",
-      "rest": {
-        "method": "POST",
-        "path": "/transactions/split/{transaction_id}",
-        "operation_id": "split_transaction"
-      },
-      "mcp": "split_transaction"
-    },
-    {
-      "id": "unsplit_transaction",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/transactions/split/{id}",
-        "client": "transactions_split.unsplit_transaction"
-      },
-      "service": "lunchmoney_mcp.services.transactions:unsplit_transaction",
-      "rest": {
-        "method": "DELETE",
-        "path": "/transactions/split/{transaction_id}",
-        "operation_id": "unsplit_transaction"
-      },
-      "mcp": "unsplit_transaction"
-    },
-    {
-      "id": "attach_file_to_transaction",
-      "upstream": {
-        "method": "POST",
-        "path": "/transactions/{transaction_id}/attachments",
-        "client": "transactions_files.attach_file_to_transaction"
-      },
-      "service": "lunchmoney_mcp.services.transactions:upload_transaction_attachment",
-      "rest": {
-        "method": "POST",
-        "path": "/transactions/{transaction_id}/attachments",
-        "operation_id": "upload_attachment"
-      },
-      "mcp": "upload_attachment"
-    },
-    {
-      "id": "get_transaction_attachment_url",
-      "upstream": {
-        "method": "GET",
-        "path": "/transactions/attachments/{file_id}",
-        "client": "transactions_files.get_transaction_attachment_url"
-      },
-      "service": "lunchmoney_mcp.services.transactions:fetch_attachment_by_id",
-      "rest": {
-        "method": "GET",
-        "path": "/transactions/attachments/{file_id}",
-        "operation_id": "get_attachment"
-      },
-      "mcp": "get_attachment"
-    },
-    {
-      "id": "delete_transaction_attachment",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/transactions/attachments/{file_id}",
-        "client": "transactions_files.delete_transaction_attachment"
-      },
-      "service": "lunchmoney_mcp.services.transactions:delete_transaction_attachment",
-      "rest": {
-        "method": "DELETE",
-        "path": "/transactions/attachments/{file_id}",
-        "operation_id": "delete_attachment"
-      },
-      "mcp": "delete_attachment"
-    },
-    {
-      "id": "get_all_tags",
-      "upstream": {
-        "method": "GET",
-        "path": "/tags",
-        "client": "tags.get_all_tags"
-      },
-      "service": "lunchmoney_mcp.services.tags:fetch_tags",
-      "rest": { "method": "GET", "path": "/tags", "operation_id": "list_tags" },
-      "mcp": "list_tags"
-    },
-    {
-      "id": "create_tag",
-      "upstream": {
-        "method": "POST",
-        "path": "/tags",
-        "client": "tags.create_tag"
-      },
-      "service": "lunchmoney_mcp.services.tags:create_tag",
-      "rest": {
-        "method": "POST",
-        "path": "/tags",
-        "operation_id": "create_tag"
-      },
-      "mcp": "create_tag"
-    },
-    {
-      "id": "get_tag",
-      "upstream": {
-        "method": "GET",
-        "path": "/tags/{id}",
-        "client": "tags.get_tag_by_id"
-      },
-      "service": "lunchmoney_mcp.services.tags:fetch_tag_by_id",
-      "rest": {
-        "method": "GET",
-        "path": "/tags/{tag_id}",
-        "operation_id": "get_tag"
-      },
-      "mcp": "get_tag"
-    },
-    {
-      "id": "update_tag",
-      "upstream": {
-        "method": "PUT",
-        "path": "/tags/{id}",
-        "client": "tags.update_tag"
-      },
-      "service": "lunchmoney_mcp.services.tags:update_tag",
-      "rest": {
-        "method": "PUT",
-        "path": "/tags/{tag_id}",
-        "operation_id": "update_tag"
-      },
-      "mcp": "update_tag"
-    },
-    {
-      "id": "delete_tag",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/tags/{id}",
-        "client": "tags.delete_tag"
-      },
-      "service": "lunchmoney_mcp.services.tags:delete_tag",
-      "rest": {
-        "method": "DELETE",
-        "path": "/tags/{tag_id}",
-        "operation_id": "delete_tag"
-      },
-      "mcp": "delete_tag"
-    },
-    {
-      "id": "get_all_recurring",
-      "upstream": {
-        "method": "GET",
-        "path": "/recurring_items",
-        "client": "recurring_items.get_all_recurring"
-      },
-      "service": "lunchmoney_mcp.services.recurring:fetch_recurring_items",
-      "rest": {
-        "method": "GET",
-        "path": "/recurring_items",
-        "operation_id": "list_recurring_items"
-      },
-      "mcp": "list_recurring_items"
-    },
-    {
-      "id": "get_recurring_by_id",
-      "upstream": {
-        "method": "GET",
-        "path": "/recurring_items/{id}",
-        "client": "recurring_items.get_recurring_by_id"
-      },
-      "service": "lunchmoney_mcp.services.recurring:fetch_recurring_item_by_id",
-      "rest": {
-        "method": "GET",
-        "path": "/recurring_items/{recurring_item_id}",
-        "operation_id": "get_recurring_item"
-      },
-      "mcp": "get_recurring_item"
-    },
-    {
-      "id": "get_budget_settings",
-      "upstream": {
-        "method": "GET",
-        "path": "/budgets/settings",
-        "client": "budgets.get_budget_settings"
-      },
-      "service": "lunchmoney_mcp.services.budgets:fetch_budget_settings",
-      "rest": {
-        "method": "GET",
-        "path": "/budgets/settings",
-        "operation_id": "get_budget_settings"
-      },
-      "mcp": "get_budget_settings"
-    },
-    {
-      "id": "upsert_budget",
-      "upstream": {
-        "method": "PUT",
-        "path": "/budgets",
-        "client": "budgets.upsert_budget"
-      },
-      "service": "lunchmoney_mcp.services.budgets:set_budget_value",
-      "rest": {
-        "method": "PUT",
-        "path": "/budgets",
-        "operation_id": "upsert_budget"
-      },
-      "mcp": "upsert_budget"
-    },
-    {
-      "id": "delete_budget",
-      "upstream": {
-        "method": "DELETE",
-        "path": "/budgets",
-        "client": "budgets.delete_budget"
-      },
-      "service": "lunchmoney_mcp.services.budgets:clear_budget_value",
-      "rest": {
-        "method": "DELETE",
-        "path": "/budgets",
-        "operation_id": "clear_budget"
-      },
-      "mcp": "clear_budget"
-    }
-  ]
+    "operations": [
+        {
+            "id": "get_me",
+            "upstream": {
+                "method": "GET",
+                "path": "/me",
+                "client": "me.get_me"
+            },
+            "service": "lunchmoney_mcp.services.user:fetch_user_info",
+            "rest": {
+                "method": "GET",
+                "path": "/user",
+                "operation_id": "get_user_info"
+            },
+            "mcp": "get_user_info"
+        },
+        {
+            "id": "get_budget_summary",
+            "upstream": {
+                "method": "GET",
+                "path": "/summary",
+                "client": "summary.get_budget_summary"
+            },
+            "service": "lunchmoney_mcp.services.summary:fetch_account_summary",
+            "rest": {
+                "method": "GET",
+                "path": "/summary",
+                "operation_id": "get_account_summary"
+            },
+            "mcp": "get_account_summary"
+        },
+        {
+            "id": "get_all_categories",
+            "upstream": {
+                "method": "GET",
+                "path": "/categories",
+                "client": "categories.get_all_categories"
+            },
+            "service": "lunchmoney_mcp.services.categories:fetch_categories",
+            "rest": {
+                "method": "GET",
+                "path": "/categories",
+                "operation_id": "list_categories"
+            },
+            "mcp": "list_categories"
+        },
+        {
+            "id": "create_category",
+            "upstream": {
+                "method": "POST",
+                "path": "/categories",
+                "client": "categories.create_category"
+            },
+            "service": "lunchmoney_mcp.services.categories:create_category",
+            "rest": {
+                "method": "POST",
+                "path": "/categories",
+                "operation_id": "create_category"
+            },
+            "mcp": "create_category"
+        },
+        {
+            "id": "get_category",
+            "upstream": {
+                "method": "GET",
+                "path": "/categories/{id}",
+                "client": "categories.get_category_by_id"
+            },
+            "service": "lunchmoney_mcp.services.categories:fetch_category_by_id",
+            "rest": {
+                "method": "GET",
+                "path": "/categories/{category_id}",
+                "operation_id": "get_category"
+            },
+            "mcp": "get_category"
+        },
+        {
+            "id": "update_category",
+            "upstream": {
+                "method": "PUT",
+                "path": "/categories/{id}",
+                "client": "categories.update_category"
+            },
+            "service": "lunchmoney_mcp.services.categories:update_category",
+            "rest": {
+                "method": "PUT",
+                "path": "/categories/{category_id}",
+                "operation_id": "update_category"
+            },
+            "mcp": "update_category"
+        },
+        {
+            "id": "delete_category",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/categories/{id}",
+                "client": "categories.delete_category"
+            },
+            "service": "lunchmoney_mcp.services.categories:delete_category",
+            "rest": {
+                "method": "DELETE",
+                "path": "/categories/{category_id}",
+                "operation_id": "delete_category"
+            },
+            "mcp": "delete_category"
+        },
+        {
+            "id": "get_all_manual_accounts",
+            "upstream": {
+                "method": "GET",
+                "path": "/manual_accounts",
+                "client": "manual_accounts.get_all_manual_accounts"
+            },
+            "service": "lunchmoney_mcp.services.accounts:fetch_manual_accounts",
+            "rest": {
+                "method": "GET",
+                "path": "/manual-accounts",
+                "operation_id": "list_manual_accounts"
+            },
+            "mcp": "list_manual_accounts"
+        },
+        {
+            "id": "create_manual_account",
+            "upstream": {
+                "method": "POST",
+                "path": "/manual_accounts",
+                "client": "manual_accounts.create_manual_account"
+            },
+            "service": "lunchmoney_mcp.services.accounts:create_manual_account",
+            "rest": {
+                "method": "POST",
+                "path": "/manual-accounts",
+                "operation_id": "create_manual_account"
+            },
+            "mcp": "create_manual_account"
+        },
+        {
+            "id": "get_manual_account",
+            "upstream": {
+                "method": "GET",
+                "path": "/manual_accounts/{id}",
+                "client": "manual_accounts.get_manual_account_by_id"
+            },
+            "service": "lunchmoney_mcp.services.accounts:fetch_manual_account_by_id",
+            "rest": {
+                "method": "GET",
+                "path": "/manual-accounts/{account_id}",
+                "operation_id": "get_manual_account"
+            },
+            "mcp": "get_manual_account"
+        },
+        {
+            "id": "update_manual_account",
+            "upstream": {
+                "method": "PUT",
+                "path": "/manual_accounts/{id}",
+                "client": "manual_accounts.update_manual_account"
+            },
+            "service": "lunchmoney_mcp.services.accounts:update_manual_account",
+            "rest": {
+                "method": "PUT",
+                "path": "/manual-accounts/{account_id}",
+                "operation_id": "update_manual_account"
+            },
+            "mcp": "update_manual_account"
+        },
+        {
+            "id": "delete_manual_account",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/manual_accounts/{id}",
+                "client": "manual_accounts.delete_manual_account"
+            },
+            "service": "lunchmoney_mcp.services.accounts:delete_manual_account",
+            "rest": {
+                "method": "DELETE",
+                "path": "/manual-accounts/{account_id}",
+                "operation_id": "delete_manual_account"
+            },
+            "mcp": "delete_manual_account"
+        },
+        {
+            "id": "get_all_plaid_accounts",
+            "upstream": {
+                "method": "GET",
+                "path": "/plaid_accounts",
+                "client": "plaid.get_all_plaid_accounts"
+            },
+            "service": "lunchmoney_mcp.services.accounts:fetch_plaid_accounts",
+            "rest": {
+                "method": "GET",
+                "path": "/plaid-accounts",
+                "operation_id": "list_plaid_accounts"
+            },
+            "mcp": "list_plaid_accounts"
+        },
+        {
+            "id": "get_plaid_account",
+            "upstream": {
+                "method": "GET",
+                "path": "/plaid_accounts/{id}",
+                "client": "plaid.get_plaid_account_by_id"
+            },
+            "service": "lunchmoney_mcp.services.accounts:fetch_plaid_account_by_id",
+            "rest": {
+                "method": "GET",
+                "path": "/plaid-accounts/{account_id}",
+                "operation_id": "get_plaid_account"
+            },
+            "mcp": "get_plaid_account"
+        },
+        {
+            "id": "trigger_plaid_account_fetch",
+            "upstream": {
+                "method": "POST",
+                "path": "/plaid_accounts/fetch",
+                "client": "plaid.trigger_plaid_account_fetch"
+            },
+            "service": "lunchmoney_mcp.services.accounts:trigger_plaid_fetch",
+            "rest": {
+                "method": "POST",
+                "path": "/plaid-accounts/sync",
+                "operation_id": "trigger_plaid_fetch"
+            },
+            "mcp": "trigger_plaid_fetch"
+        },
+        {
+            "id": "get_all_transactions",
+            "upstream": {
+                "method": "GET",
+                "path": "/transactions",
+                "client": "transactions_bulk.get_all_transactions"
+            },
+            "service": "lunchmoney_mcp.services.transactions:fetch_transactions",
+            "rest": {
+                "method": "GET",
+                "path": "/transactions",
+                "operation_id": "list_transactions"
+            },
+            "mcp": "list_transactions"
+        },
+        {
+            "id": "create_transactions",
+            "upstream": {
+                "method": "POST",
+                "path": "/transactions",
+                "client": "transactions_bulk.create_new_transactions"
+            },
+            "service": "lunchmoney_mcp.services.transactions:create_transactions",
+            "rest": {
+                "method": "POST",
+                "path": "/transactions",
+                "operation_id": "create_transactions"
+            },
+            "mcp": "create_transactions"
+        },
+        {
+            "id": "bulk_update_transactions",
+            "upstream": {
+                "method": "PUT",
+                "path": "/transactions",
+                "client": "transactions_bulk.update_transactions"
+            },
+            "service": "lunchmoney_mcp.services.transactions:bulk_update_transactions",
+            "rest": {
+                "method": "PUT",
+                "path": "/transactions",
+                "operation_id": "bulk_update_transactions"
+            },
+            "mcp": "bulk_update_transactions"
+        },
+        {
+            "id": "bulk_delete_transactions",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/transactions",
+                "client": "transactions_bulk.delete_transactions"
+            },
+            "service": "lunchmoney_mcp.services.transactions:bulk_delete_transactions",
+            "rest": {
+                "method": "DELETE",
+                "path": "/transactions",
+                "operation_id": "bulk_delete_transactions"
+            },
+            "mcp": "bulk_delete_transactions"
+        },
+        {
+            "id": "get_transaction",
+            "upstream": {
+                "method": "GET",
+                "path": "/transactions/{id}",
+                "client": "transactions.get_transaction_by_id"
+            },
+            "service": "lunchmoney_mcp.services.transactions:fetch_transaction_by_id",
+            "rest": {
+                "method": "GET",
+                "path": "/transactions/{transaction_id}",
+                "operation_id": "get_transaction"
+            },
+            "mcp": "get_transaction"
+        },
+        {
+            "id": "update_transaction",
+            "upstream": {
+                "method": "PUT",
+                "path": "/transactions/{id}",
+                "client": "transactions.update_transaction"
+            },
+            "service": "lunchmoney_mcp.services.transactions:update_transaction",
+            "rest": {
+                "method": "PUT",
+                "path": "/transactions/{transaction_id}",
+                "operation_id": "update_transaction"
+            },
+            "mcp": "update_transaction"
+        },
+        {
+            "id": "delete_transaction",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/transactions/{id}",
+                "client": "transactions.delete_transaction_by_id"
+            },
+            "service": "lunchmoney_mcp.services.transactions:delete_transaction",
+            "rest": {
+                "method": "DELETE",
+                "path": "/transactions/{transaction_id}",
+                "operation_id": "delete_transaction"
+            },
+            "mcp": "delete_transaction"
+        },
+        {
+            "id": "group_transactions",
+            "upstream": {
+                "method": "POST",
+                "path": "/transactions/group",
+                "client": "transactions_group.group_transactions"
+            },
+            "service": "lunchmoney_mcp.services.transactions:group_transactions",
+            "rest": {
+                "method": "POST",
+                "path": "/transactions/group",
+                "operation_id": "group_transactions"
+            },
+            "mcp": "group_transactions"
+        },
+        {
+            "id": "ungroup_transactions",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/transactions/group/{id}",
+                "client": "transactions_group.ungroup_transactions"
+            },
+            "service": "lunchmoney_mcp.services.transactions:ungroup_transactions",
+            "rest": {
+                "method": "DELETE",
+                "path": "/transactions/group/{transaction_id}",
+                "operation_id": "ungroup_transactions"
+            },
+            "mcp": "ungroup_transactions"
+        },
+        {
+            "id": "split_transaction",
+            "upstream": {
+                "method": "POST",
+                "path": "/transactions/split/{id}",
+                "client": "transactions_split.split_transaction"
+            },
+            "service": "lunchmoney_mcp.services.transactions:split_transaction",
+            "rest": {
+                "method": "POST",
+                "path": "/transactions/split/{transaction_id}",
+                "operation_id": "split_transaction"
+            },
+            "mcp": "split_transaction"
+        },
+        {
+            "id": "unsplit_transaction",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/transactions/split/{id}",
+                "client": "transactions_split.unsplit_transaction"
+            },
+            "service": "lunchmoney_mcp.services.transactions:unsplit_transaction",
+            "rest": {
+                "method": "DELETE",
+                "path": "/transactions/split/{transaction_id}",
+                "operation_id": "unsplit_transaction"
+            },
+            "mcp": "unsplit_transaction"
+        },
+        {
+            "id": "attach_file_to_transaction",
+            "upstream": {
+                "method": "POST",
+                "path": "/transactions/{transaction_id}/attachments",
+                "client": "transactions_files.attach_file_to_transaction"
+            },
+            "service": "lunchmoney_mcp.services.transactions:upload_transaction_attachment",
+            "rest": {
+                "method": "POST",
+                "path": "/transactions/{transaction_id}/attachments",
+                "operation_id": "upload_attachment"
+            },
+            "mcp": "upload_attachment"
+        },
+        {
+            "id": "get_transaction_attachment_url",
+            "upstream": {
+                "method": "GET",
+                "path": "/transactions/attachments/{file_id}",
+                "client": "transactions_files.get_transaction_attachment_url"
+            },
+            "service": "lunchmoney_mcp.services.transactions:fetch_attachment_by_id",
+            "rest": {
+                "method": "GET",
+                "path": "/transactions/attachments/{file_id}",
+                "operation_id": "get_attachment"
+            },
+            "mcp": "get_attachment"
+        },
+        {
+            "id": "delete_transaction_attachment",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/transactions/attachments/{file_id}",
+                "client": "transactions_files.delete_transaction_attachment"
+            },
+            "service": "lunchmoney_mcp.services.transactions:delete_transaction_attachment",
+            "rest": {
+                "method": "DELETE",
+                "path": "/transactions/attachments/{file_id}",
+                "operation_id": "delete_attachment"
+            },
+            "mcp": "delete_attachment"
+        },
+        {
+            "id": "get_all_tags",
+            "upstream": {
+                "method": "GET",
+                "path": "/tags",
+                "client": "tags.get_all_tags"
+            },
+            "service": "lunchmoney_mcp.services.tags:fetch_tags",
+            "rest": {
+                "method": "GET",
+                "path": "/tags",
+                "operation_id": "list_tags"
+            },
+            "mcp": "list_tags"
+        },
+        {
+            "id": "create_tag",
+            "upstream": {
+                "method": "POST",
+                "path": "/tags",
+                "client": "tags.create_tag"
+            },
+            "service": "lunchmoney_mcp.services.tags:create_tag",
+            "rest": {
+                "method": "POST",
+                "path": "/tags",
+                "operation_id": "create_tag"
+            },
+            "mcp": "create_tag"
+        },
+        {
+            "id": "get_tag",
+            "upstream": {
+                "method": "GET",
+                "path": "/tags/{id}",
+                "client": "tags.get_tag_by_id"
+            },
+            "service": "lunchmoney_mcp.services.tags:fetch_tag_by_id",
+            "rest": {
+                "method": "GET",
+                "path": "/tags/{tag_id}",
+                "operation_id": "get_tag"
+            },
+            "mcp": "get_tag"
+        },
+        {
+            "id": "update_tag",
+            "upstream": {
+                "method": "PUT",
+                "path": "/tags/{id}",
+                "client": "tags.update_tag"
+            },
+            "service": "lunchmoney_mcp.services.tags:update_tag",
+            "rest": {
+                "method": "PUT",
+                "path": "/tags/{tag_id}",
+                "operation_id": "update_tag"
+            },
+            "mcp": "update_tag"
+        },
+        {
+            "id": "delete_tag",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/tags/{id}",
+                "client": "tags.delete_tag"
+            },
+            "service": "lunchmoney_mcp.services.tags:delete_tag",
+            "rest": {
+                "method": "DELETE",
+                "path": "/tags/{tag_id}",
+                "operation_id": "delete_tag"
+            },
+            "mcp": "delete_tag"
+        },
+        {
+            "id": "get_all_recurring",
+            "upstream": {
+                "method": "GET",
+                "path": "/recurring_items",
+                "client": "recurring_items.get_all_recurring"
+            },
+            "service": "lunchmoney_mcp.services.recurring:fetch_recurring_items",
+            "rest": {
+                "method": "GET",
+                "path": "/recurring_items",
+                "operation_id": "list_recurring_items"
+            },
+            "mcp": "list_recurring_items"
+        },
+        {
+            "id": "get_recurring_by_id",
+            "upstream": {
+                "method": "GET",
+                "path": "/recurring_items/{id}",
+                "client": "recurring_items.get_recurring_by_id"
+            },
+            "service": "lunchmoney_mcp.services.recurring:fetch_recurring_item_by_id",
+            "rest": {
+                "method": "GET",
+                "path": "/recurring_items/{recurring_item_id}",
+                "operation_id": "get_recurring_item"
+            },
+            "mcp": "get_recurring_item"
+        },
+        {
+            "id": "get_budget_settings",
+            "upstream": {
+                "method": "GET",
+                "path": "/budgets/settings",
+                "client": "budgets.get_budget_settings"
+            },
+            "service": "lunchmoney_mcp.services.budgets:fetch_budget_settings",
+            "rest": {
+                "method": "GET",
+                "path": "/budgets/settings",
+                "operation_id": "get_budget_settings"
+            },
+            "mcp": "get_budget_settings"
+        },
+        {
+            "id": "upsert_budget",
+            "upstream": {
+                "method": "PUT",
+                "path": "/budgets",
+                "client": "budgets.upsert_budget"
+            },
+            "service": "lunchmoney_mcp.services.budgets:set_budget_value",
+            "rest": {
+                "method": "PUT",
+                "path": "/budgets",
+                "operation_id": "upsert_budget"
+            },
+            "mcp": "upsert_budget"
+        },
+        {
+            "id": "delete_budget",
+            "upstream": {
+                "method": "DELETE",
+                "path": "/budgets",
+                "client": "budgets.delete_budget"
+            },
+            "service": "lunchmoney_mcp.services.budgets:clear_budget_value",
+            "rest": {
+                "method": "DELETE",
+                "path": "/budgets",
+                "operation_id": "clear_budget"
+            },
+            "mcp": "clear_budget"
+        }
+    ]
 }

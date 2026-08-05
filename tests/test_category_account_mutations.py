@@ -251,9 +251,9 @@ def test_mutation_routes_are_registered() -> None:
 
     assert {"post"} <= set(paths["/categories"])
     assert {"put", "delete"} <= set(paths["/categories/{category_id}"])
-    assert {"post"} <= set(paths["/accounts/manual"])
-    assert {"put", "delete"} <= set(paths["/accounts/manual/{account_id}"])
-    assert {"post"} <= set(paths["/accounts/plaid/sync"])
+    assert {"post"} <= set(paths["/manual-accounts"])
+    assert {"put", "delete"} <= set(paths["/manual-accounts/{account_id}"])
+    assert {"post"} <= set(paths["/plaid-accounts/sync"])
 
 
 @pytest.mark.asyncio

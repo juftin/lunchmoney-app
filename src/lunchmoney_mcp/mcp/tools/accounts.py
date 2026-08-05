@@ -3,10 +3,14 @@
 import datetime
 from typing import TYPE_CHECKING
 
+from lunchmoney.models import (
+    ManualAccountObject,
+    PlaidAccountObject,
+)
+
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.schemas import (
-    AccountInfo,
     AccountsSummary,
     ManualAccountCreateRequest,
     ManualAccountUpdateRequest,
@@ -16,7 +20,9 @@ from lunchmoney_mcp.services import (
     delete_manual_account as delete_manual_account_service,
     fetch_accounts,
     fetch_manual_account_by_id,
+    fetch_manual_accounts,
     fetch_plaid_account_by_id,
+    fetch_plaid_accounts,
     trigger_plaid_fetch as trigger_plaid_fetch_service,
     update_manual_account as update_manual_account_service,
 )
@@ -27,19 +33,45 @@ if TYPE_CHECKING:
 
 @mcp.tool()
 async def list_accounts() -> AccountsSummary:
-    """List all connected Plaid and manual accounts with current balances.
+    """List complete synchronized manual and Plaid account collections.
 
     Returns
     -------
     AccountsSummary
-        Summary of connected Plaid and manual accounts.
+        Full account objects separated into manual and Plaid collections.
     """
     db: LunchMoneyDatabase = get_database()
     return await fetch_accounts(db=db)
 
 
 @mcp.tool()
-async def get_manual_account(account_id: int) -> AccountInfo | None:
+async def list_manual_accounts() -> list[ManualAccountObject]:
+    """List synchronized manual accounts with every Lunch Money field.
+
+    Returns
+    -------
+    list[ManualAccountObject]
+        Complete synchronized manual-account objects.
+    """
+    db: LunchMoneyDatabase = get_database()
+    return await fetch_manual_accounts(db=db)
+
+
+@mcp.tool()
+async def list_plaid_accounts() -> list[PlaidAccountObject]:
+    """List synchronized Plaid accounts with every Lunch Money field.
+
+    Returns
+    -------
+    list[PlaidAccountObject]
+        Complete synchronized Plaid-account objects.
+    """
+    db: LunchMoneyDatabase = get_database()
+    return await fetch_plaid_accounts(db=db)
+
+
+@mcp.tool()
+async def get_manual_account(account_id: int) -> ManualAccountObject | None:
     """Fetch one synchronized manual account.
 
     Parameters
@@ -49,7 +81,7 @@ async def get_manual_account(account_id: int) -> AccountInfo | None:
 
     Returns
     -------
-    AccountInfo | None
+    ManualAccountObject | None
         Matching account, or ``None`` when it has not been synchronized.
     """
     db: LunchMoneyDatabase = get_database()
@@ -57,7 +89,7 @@ async def get_manual_account(account_id: int) -> AccountInfo | None:
 
 
 @mcp.tool()
-async def get_plaid_account(account_id: int) -> AccountInfo | None:
+async def get_plaid_account(account_id: int) -> PlaidAccountObject | None:
     """Fetch one synchronized Plaid account.
 
     Parameters
@@ -67,7 +99,7 @@ async def get_plaid_account(account_id: int) -> AccountInfo | None:
 
     Returns
     -------
-    AccountInfo | None
+    PlaidAccountObject | None
         Matching account, or ``None`` when it has not been synchronized.
     """
     db: LunchMoneyDatabase = get_database()
@@ -77,7 +109,7 @@ async def get_plaid_account(account_id: int) -> AccountInfo | None:
 @mcp.tool()
 async def create_manual_account(
     request: ManualAccountCreateRequest,
-) -> AccountInfo:
+) -> ManualAccountObject:
     """Create a manual account and cache Lunch Money's canonical response."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
@@ -88,7 +120,7 @@ async def create_manual_account(
 async def update_manual_account(
     account_id: int,
     request: ManualAccountUpdateRequest,
-) -> AccountInfo:
+) -> ManualAccountObject:
     """Update a manual account and cache Lunch Money's canonical response."""
     client: LunchMoneyApp = get_lunchmoney_app()
     db: LunchMoneyDatabase = get_database()
@@ -140,6 +172,8 @@ __all__ = [
     "get_manual_account",
     "get_plaid_account",
     "list_accounts",
+    "list_manual_accounts",
+    "list_plaid_accounts",
     "trigger_plaid_fetch",
     "update_manual_account",
 ]

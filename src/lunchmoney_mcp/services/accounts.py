@@ -4,33 +4,21 @@ import datetime
 
 from lunchmoney.models import (
     ManualAccountObject,
+    PlaidAccountObject,
 )
 
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import ManualAccount, PlaidAccount, Transaction
 from lunchmoney_mcp.schemas import (
-    AccountInfo,
     AccountsSummary,
     ManualAccountCreateRequest,
     ManualAccountUpdateRequest,
 )
 
 
-def _manual_account_info(account: ManualAccount) -> AccountInfo:
-    """Convert one persisted manual account into the public response schema."""
-    return AccountInfo(
-        id=account.id,
-        name=account.name,
-        balance=float(account.balance),
-        currency=account.currency,
-        type_or_status=account.type,
-        institution_name=account.institution_name,
-    )
-
-
 async def fetch_accounts(db: LunchMoneyDatabase) -> AccountsSummary:
-    """Fetch all connected Plaid and manual accounts with current balances.
+    """Fetch complete manual and Plaid account collections in one response.
 
     Parameters
     ----------
@@ -40,30 +28,56 @@ async def fetch_accounts(db: LunchMoneyDatabase) -> AccountsSummary:
     Returns
     -------
     AccountsSummary
-        Combined summary of connected Plaid and manual accounts.
+        Full synchronized account objects separated by their Lunch Money source.
     """
-    plaid_accs = await db.list(PlaidAccount)
-    manual_accs = await db.list(ManualAccount)
+    manual_accounts = await fetch_manual_accounts(db=db)
+    plaid_accounts = await fetch_plaid_accounts(db=db)
     return AccountsSummary(
-        plaid_accounts=[
-            AccountInfo(
-                id=a.id,
-                name=a.name,
-                institution_name=a.institution_name,
-                balance=float(a.balance),
-                currency=a.currency,
-                type_or_status=a.status,
-            )
-            for a in plaid_accs
-        ],
-        manual_accounts=[_manual_account_info(account) for account in manual_accs],
+        manual_accounts=manual_accounts,
+        plaid_accounts=plaid_accounts,
     )
+
+
+async def fetch_manual_accounts(
+    db: LunchMoneyDatabase,
+) -> list[ManualAccountObject]:
+    """Fetch all synchronized manual accounts with every upstream field.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+
+    Returns
+    -------
+    list[ManualAccountObject]
+        Complete synchronized manual-account objects.
+    """
+    return [account.to_api() for account in await db.list(ManualAccount)]
+
+
+async def fetch_plaid_accounts(
+    db: LunchMoneyDatabase,
+) -> list[PlaidAccountObject]:
+    """Fetch all synchronized Plaid accounts with every upstream field.
+
+    Parameters
+    ----------
+    db : LunchMoneyDatabase
+        Database manager instance.
+
+    Returns
+    -------
+    list[PlaidAccountObject]
+        Complete synchronized Plaid-account objects.
+    """
+    return [account.to_api() for account in await db.list(PlaidAccount)]
 
 
 async def fetch_manual_account_by_id(
     db: LunchMoneyDatabase,
     account_id: int,
-) -> AccountInfo | None:
+) -> ManualAccountObject | None:
     """Fetch one synchronized manual account by identifier.
 
     Parameters
@@ -75,19 +89,19 @@ async def fetch_manual_account_by_id(
 
     Returns
     -------
-    AccountInfo | None
+    ManualAccountObject | None
         Matching manual account, or ``None`` when it has not been synchronized.
     """
     account = await db.get(ManualAccount, account_id)
     if account is None:
         return None
-    return _manual_account_info(account)
+    return account.to_api()
 
 
 async def fetch_plaid_account_by_id(
     db: LunchMoneyDatabase,
     account_id: int,
-) -> AccountInfo | None:
+) -> PlaidAccountObject | None:
     """Fetch one synchronized Plaid account by identifier.
 
     Parameters
@@ -99,36 +113,29 @@ async def fetch_plaid_account_by_id(
 
     Returns
     -------
-    AccountInfo | None
+    PlaidAccountObject | None
         Matching Plaid account, or ``None`` when it has not been synchronized.
     """
     account = await db.get(PlaidAccount, account_id)
     if account is None:
         return None
-    return AccountInfo(
-        id=account.id,
-        name=account.name,
-        balance=float(account.balance),
-        currency=account.currency,
-        type_or_status=account.status,
-        institution_name=account.institution_name,
-    )
+    return account.to_api()
 
 
 async def _store_manual_account(
     db: LunchMoneyDatabase,
     account: ManualAccountObject,
-) -> AccountInfo:
-    """Persist an upstream manual-account response and expose public fields."""
-    stored = await db.upsert(ManualAccount.from_api(account))
-    return _manual_account_info(stored)
+) -> ManualAccountObject:
+    """Persist an upstream manual-account response and preserve all its fields."""
+    await db.upsert(ManualAccount.from_api(account))
+    return account
 
 
 async def create_manual_account(
     client: LunchMoneyApp,
     db: LunchMoneyDatabase,
     request: ManualAccountCreateRequest,
-) -> AccountInfo:
+) -> ManualAccountObject:
     """Create a manual account upstream before saving its canonical response.
 
     Parameters
@@ -142,7 +149,7 @@ async def create_manual_account(
 
     Returns
     -------
-    AccountInfo
+    ManualAccountObject
         Created manual account after its local cache has been updated.
     """
     account = await client.client.manual_accounts.create_manual_account(
@@ -156,7 +163,7 @@ async def update_manual_account(
     db: LunchMoneyDatabase,
     account_id: int,
     request: ManualAccountUpdateRequest,
-) -> AccountInfo:
+) -> ManualAccountObject:
     """Update a manual account upstream before saving its canonical response.
 
     Parameters
@@ -172,7 +179,7 @@ async def update_manual_account(
 
     Returns
     -------
-    AccountInfo
+    ManualAccountObject
         Updated manual account after its local cache has been updated.
     """
     account = await client.client.manual_accounts.update_manual_account(

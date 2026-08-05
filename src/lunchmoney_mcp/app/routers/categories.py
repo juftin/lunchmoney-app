@@ -3,12 +3,18 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from lunchmoney.models import CreateCategoryRequestObject, UpdateCategoryRequestObject
+from lunchmoney.models import (
+    CategoryObject,
+    ChildCategoryObject,
+    CreateCategoryRequestObject,
+    UpdateCategoryRequestObject,
+)
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.schemas import CategoryInfo
+from lunchmoney_mcp.schemas import CategoryQuery
 from lunchmoney_mcp.services import (
     create_category as create_category_service,
     delete_category as delete_category_service,
@@ -23,32 +29,41 @@ router = APIRouter(tags=["Categories"])
 
 @router.get(
     path="/categories",
-    response_model=list[CategoryInfo],
+    response_model=list[CategoryObject],
     operation_id="list_categories",
 )
 async def list_categories(
+    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> list[CategoryInfo]:
-    """List all budget categories and subcategories.
+    query: Annotated[CategoryQuery, Depends()],
+) -> list[CategoryObject]:
+    """List categories using Lunch Money's hierarchy and group controls.
 
     **Parameters:**
 
-    - **db**: Database manager instance.
+    - **client**: Lunch Money client used in stateless mode.
+    - **db**: Database manager instance used in persistent mode.
+    - **query**: Upstream-compatible category collection controls.
 
-    **Returns:** All budget category objects in the database.
+    **Returns:** Matching category objects in the requested representation.
     """
-    return await fetch_categories(db=db)
+    return await fetch_categories(
+        client=client,
+        db=db,
+        query=query,
+        live=get_settings().stateless,
+    )
 
 
 @router.get(
     path="/categories/{category_id}",
-    response_model=CategoryInfo | None,
+    response_model=CategoryObject | ChildCategoryObject | None,
     operation_id="get_category",
 )
 async def get_category(
     category_id: int,
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> CategoryInfo | None:
+) -> CategoryObject | ChildCategoryObject | None:
     """Fetch one synchronized budget category.
 
     **Parameters:**
@@ -63,21 +78,21 @@ async def get_category(
 
 @router.post(
     path="/categories",
-    response_model=CategoryInfo,
+    response_model=CategoryObject,
     operation_id="create_category",
 )
 async def create_category(
     request: CreateCategoryRequestObject,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> CategoryInfo:
+) -> CategoryObject:
     """Create a budget category and store Lunch Money's canonical response."""
     return await create_category_service(client=client, db=db, request=request)
 
 
 @router.put(
     path="/categories/{category_id}",
-    response_model=CategoryInfo,
+    response_model=CategoryObject,
     operation_id="update_category",
 )
 async def update_category(
@@ -85,7 +100,7 @@ async def update_category(
     request: UpdateCategoryRequestObject,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> CategoryInfo:
+) -> CategoryObject:
     """Update a budget category and store Lunch Money's canonical response."""
     return await update_category_service(
         client=client,

@@ -27,7 +27,7 @@ def _():
     from lunchmoney_mcp.database import LunchMoneyDatabase
     from lunchmoney_mcp.services import (
         execute_sync,
-        fetch_accounts,
+        fetch_plaid_accounts,
         fetch_recent_transactions,
         fetch_user_info,
     )
@@ -36,7 +36,7 @@ def _():
         LunchMoneyApp,
         LunchMoneyDatabase,
         execute_sync,
-        fetch_accounts,
+        fetch_plaid_accounts,
         fetch_recent_transactions,
         fetch_user_info,
     )
@@ -105,14 +105,14 @@ def _(mo, user_info):
 
 
 @app.cell
-async def _(db, fetch_accounts):
-    accounts = await fetch_accounts(db=db)
-    return (accounts,)
+async def _(db, fetch_plaid_accounts):
+    plaid_accounts = await fetch_plaid_accounts(db=db)
+    return (plaid_accounts,)
 
 
 @app.cell(hide_code=True)
-def _(accounts, mo):
-    plaid_data = [a.model_dump() for a in accounts.plaid_accounts]
+def _(mo, plaid_accounts):
+    plaid_data = [account.model_dump() for account in plaid_accounts]
 
     mo.md(
         f"""

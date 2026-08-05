@@ -4,20 +4,23 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from lunchmoney.models import (
+    ChildTransactionObject,
     CreateNewTransactionsRequest,
     DeleteTransactionsRequest,
     GetTransactionAttachmentUrl200Response,
     GroupTransactionsRequest,
     SplitTransactionRequest,
     TransactionAttachmentObject,
+    TransactionObject,
     UpdateTransactionObject,
     UpdateTransactionsRequest,
 )
 
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.schemas import TransactionAttachmentUploadRequest, TransactionInfo
+from lunchmoney_mcp.schemas import TransactionAttachmentUploadRequest, TransactionQuery
 from lunchmoney_mcp.services import (
     bulk_delete_transactions,
     bulk_update_transactions,
@@ -25,7 +28,7 @@ from lunchmoney_mcp.services import (
     delete_transaction,
     delete_transaction_attachment,
     fetch_attachment_by_id,
-    fetch_recent_transactions,
+    fetch_transactions,
     fetch_transaction_by_id,
     group_transactions,
     split_transaction,
@@ -41,42 +44,47 @@ router = APIRouter(tags=["Transactions"])
 
 @router.get(
     path="/transactions",
-    response_model=list[TransactionInfo],
-    operation_id="get_recent_transactions",
+    response_model=list[TransactionObject],
+    operation_id="list_transactions",
 )
-async def get_recent_transactions(
+async def list_transactions(
+    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-    days: int = 30,
-    limit: int = 50,
-) -> list[TransactionInfo]:
-    """Fetch recent transactions from the local database."""
-    return await fetch_recent_transactions(db=db, days=days, limit=limit)
+    query: Annotated[TransactionQuery, Depends()],
+) -> list[TransactionObject]:
+    """List filtered transactions from the configured live or persisted source."""
+    return await fetch_transactions(
+        client=client,
+        db=db,
+        query=query,
+        live=get_settings().stateless,
+    )
 
 
 @router.post(
     path="/transactions",
-    response_model=list[TransactionInfo],
+    response_model=list[TransactionObject],
     operation_id="create_transactions",
 )
 async def create_transactions_route(
     request: CreateNewTransactionsRequest,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> list[TransactionInfo]:
+) -> list[TransactionObject]:
     """Create transactions upstream and cache their canonical responses."""
     return await create_transactions(client=client, db=db, request=request)
 
 
 @router.put(
     path="/transactions",
-    response_model=list[TransactionInfo],
+    response_model=list[TransactionObject],
     operation_id="bulk_update_transactions",
 )
 async def bulk_update_transactions_route(
     request: UpdateTransactionsRequest,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> list[TransactionInfo]:
+) -> list[TransactionObject]:
     """Apply an upstream bulk transaction update and refresh local records."""
     return await bulk_update_transactions(client=client, db=db, request=request)
 
@@ -97,14 +105,14 @@ async def bulk_delete_transactions_route(
 
 @router.post(
     path="/transactions/group",
-    response_model=TransactionInfo,
+    response_model=TransactionObject,
     operation_id="group_transactions",
 )
 async def group_transactions_route(
     request: GroupTransactionsRequest,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> TransactionInfo:
+) -> TransactionObject:
     """Create a transaction group upstream and cache its returned graph."""
     return await group_transactions(client=client, db=db, request=request)
 
@@ -125,7 +133,7 @@ async def ungroup_transactions_route(
 
 @router.post(
     path="/transactions/split/{transaction_id}",
-    response_model=TransactionInfo,
+    response_model=TransactionObject,
     operation_id="split_transaction",
 )
 async def split_transaction_route(
@@ -133,7 +141,7 @@ async def split_transaction_route(
     request: SplitTransactionRequest,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> TransactionInfo:
+) -> TransactionObject:
     """Split a transaction upstream and cache the returned parent graph."""
     return await split_transaction(
         client=client,
@@ -207,20 +215,20 @@ async def delete_attachment(
 
 @router.get(
     path="/transactions/{transaction_id}",
-    response_model=TransactionInfo | None,
+    response_model=TransactionObject | ChildTransactionObject | None,
     operation_id="get_transaction",
 )
 async def get_transaction(
     transaction_id: int,
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> TransactionInfo | None:
+) -> TransactionObject | ChildTransactionObject | None:
     """Fetch one synchronized transaction from the local database."""
     return await fetch_transaction_by_id(db=db, transaction_id=transaction_id)
 
 
 @router.put(
     path="/transactions/{transaction_id}",
-    response_model=TransactionInfo,
+    response_model=TransactionObject,
     operation_id="update_transaction",
 )
 async def update_transaction_route(
@@ -229,7 +237,7 @@ async def update_transaction_route(
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     update_balance: bool | None = None,
-) -> TransactionInfo:
+) -> TransactionObject:
     """Update one transaction upstream and cache Lunch Money's response."""
     return await update_transaction(
         client=client,

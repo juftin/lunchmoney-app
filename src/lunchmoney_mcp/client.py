@@ -573,6 +573,7 @@ class LunchMoneyApp:
         include_metadata: bool | None = None,
         include_split_parents: bool | None = None,
         include_group_children: bool | None = None,
+        include_children: bool | None = None,
         include_files: bool | None = None,
         cache: bool | None = None,
     ) -> dict[int, TransactionObject]:
@@ -659,6 +660,9 @@ class LunchMoneyApp:
             are not included in the response. Set to true if you'd like the returned
             transactions objects to include any transactions that joined into a
             transaction group.
+        include_children: bool | None
+            Whether returned parent transactions include their split or grouped
+            child records.
         include_files: bool | None
             By default, the `files` property is not included in the response. Set to
             true if you'd like the responses to include a list of objects that
@@ -690,6 +694,7 @@ class LunchMoneyApp:
             "include_metadata": include_metadata,
             "include_split_parents": include_split_parents,
             "include_group_children": include_group_children,
+            "include_children": include_children,
             "include_files": include_files,
         }
         filtered_kwargs: dict[str, Any] = {

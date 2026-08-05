@@ -9,22 +9,9 @@ from lunchmoney.models import (
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import Tag, Transaction
-from lunchmoney_mcp.schemas import TagInfo
 
 
-def _tag_info(tag: Tag) -> TagInfo:
-    """Convert a persisted tag into the public read-only response schema."""
-    return TagInfo(
-        id=tag.id,
-        name=tag.name,
-        description=tag.description,
-        text_color=tag.text_color,
-        background_color=tag.background_color,
-        archived=tag.archived,
-    )
-
-
-async def fetch_tags(db: LunchMoneyDatabase) -> list[TagInfo]:
+async def fetch_tags(db: LunchMoneyDatabase) -> list[TagObject]:
     """Fetch all synchronized transaction tags.
 
     Parameters
@@ -34,16 +21,16 @@ async def fetch_tags(db: LunchMoneyDatabase) -> list[TagInfo]:
 
     Returns
     -------
-    list[TagInfo]
-        All tags in identifier order.
+    list[TagObject]
+        Complete synchronized transaction tags.
     """
-    return [_tag_info(tag) for tag in await db.list(Tag)]
+    return [tag.to_api() for tag in await db.list(Tag)]
 
 
 async def fetch_tag_by_id(
     db: LunchMoneyDatabase,
     tag_id: int,
-) -> TagInfo | None:
+) -> TagObject | None:
     """Fetch one synchronized transaction tag by identifier.
 
     Parameters
@@ -55,24 +42,24 @@ async def fetch_tag_by_id(
 
     Returns
     -------
-    TagInfo | None
+    TagObject | None
         Matching tag, or ``None`` when it has not been synchronized.
     """
     tag = await db.get(Tag, tag_id)
-    return _tag_info(tag) if tag is not None else None
+    return tag.to_api() if tag is not None else None
 
 
-async def _store_tag(db: LunchMoneyDatabase, tag: TagObject) -> TagInfo:
-    """Persist an upstream tag response and expose its public fields."""
-    stored = await db.upsert(Tag.from_api(tag))
-    return _tag_info(stored)
+async def _store_tag(db: LunchMoneyDatabase, tag: TagObject) -> TagObject:
+    """Persist an upstream tag response and preserve all of its fields."""
+    await db.upsert(Tag.from_api(tag))
+    return tag
 
 
 async def create_tag(
     client: LunchMoneyApp,
     db: LunchMoneyDatabase,
     request: CreateTagRequestObject,
-) -> TagInfo:
+) -> TagObject:
     """Create a tag upstream before saving its canonical response locally."""
     tag = await client.client.tags.create_tag(create_tag_request_object=request)
     return await _store_tag(db=db, tag=tag)
@@ -83,7 +70,7 @@ async def update_tag(
     db: LunchMoneyDatabase,
     tag_id: int,
     request: UpdateTagRequestObject,
-) -> TagInfo:
+) -> TagObject:
     """Update a tag upstream before saving its canonical response locally."""
     tag = await client.client.tags.update_tag(
         id=tag_id,

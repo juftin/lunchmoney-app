@@ -79,17 +79,21 @@ graph TD
 | `/categories/{id}`   |  `PUT`   | `PUT /categories/{id}`    | `update_category` | `update_category`      | ✅ Done |
 | `/categories/{id}`   | `DELETE` | `DELETE /categories/{id}` | `delete_category` | `delete_category`      | ✅ Done |
 
+`GET /categories` accepts Lunch Money's `format` (`nested` or `flattened`) and
+`is_group` controls, returns a flat collection, and uses the configured live or
+persisted source.
+
 ---
 
 ### 3. Manual Accounts (`/manual_accounts`)
 
 | Upstream v2 Endpoint    |  Method  | Local Route                    | FastMCP Tool            | Service Function             | Status  |
 | :---------------------- | :------: | :----------------------------- | :---------------------- | :--------------------------- | :-----: |
-| `/manual_accounts`      |  `GET`   | `GET /accounts`                | `list_accounts`         | `fetch_accounts`             | ✅ Done |
-| `/manual_accounts`      |  `POST`  | `POST /accounts/manual`        | `create_manual_account` | `create_manual_account`      | ✅ Done |
-| `/manual_accounts/{id}` |  `GET`   | `GET /accounts/manual/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` | ✅ Done |
-| `/manual_accounts/{id}` |  `PUT`   | `PUT /accounts/manual/{id}`    | `update_manual_account` | `update_manual_account`      | ✅ Done |
-| `/manual_accounts/{id}` | `DELETE` | `DELETE /accounts/manual/{id}` | `delete_manual_account` | `delete_manual_account`      | ✅ Done |
+| `/manual_accounts`      |  `GET`   | `GET /manual-accounts`         | `list_manual_accounts`  | `fetch_manual_accounts`      | ✅ Done |
+| `/manual_accounts`      |  `POST`  | `POST /manual-accounts`        | `create_manual_account` | `create_manual_account`      | ✅ Done |
+| `/manual_accounts/{id}` |  `GET`   | `GET /manual-accounts/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` | ✅ Done |
+| `/manual_accounts/{id}` |  `PUT`   | `PUT /manual-accounts/{id}`    | `update_manual_account` | `update_manual_account`      | ✅ Done |
+| `/manual_accounts/{id}` | `DELETE` | `DELETE /manual-accounts/{id}` | `delete_manual_account` | `delete_manual_account`      | ✅ Done |
 
 ---
 
@@ -97,23 +101,33 @@ graph TD
 
 | Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool          | Service Function            | Status  |
 | :---------------------- | :----: | :-------------------------- | :-------------------- | :-------------------------- | :-----: |
-| `/plaid_accounts`       | `GET`  | `GET /accounts`             | `list_accounts`       | `fetch_accounts`            | ✅ Done |
-| `/plaid_accounts/{id}`  | `GET`  | `GET /accounts/plaid/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` | ✅ Done |
-| `/plaid_accounts/fetch` | `POST` | `POST /accounts/plaid/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       | ✅ Done |
+| `/plaid_accounts`       | `GET`  | `GET /plaid-accounts`       | `list_plaid_accounts` | `fetch_plaid_accounts`      | ✅ Done |
+| `/plaid_accounts/{id}`  | `GET`  | `GET /plaid-accounts/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` | ✅ Done |
+| `/plaid_accounts/fetch` | `POST` | `POST /plaid-accounts/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       | ✅ Done |
+
+`GET /manual-accounts` and `GET /plaid-accounts` (and their corresponding MCP
+tools) return flat collections of complete account objects. `GET /accounts` and
+`list_accounts` remain the local convenience envelope containing both complete
+collections.
 
 ---
 
 ### 5. Transactions Management (`/transactions`)
 
-| Upstream v2 Endpoint |  Method  | Local Route                 | FastMCP Tool               | Service Function            | Status  |
-| :------------------- | :------: | :-------------------------- | :------------------------- | :-------------------------- | :-----: |
-| `/transactions`      |  `GET`   | `GET /transactions`         | `get_recent_transactions`  | `fetch_recent_transactions` | ✅ Done |
-| `/transactions`      |  `POST`  | `POST /transactions`        | `create_transactions`      | `create_transactions`       | ✅ Done |
-| `/transactions`      |  `PUT`   | `PUT /transactions`         | `bulk_update_transactions` | `bulk_update_transactions`  | ✅ Done |
-| `/transactions`      | `DELETE` | `DELETE /transactions`      | `bulk_delete_transactions` | `bulk_delete_transactions`  | ✅ Done |
-| `/transactions/{id}` |  `GET`   | `GET /transactions/{id}`    | `get_transaction`          | `fetch_transaction_by_id`   | ✅ Done |
-| `/transactions/{id}` |  `PUT`   | `PUT /transactions/{id}`    | `update_transaction`       | `update_transaction`        | ✅ Done |
-| `/transactions/{id}` | `DELETE` | `DELETE /transactions/{id}` | `delete_transaction`       | `delete_transaction`        | ✅ Done |
+| Upstream v2 Endpoint |  Method  | Local Route                 | FastMCP Tool               | Service Function           | Status  |
+| :------------------- | :------: | :-------------------------- | :------------------------- | :------------------------- | :-----: |
+| `/transactions`      |  `GET`   | `GET /transactions`         | `list_transactions`        | `fetch_transactions`       | ✅ Done |
+| `/transactions`      |  `POST`  | `POST /transactions`        | `create_transactions`      | `create_transactions`      | ✅ Done |
+| `/transactions`      |  `PUT`   | `PUT /transactions`         | `bulk_update_transactions` | `bulk_update_transactions` | ✅ Done |
+| `/transactions`      | `DELETE` | `DELETE /transactions`      | `bulk_delete_transactions` | `bulk_delete_transactions` | ✅ Done |
+| `/transactions/{id}` |  `GET`   | `GET /transactions/{id}`    | `get_transaction`          | `fetch_transaction_by_id`  | ✅ Done |
+| `/transactions/{id}` |  `PUT`   | `PUT /transactions/{id}`    | `update_transaction`       | `update_transaction`       | ✅ Done |
+| `/transactions/{id}` | `DELETE` | `DELETE /transactions/{id}` | `delete_transaction`       | `delete_transaction`       | ✅ Done |
+
+`GET /transactions` applies Lunch Money's transaction filters in either source
+mode. Stateless servers retrieve every upstream page before returning all
+matches; persistent servers return all matching cached records. Both return one
+flat collection.
 
 ---
 
@@ -157,6 +171,9 @@ graph TD
 | `/recurring_items`      | `GET`  | `GET /recurring_items`      | `list_recurring_items` | `fetch_recurring_items`      | ✅ Done |
 | `/recurring_items/{id}` | `GET`  | `GET /recurring_items/{id}` | `get_recurring_item`   | `fetch_recurring_item_by_id` | ✅ Done |
 
+`GET /tags` and `GET /recurring_items` (and their corresponding MCP tools)
+return flat collections of complete objects.
+
 ---
 
 ### 10. Budgets & Local Analytics (`/budgets`, `/spending`)
@@ -185,13 +202,13 @@ graph TD
 - [x] Implement `GET /summary` (`get_account_summary`)
 - [x] Implement `GET /tags` & `GET /tags/{id}`
 - [x] Implement `GET /recurring_items` & `GET /recurring_items/{id}`
-- [x] Implement Single-ID GET routes (`/categories/{id}`, `/accounts/manual/{id}`, `/accounts/plaid/{id}`, `/transactions/{id}`)
+- [x] Implement Single-ID GET routes (`/categories/{id}`, `/manual-accounts/{id}`, `/plaid-accounts/{id}`, `/transactions/{id}`)
 
 ### Sprint 2: Category & Account Mutations (Write Operations)
 
 - [x] Implement Category mutations (`POST`, `PUT`, `DELETE` `/categories`)
-- [x] Implement Manual Account mutations (`POST`, `PUT`, `DELETE` `/manual_accounts`)
-- [x] Implement Plaid sync trigger (`POST /plaid_accounts/fetch`)
+- [x] Implement Manual Account mutations (`POST`, `PUT`, `DELETE` `/manual-accounts`)
+- [x] Implement Plaid sync trigger (`POST /plaid-accounts/sync`)
 
 ### Sprint 3: Transaction Mutations & Advanced Operations
 
@@ -269,6 +286,8 @@ features.
       when a supported upstream operation lacks its REST/MCP/service mapping.
 - [x] Validate supported operations against Lunch Money's mock service or a
       disposable test budget, with synthetic fixtures retained for unit tests.
+- [x] Return complete generated Lunch Money resource models from cached REST and
+      MCP endpoints. Keep derived summaries only for analytics and sync operations.
 - [x] Establish an alpha-API compatibility policy: version pinning, release
       notes review, deprecation handling, and a documented response for a breaking
       upstream change.

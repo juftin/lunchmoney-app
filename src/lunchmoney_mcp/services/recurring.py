@@ -29,7 +29,7 @@ async def fetch_recurring_items(
     Returns
     -------
     list[RecurringObject]
-        Upstream recurring items for the requested matching window.
+        Recurring items returned by Lunch Money for the requested window.
     """
     response = await client.client.recurring_items.get_all_recurring(
         start_date=start_date,
