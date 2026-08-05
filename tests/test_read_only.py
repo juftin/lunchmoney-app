@@ -305,11 +305,11 @@ def test_read_only_routes_are_registered() -> None:
     assert "/recurring_items" in paths
     assert "/recurring_items/{recurring_item_id}" in paths
     assert "/categories/{category_id}" in paths
-    assert "/manual-accounts" in paths
-    assert "/plaid-accounts" in paths
+    assert "/manual_accounts" in paths
+    assert "/plaid_accounts" in paths
     assert "/accounts" in paths
-    assert "/manual-accounts/{account_id}" in paths
-    assert "/plaid-accounts/{account_id}" in paths
+    assert "/manual_accounts/{id}" in paths
+    assert "/plaid_accounts/{id}" in paths
     assert "/transactions/{transaction_id}" in paths
 
 

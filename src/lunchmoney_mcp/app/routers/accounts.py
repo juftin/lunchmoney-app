@@ -53,7 +53,7 @@ async def list_accounts(
 
 
 @router.get(
-    path="/manual-accounts",
+    path="/manual_accounts",
     response_model=list[ManualAccountObject],
     operation_id="list_manual_accounts",
 )
@@ -72,7 +72,7 @@ async def list_manual_accounts(
 
 
 @router.get(
-    path="/plaid-accounts",
+    path="/plaid_accounts",
     response_model=list[PlaidAccountObject],
     operation_id="list_plaid_accounts",
 )
@@ -91,49 +91,49 @@ async def list_plaid_accounts(
 
 
 @router.get(
-    path="/manual-accounts/{account_id}",
+    path="/manual_accounts/{id}",
     response_model=ManualAccountObject | None,
     operation_id="get_manual_account",
 )
 async def get_manual_account(
-    account_id: int,
+    id: int,
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> ManualAccountObject | None:
     """Fetch one synchronized manual account.
 
     **Parameters:**
 
-    - **account_id**: Identifier of the manual account to retrieve.
+    - **id**: Identifier of the manual account to retrieve.
     - **db**: Database manager instance.
 
     **Returns:** Matching account, or `None` when it has not been synchronized.
     """
-    return await fetch_manual_account_by_id(db=db, account_id=account_id)
+    return await fetch_manual_account_by_id(db=db, account_id=id)
 
 
 @router.get(
-    path="/plaid-accounts/{account_id}",
+    path="/plaid_accounts/{id}",
     response_model=PlaidAccountObject | None,
     operation_id="get_plaid_account",
 )
 async def get_plaid_account(
-    account_id: int,
+    id: int,
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> PlaidAccountObject | None:
     """Fetch one synchronized Plaid account.
 
     **Parameters:**
 
-    - **account_id**: Identifier of the Plaid account to retrieve.
+    - **id**: Identifier of the Plaid account to retrieve.
     - **db**: Database manager instance.
 
     **Returns:** Matching account, or `None` when it has not been synchronized.
     """
-    return await fetch_plaid_account_by_id(db=db, account_id=account_id)
+    return await fetch_plaid_account_by_id(db=db, account_id=id)
 
 
 @router.post(
-    path="/manual-accounts",
+    path="/manual_accounts",
     response_model=ManualAccountObject,
     operation_id="create_manual_account",
 )
@@ -147,12 +147,12 @@ async def create_manual_account(
 
 
 @router.put(
-    path="/manual-accounts/{account_id}",
+    path="/manual_accounts/{id}",
     response_model=ManualAccountObject,
     operation_id="update_manual_account",
 )
 async def update_manual_account(
-    account_id: int,
+    id: int,
     request: ManualAccountUpdateRequest,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
@@ -161,18 +161,18 @@ async def update_manual_account(
     return await update_manual_account_service(
         client=client,
         db=db,
-        account_id=account_id,
+        account_id=id,
         request=request,
     )
 
 
 @router.delete(
-    path="/manual-accounts/{account_id}",
+    path="/manual_accounts/{id}",
     status_code=204,
     operation_id="delete_manual_account",
 )
 async def delete_manual_account(
-    account_id: int,
+    id: int,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     delete_items: bool | None = None,
@@ -182,14 +182,14 @@ async def delete_manual_account(
     await delete_manual_account_service(
         client=client,
         db=db,
-        account_id=account_id,
+        account_id=id,
         delete_items=delete_items,
         delete_balance_history=delete_balance_history,
     )
 
 
 @router.post(
-    path="/plaid-accounts/sync",
+    path="/plaid_accounts/fetch",
     status_code=204,
     operation_id="trigger_plaid_fetch",
 )
@@ -197,12 +197,12 @@ async def trigger_plaid_fetch(
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
-    account_id: int | None = None,
+    id: int | None = None,
 ) -> None:
     """Trigger a Lunch Money transaction fetch for eligible Plaid accounts."""
     await trigger_plaid_fetch_service(
         client=client,
         start_date=start_date,
         end_date=end_date,
-        account_id=account_id,
+        account_id=id,
     )

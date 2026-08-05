@@ -121,7 +121,7 @@
             "service": "lunchmoney_mcp.services.accounts:fetch_manual_accounts",
             "rest": {
                 "method": "GET",
-                "path": "/manual-accounts",
+                "path": "/manual_accounts",
                 "operation_id": "list_manual_accounts"
             },
             "mcp": "list_manual_accounts"
@@ -136,7 +136,7 @@
             "service": "lunchmoney_mcp.services.accounts:create_manual_account",
             "rest": {
                 "method": "POST",
-                "path": "/manual-accounts",
+                "path": "/manual_accounts",
                 "operation_id": "create_manual_account"
             },
             "mcp": "create_manual_account"
@@ -151,7 +151,7 @@
             "service": "lunchmoney_mcp.services.accounts:fetch_manual_account_by_id",
             "rest": {
                 "method": "GET",
-                "path": "/manual-accounts/{account_id}",
+                "path": "/manual_accounts/{id}",
                 "operation_id": "get_manual_account"
             },
             "mcp": "get_manual_account"
@@ -166,7 +166,7 @@
             "service": "lunchmoney_mcp.services.accounts:update_manual_account",
             "rest": {
                 "method": "PUT",
-                "path": "/manual-accounts/{account_id}",
+                "path": "/manual_accounts/{id}",
                 "operation_id": "update_manual_account"
             },
             "mcp": "update_manual_account"
@@ -181,7 +181,7 @@
             "service": "lunchmoney_mcp.services.accounts:delete_manual_account",
             "rest": {
                 "method": "DELETE",
-                "path": "/manual-accounts/{account_id}",
+                "path": "/manual_accounts/{id}",
                 "operation_id": "delete_manual_account"
             },
             "mcp": "delete_manual_account"
@@ -196,7 +196,7 @@
             "service": "lunchmoney_mcp.services.accounts:fetch_plaid_accounts",
             "rest": {
                 "method": "GET",
-                "path": "/plaid-accounts",
+                "path": "/plaid_accounts",
                 "operation_id": "list_plaid_accounts"
             },
             "mcp": "list_plaid_accounts"
@@ -211,7 +211,7 @@
             "service": "lunchmoney_mcp.services.accounts:fetch_plaid_account_by_id",
             "rest": {
                 "method": "GET",
-                "path": "/plaid-accounts/{account_id}",
+                "path": "/plaid_accounts/{id}",
                 "operation_id": "get_plaid_account"
             },
             "mcp": "get_plaid_account"
@@ -226,7 +226,7 @@
             "service": "lunchmoney_mcp.services.accounts:trigger_plaid_fetch",
             "rest": {
                 "method": "POST",
-                "path": "/plaid-accounts/sync",
+                "path": "/plaid_accounts/fetch",
                 "operation_id": "trigger_plaid_fetch"
             },
             "mcp": "trigger_plaid_fetch"

@@ -96,8 +96,8 @@ def test_rest_collection_response_contracts_are_flat_arrays() -> None:
     openapi = fastapi_app.openapi()
     expected_items = {
         "/categories": "CategoryObject",
-        "/manual-accounts": "ManualAccountObject",
-        "/plaid-accounts": "PlaidAccountObject",
+        "/manual_accounts": "ManualAccountObject",
+        "/plaid_accounts": "PlaidAccountObject",
         "/tags": "TagObject",
         "/recurring_items": "RecurringObject",
         "/transactions": "TransactionObject",
@@ -123,6 +123,25 @@ def test_accounts_is_the_only_combined_collection_envelope() -> None:
     assert set(properties) == {"manual_accounts", "plaid_accounts"}
     assert properties["manual_accounts"]["type"] == "array"
     assert properties["plaid_accounts"]["type"] == "array"
+
+
+def test_account_routes_match_upstream_paths_and_parameter_names() -> None:
+    """Expose account operation paths and IDs with Lunch Money's exact spelling."""
+    paths = fastapi_app.openapi()["paths"]
+
+    for path in ("/manual_accounts/{id}", "/plaid_accounts/{id}"):
+        assert path in paths
+        for operation in paths[path].values():
+            parameters = operation.get("parameters", [])
+            path_parameter_names = [
+                parameter["name"]
+                for parameter in parameters
+                if parameter["in"] == "path"
+            ]
+            assert path_parameter_names == ["id"]
+
+    fetch_parameters = paths["/plaid_accounts/fetch"]["post"]["parameters"]
+    assert "id" in {parameter["name"] for parameter in fetch_parameters}
 
 
 def test_mcp_collection_tool_contracts_are_flat_arrays() -> None:
@@ -193,8 +212,8 @@ def test_rest_collection_endpoints_serialize_their_runtime_contracts(
 
     expected_collections = {
         "/categories": [category],
-        "/manual-accounts": [manual_account],
-        "/plaid-accounts": [plaid_account],
+        "/manual_accounts": [manual_account],
+        "/plaid_accounts": [plaid_account],
         "/tags": [tag],
         "/recurring_items": [recurring_item],
         "/transactions": [transaction],

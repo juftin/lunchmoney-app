@@ -89,23 +89,23 @@ persisted source.
 
 | Upstream v2 Endpoint    |  Method  | Local Route                    | FastMCP Tool            | Service Function             | Status  |
 | :---------------------- | :------: | :----------------------------- | :---------------------- | :--------------------------- | :-----: |
-| `/manual_accounts`      |  `GET`   | `GET /manual-accounts`         | `list_manual_accounts`  | `fetch_manual_accounts`      | ✅ Done |
-| `/manual_accounts`      |  `POST`  | `POST /manual-accounts`        | `create_manual_account` | `create_manual_account`      | ✅ Done |
-| `/manual_accounts/{id}` |  `GET`   | `GET /manual-accounts/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` | ✅ Done |
-| `/manual_accounts/{id}` |  `PUT`   | `PUT /manual-accounts/{id}`    | `update_manual_account` | `update_manual_account`      | ✅ Done |
-| `/manual_accounts/{id}` | `DELETE` | `DELETE /manual-accounts/{id}` | `delete_manual_account` | `delete_manual_account`      | ✅ Done |
+| `/manual_accounts`      |  `GET`   | `GET /manual_accounts`         | `list_manual_accounts`  | `fetch_manual_accounts`      | ✅ Done |
+| `/manual_accounts`      |  `POST`  | `POST /manual_accounts`        | `create_manual_account` | `create_manual_account`      | ✅ Done |
+| `/manual_accounts/{id}` |  `GET`   | `GET /manual_accounts/{id}`    | `get_manual_account`    | `fetch_manual_account_by_id` | ✅ Done |
+| `/manual_accounts/{id}` |  `PUT`   | `PUT /manual_accounts/{id}`    | `update_manual_account` | `update_manual_account`      | ✅ Done |
+| `/manual_accounts/{id}` | `DELETE` | `DELETE /manual_accounts/{id}` | `delete_manual_account` | `delete_manual_account`      | ✅ Done |
 
 ---
 
 ### 4. Plaid Accounts (`/plaid_accounts`)
 
-| Upstream v2 Endpoint    | Method | Local Route                 | FastMCP Tool          | Service Function            | Status  |
-| :---------------------- | :----: | :-------------------------- | :-------------------- | :-------------------------- | :-----: |
-| `/plaid_accounts`       | `GET`  | `GET /plaid-accounts`       | `list_plaid_accounts` | `fetch_plaid_accounts`      | ✅ Done |
-| `/plaid_accounts/{id}`  | `GET`  | `GET /plaid-accounts/{id}`  | `get_plaid_account`   | `fetch_plaid_account_by_id` | ✅ Done |
-| `/plaid_accounts/fetch` | `POST` | `POST /plaid-accounts/sync` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       | ✅ Done |
+| Upstream v2 Endpoint    | Method | Local Route                  | FastMCP Tool          | Service Function            | Status  |
+| :---------------------- | :----: | :--------------------------- | :-------------------- | :-------------------------- | :-----: |
+| `/plaid_accounts`       | `GET`  | `GET /plaid_accounts`        | `list_plaid_accounts` | `fetch_plaid_accounts`      | ✅ Done |
+| `/plaid_accounts/{id}`  | `GET`  | `GET /plaid_accounts/{id}`   | `get_plaid_account`   | `fetch_plaid_account_by_id` | ✅ Done |
+| `/plaid_accounts/fetch` | `POST` | `POST /plaid_accounts/fetch` | `trigger_plaid_fetch` | `trigger_plaid_fetch`       | ✅ Done |
 
-`GET /manual-accounts` and `GET /plaid-accounts` (and their corresponding MCP
+`GET /manual_accounts` and `GET /plaid_accounts` (and their corresponding MCP
 tools) return flat collections of complete account objects. `GET /accounts` and
 `list_accounts` remain the local convenience envelope containing both complete
 collections.
@@ -202,13 +202,13 @@ return flat collections of complete objects.
 - [x] Implement `GET /summary` (`get_account_summary`)
 - [x] Implement `GET /tags` & `GET /tags/{id}`
 - [x] Implement `GET /recurring_items` & `GET /recurring_items/{id}`
-- [x] Implement Single-ID GET routes (`/categories/{id}`, `/manual-accounts/{id}`, `/plaid-accounts/{id}`, `/transactions/{id}`)
+- [x] Implement Single-ID GET routes (`/categories/{id}`, `/manual_accounts/{id}`, `/plaid_accounts/{id}`, `/transactions/{id}`)
 
 ### Sprint 2: Category & Account Mutations (Write Operations)
 
 - [x] Implement Category mutations (`POST`, `PUT`, `DELETE` `/categories`)
-- [x] Implement Manual Account mutations (`POST`, `PUT`, `DELETE` `/manual-accounts`)
-- [x] Implement Plaid sync trigger (`POST /plaid-accounts/sync`)
+- [x] Implement Manual Account mutations (`POST`, `PUT`, `DELETE` `/manual_accounts`)
+- [x] Implement Plaid sync trigger (`POST /plaid_accounts/fetch`)
 
 ### Sprint 3: Transaction Mutations & Advanced Operations
 
