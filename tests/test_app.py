@@ -647,3 +647,26 @@ def test_stateless_startup_syncs_and_persists_without_manual_schema_setup(
     finally:
         get_settings.cache_clear()
         get_database.cache_clear()
+
+
+def test_openapi_docs_served_at_api_docs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Expose OpenAPI documentation at /api/docs, /api/redoc, and /api/openapi.json without auth."""
+    from starlette.testclient import TestClient
+    from lunchmoney_mcp.app import auth as auth_module
+
+    monkeypatch.setattr(
+        auth_module,
+        "get_secret_settings",
+        lambda: SimpleNamespace(mcp_api_key="secret-key"),
+    )
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
+        docs = client.get("/api/docs")
+        redoc = client.get("/api/redoc")
+        openapi = client.get("/api/openapi.json")
+
+    assert docs.status_code == 200
+    assert redoc.status_code == 200
+    assert openapi.status_code == 200
+    assert "SwaggerUIBundle" in docs.text
+    assert "redoc" in redoc.text.lower()
+    assert openapi.json()["info"]["title"] == "Lunch Money MCP"

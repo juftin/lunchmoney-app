@@ -43,6 +43,9 @@ fastapi_app = FastAPI(
     title="Lunch Money MCP",
     description="Lunch Money Model Context Protocol Server & API",
     lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
 )
 api_router = APIRouter(prefix="/api")
 """Router namespace for every public REST API operation."""
@@ -146,6 +149,11 @@ fastapi_app.include_router(dashboard_router)
 
 mcp_app: StarletteWithLifespan = mcp.http_app(path="/mcp")
 app = FastAPI(
+    title="Lunch Money MCP",
+    description="Lunch Money Model Context Protocol Server & API",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
     routes=[
         *mcp_app.routes,
         *fastapi_app.routes,
