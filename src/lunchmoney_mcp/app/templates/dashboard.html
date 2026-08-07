@@ -45,7 +45,7 @@
                 <span>Lunch Money</span>
             </a>
             {% include "partials/_period_control.html" %}
-            <div class="header-status">
+            <div id="header-status" class="header-status">
                 <span class="live-dot" aria-hidden="true"></span>
                 {% if dashboard.transaction_last_synced_at %}
                 <time datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}" title="{{ dashboard.transaction_last_synced_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">Data synced {{ dashboard.transaction_last_synced_at | time_ago }}</time>
@@ -55,7 +55,16 @@
             </div>
         </header>
 
-        <main id="dashboard-content" class="cockpit-layout" tabindex="-1">
+        <main
+            id="dashboard-content"
+            class="cockpit-layout"
+            tabindex="-1"
+            hx-get="/{% if dashboard.period_start %}?period={{ dashboard.period_start.isoformat() }}{% endif %}"
+            hx-trigger="every 30s"
+            hx-target="#dashboard-content"
+            hx-swap="innerHTML"
+            hx-disinherit="*"
+        >
             {% include "partials/cockpit_content.html" %}
         </main>
     </div>

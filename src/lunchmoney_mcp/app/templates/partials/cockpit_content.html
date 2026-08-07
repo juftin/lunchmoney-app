@@ -1,6 +1,15 @@
-{% from "partials/_macros.html" import amount, currency_symbol, category_row
-with context -%} {% if is_hx_request %}{% include
-"partials/_period_control.html" %}{% endif %} {%- set spending =
+{% from "partials/_macros.html" import amount, currency_symbol, category_row with context -%}
+{% if is_hx_request %}
+{% include "partials/_period_control.html" %}
+<div id="header-status" hx-swap-oob="true" class="header-status">
+    <span class="live-dot" aria-hidden="true"></span>
+    {% if dashboard.transaction_last_synced_at %}
+    <time datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}" title="{{ dashboard.transaction_last_synced_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">Data synced {{ dashboard.transaction_last_synced_at | time_ago }}</time>
+    {% else %}
+    <span>Awaiting sync</span>
+    {% endif %}
+</div>
+{% endif %} {%- set spending =
 dashboard.category_spending -%} {%- set accounts = dashboard.accounts -%} {%-
 set all_accounts = accounts.plaid_accounts + accounts.manual_accounts if
 accounts else [] -%} {%- set visible_accounts = all_accounts |
