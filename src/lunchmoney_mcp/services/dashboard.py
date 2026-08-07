@@ -41,6 +41,16 @@ ResultT = TypeVar("ResultT")
 """Type returned from one independently loaded dashboard section."""
 
 
+def _normalize_cron(raw: str | None) -> str | None:
+    """Normalize cron string and return None if disabled or empty."""
+    if not raw:
+        return None
+    cleaned = raw.strip().lower()
+    if cleaned in {"", "none", "disabled", "false", "0", "null", "off"}:
+        return None
+    return raw.strip()
+
+
 @dataclass(frozen=True)
 class DashboardData:
     """Read-only data rendered by the financial dashboard.
@@ -235,10 +245,11 @@ async def fetch_dashboard_data(
     metadata_last_synced_at = (
         metadata_sync.last_synced_at if metadata_sync is not None else last_synced_at
     )
-
     now = datetime.datetime.now(datetime.timezone.utc)
-    transaction_cron = settings.schedule_transactions_cron or settings.schedule_cron
-    metadata_cron = settings.schedule_metadata_cron
+    transaction_cron = _normalize_cron(
+        settings.schedule_transactions_cron or settings.schedule_cron
+    )
+    metadata_cron = _normalize_cron(settings.schedule_metadata_cron)
 
     transaction_next_sync_at: datetime.datetime | None = None
     if transaction_cron:

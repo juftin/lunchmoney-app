@@ -164,6 +164,16 @@ async def stop_scheduler(scheduler: AsyncIOScheduler) -> None:
     scheduler.shutdown(wait=False)
 
 
+def _normalize_cron(raw: str | None) -> str | None:
+    """Normalize cron string and return None if disabled or empty."""
+    if not raw:
+        return None
+    cleaned = raw.strip().lower()
+    if cleaned in {"", "none", "disabled", "false", "0", "null", "off"}:
+        return None
+    return raw.strip()
+
+
 def _create_scheduler(
     settings: RuntimeSettings,
     cron: str | None = None,
@@ -171,33 +181,52 @@ def _create_scheduler(
 ) -> AsyncIOScheduler:
     """Create a scheduler and register its stable, coalescing synchronization jobs."""
     resolved_timezone = timezone or settings.schedule_timezone
-    txn_cron = cron or settings.schedule_transactions_cron or settings.schedule_cron
-    meta_cron = settings.schedule_metadata_cron
+    txn_cron_str = _normalize_cron(
+        cron or settings.schedule_transactions_cron or settings.schedule_cron
+    )
+    meta_cron_str = _normalize_cron(settings.schedule_metadata_cron)
 
-    try:
-        txn_trigger = CronTrigger.from_crontab(txn_cron, timezone=resolved_timezone)
-        meta_trigger = CronTrigger.from_crontab(meta_cron, timezone=resolved_timezone)
-    except (TypeError, ValueError) as error:
-        msg = f"Invalid scheduler cron or timezone: {error}"
-        raise SchedulerConfigurationError(msg) from error
+    if cron is not None or settings.embed_scheduler:
+        if txn_cron_str is None:
+            txn_cron_str = "*/10 * * * *"
+        if meta_cron_str is None:
+            meta_cron_str = "0 * * * *"
 
     scheduler = build_scheduler(settings, timezone=resolved_timezone)
-    scheduler.add_job(
-        run_scheduled_sync,
-        trigger=txn_trigger,
-        id=SCHEDULE_TRANSACTIONS_ID,
-        coalesce=True,
-        max_instances=1,
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        run_scheduled_sync,
-        trigger=meta_trigger,
-        id=SCHEDULE_METADATA_ID,
-        coalesce=True,
-        max_instances=1,
-        replace_existing=True,
-    )
+    if txn_cron_str is not None:
+        try:
+            txn_trigger = CronTrigger.from_crontab(
+                txn_cron_str, timezone=resolved_timezone
+            )
+            scheduler.add_job(
+                run_scheduled_sync,
+                trigger=txn_trigger,
+                id=SCHEDULE_TRANSACTIONS_ID,
+                coalesce=True,
+                max_instances=1,
+                replace_existing=True,
+            )
+        except (TypeError, ValueError) as error:
+            msg = f"Invalid scheduler cron or timezone: {error}"
+            raise SchedulerConfigurationError(msg) from error
+
+    if meta_cron_str is not None:
+        try:
+            meta_trigger = CronTrigger.from_crontab(
+                meta_cron_str, timezone=resolved_timezone
+            )
+            scheduler.add_job(
+                run_scheduled_sync,
+                trigger=meta_trigger,
+                id=SCHEDULE_METADATA_ID,
+                coalesce=True,
+                max_instances=1,
+                replace_existing=True,
+            )
+        except (TypeError, ValueError) as error:
+            msg = f"Invalid scheduler cron or timezone: {error}"
+            raise SchedulerConfigurationError(msg) from error
+
     return scheduler
 
 

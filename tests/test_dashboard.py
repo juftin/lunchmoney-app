@@ -661,3 +661,32 @@ def test_dashboard_renders_syncing_component(
     assert "0 * * * *" in response.text
     assert "Aug 02, 12:00 UTC" in response.text
     assert "Aug 02, 12:10 UTC" in response.text
+
+
+def test_dashboard_renders_disabled_cron_workloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Render Disabled for cron schedule and next estimate when cron is unconfigured."""
+    data = _dashboard_data()
+    assert data.sync_status is not None
+    disabled_status = data.sync_status.model_copy(
+        update={
+            "transaction_cron": None,
+            "transaction_next_sync_at": None,
+            "metadata_cron": None,
+            "metadata_next_sync_at": None,
+            "schedule_cron": None,
+            "next_sync_at": None,
+        }
+    )
+    disabled_data = replace(data, sync_status=disabled_status)
+    _configure_dashboard(monkeypatch=monkeypatch, data=disabled_data)
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get("/", headers={"X-API-Key": "dashboard-key"})
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert 'id="sync-panel"' in response.text
+    assert "Disabled" in response.text
