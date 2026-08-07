@@ -29,8 +29,10 @@ async def database(tmp_path: Path) -> AsyncIterator[LunchMoneyDatabase]:
 def client() -> AsyncMock:
     """Provide a client double with successful empty domain refreshes."""
     from database.factories import user_object
+    from lunchmoney_mcp.client import LunchableData
 
     test_client = AsyncMock(spec=LunchMoneyApp)
+    test_client.data = LunchableData()
 
     async def refresh(model: type[Any]) -> Any:
         """Return the required user object and empty collection domains."""

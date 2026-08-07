@@ -475,7 +475,10 @@ async def test_explicit_sync_initializes_and_persists_to_stateless_database(
     monkeypatch.setenv("STATELESS", "true")
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     get_settings.cache_clear()
+    from lunchmoney_mcp.client import LunchableData
+
     client = AsyncMock(spec=LunchMoneyApp)
+    client.data = LunchableData()
     client.refresh.side_effect = refresh
     client.refresh_transactions.return_value = {}
 

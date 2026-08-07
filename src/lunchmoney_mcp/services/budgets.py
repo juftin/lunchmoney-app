@@ -8,7 +8,7 @@ from lunchmoney.models import (
     UpsertBudgetRequestObject,
 )
 
-from lunchmoney_mcp.client import LunchableData, LunchMoneyApp
+from lunchmoney_mcp.client import LunchMoneyApp
 
 
 async def fetch_budget_settings(
@@ -29,17 +29,11 @@ async def fetch_budget_settings(
     BudgetSettingsResponseObject
         Upstream budget-period settings.
     """
-    data = getattr(client, "data", None)
-    if (
-        not force_refresh
-        and isinstance(data, LunchableData)
-        and data.budget_settings is not None
-    ):
-        return data.budget_settings
+    if not force_refresh and client.data.budget_settings is not None:
+        return client.data.budget_settings
 
     res = await client.client.budgets.get_budget_settings()
-    if isinstance(data, LunchableData):
-        data.budget_settings = res
+    client.data.budget_settings = res
     return res
 
 
@@ -64,9 +58,7 @@ async def set_budget_value(
     res = await client.client.budgets.upsert_budget(
         upsert_budget_request_object=request,
     )
-    data = getattr(client, "data", None)
-    if isinstance(data, LunchableData):
-        data.summaries.clear()
+    client.data.summaries.clear()
     return res
 
 
@@ -90,6 +82,4 @@ async def clear_budget_value(
         category_id=category_id,
         start_date=start_date,
     )
-    data = getattr(client, "data", None)
-    if isinstance(data, LunchableData):
-        data.summaries.clear()
+    client.data.summaries.clear()

@@ -46,8 +46,6 @@ async def fetch_account_summary(
     SummaryResponseObject
         Upstream budget summary response for the requested range.
     """
-    from lunchmoney_mcp.client import LunchableData
-
     cache_key = (
         start_date,
         end_date,
@@ -57,13 +55,8 @@ async def fetch_account_summary(
         include_totals,
         include_rollover_pool,
     )
-    data = getattr(client, "data", None)
-    if (
-        not force_refresh
-        and isinstance(data, LunchableData)
-        and cache_key in data.summaries
-    ):
-        return data.summaries[cache_key]
+    if not force_refresh and cache_key in client.data.summaries:
+        return client.data.summaries[cache_key]
 
     res = await client.client.summary.get_budget_summary(
         start_date=start_date,
@@ -74,6 +67,5 @@ async def fetch_account_summary(
         include_totals=include_totals,
         include_rollover_pool=include_rollover_pool,
     )
-    if isinstance(data, LunchableData):
-        data.summaries[cache_key] = res
+    client.data.summaries[cache_key] = res
     return res
