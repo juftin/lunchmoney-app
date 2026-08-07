@@ -35,7 +35,7 @@
         });
 
         Alpine.data("dashboard", () => ({
-            activeTab: "accounts",
+            activeTab: localStorage.getItem("lm_active_tab") || "accounts",
             searchQuery: "",
             allExpanded: false,
             showApiKeyDialog: false,
@@ -57,6 +57,11 @@
         /** ----- lifecycle ----- */
 
         init() {
+            const savedTab = localStorage.getItem("lm_active_tab");
+            if (savedTab && ["accounts", "summary", "activity", "sync"].includes(savedTab)) {
+                this.activeTab = savedTab;
+            }
+
             this.initChart();
             this._formatLocalTimes();
             this._updateRelativeTimes();
@@ -150,6 +155,11 @@
 
         setTab(tab) {
             this.activeTab = tab;
+            try {
+                localStorage.setItem("lm_active_tab", tab);
+            } catch {
+                // Ignore storage errors
+            }
         },
 
         /** ----- keyboard shortcuts ----- */
