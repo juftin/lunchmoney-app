@@ -628,5 +628,5 @@ def test_dashboard_renders_syncing_component(
     assert "Syncing status" in response.text
     assert "Persistent (SQLite)" in response.text
     assert "0 * * * *" in response.text
-    assert "Aug 02, 2026 12:00 UTC" in response.text
-    assert "Aug 02, 2026 13:00 UTC" in response.text
+    assert "Aug 02, 12:00 UTC" in response.text
+    assert "Aug 02, 13:00 UTC" in response.text

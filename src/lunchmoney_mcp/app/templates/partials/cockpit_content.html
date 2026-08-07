@@ -282,25 +282,25 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         <dl class="sync-details">
             <div>
                 <dt>Persistence mode</dt>
-                <dd><strong>{{ dashboard.sync_status.persistence_mode }}</strong></dd>
+                <dd><span class="sync-badge sync-badge--mode">{{ dashboard.sync_status.persistence_mode }}</span></dd>
             </div>
             <div>
                 <dt>Last sync date</dt>
                 <dd>
                     {% if dashboard.sync_status.last_synced_at %}
                     <time datetime="{{ dashboard.sync_status.last_synced_at.isoformat() }}">
-                        {{ dashboard.sync_status.last_synced_at.strftime('%b %d, %Y %H:%M UTC') }}
+                        {{ dashboard.sync_status.last_synced_at.strftime('%b %d, %H:%M UTC') }}
                     </time>
                     {% else %}
-                    <span>Not yet synced</span>
+                    <span class="text-muted">Not yet synced</span>
                     {% endif %}
                 </dd>
             </div>
             <div>
                 <dt>Scheduled workloads</dt>
                 <dd>
-                    <code>{{ dashboard.sync_status.schedule_cron }}</code>
-                    <small>({{ dashboard.sync_status.schedule_timezone }})</small>
+                    <code class="sync-code">{{ dashboard.sync_status.schedule_cron }}</code>
+                    <span class="sync-tz">({{ dashboard.sync_status.schedule_timezone }})</span>
                 </dd>
             </div>
             <div>
@@ -308,10 +308,10 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dd>
                     {% if dashboard.sync_status.next_sync_at %}
                     <time datetime="{{ dashboard.sync_status.next_sync_at.isoformat() }}">
-                        {{ dashboard.sync_status.next_sync_at.strftime('%b %d, %Y %H:%M UTC') }}
+                        {{ dashboard.sync_status.next_sync_at.strftime('%b %d, %H:%M UTC') }}
                     </time>
                     {% else %}
-                    <span>Disabled</span>
+                    <span class="text-muted">Disabled</span>
                     {% endif %}
                 </dd>
             </div>
@@ -319,9 +319,9 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Scheduler engine</dt>
                 <dd>
                     {% if dashboard.sync_status.embed_scheduler %}
-                    Embedded (Local FastAPI)
+                    <span class="sync-badge">Embedded</span>
                     {% else %}
-                    External / Standalone
+                    <span class="sync-badge">External</span>
                     {% endif %}
                 </dd>
             </div>
