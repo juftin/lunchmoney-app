@@ -121,7 +121,7 @@ async def dashboard(
         target = (
             request.headers.get("HX-Target") or request.headers.get("hx-target") or ""
         ).lstrip("#")
-        if target == "spending-workspace" or period:
+        if target == "spending-workspace":
             return templates.TemplateResponse(
                 request=request,
                 name="partials/_spending_workspace.html",

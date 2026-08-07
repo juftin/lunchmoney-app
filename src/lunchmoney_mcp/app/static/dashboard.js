@@ -200,10 +200,10 @@
             });
 
             sections.forEach((section) => {
-                const visible = section.querySelectorAll(
-                    '.category-item:not([style*="display: none"]), .category-child:not([style*="display: none"])',
-                );
-                section.style.display = visible.length > 0 ? "" : "none";
+                const visibleItems = Array.from(
+                    section.querySelectorAll(".category-item, .category-child"),
+                ).filter((item) => item.style.display !== "none");
+                section.style.display = !query || visibleItems.length > 0 ? "" : "none";
             });
         },
 

@@ -733,3 +733,25 @@ def test_dashboard_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     assert response.status_code == 200
     assert 'id="sync-panel"' in response.text
     assert "Syncing status" in response.text
+
+
+def test_dashboard_htmx_period_request_preserves_left_rail_when_targeting_dashboard_content(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Preserve the left rail when an HTMX request with a period parameter targets dashboard-content."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get(
+                "/?period=2026-07-01",
+                headers={
+                    "X-API-Key": "dashboard-key",
+                    "HX-Request": "true",
+                    "HX-Target": "dashboard-content",
+                },
+            )
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert 'class="left-rail"' in response.text
