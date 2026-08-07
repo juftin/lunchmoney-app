@@ -63,6 +63,11 @@ async def sync_database(
     SyncSummary
         Counts of records persisted across categories, accounts, tags, user, and transactions.
     """
+    from lunchmoney_mcp.client import LunchableData
+
+    data = getattr(client, "data", None)
+    if isinstance(data, LunchableData):
+        data.clear()
     sync_started_at = datetime.datetime.now(datetime.timezone.utc)
     resolved_end_date: datetime.date = end_date or datetime.date.today()
     resolved_start_date = (

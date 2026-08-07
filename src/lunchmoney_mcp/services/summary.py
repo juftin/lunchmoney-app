@@ -16,6 +16,7 @@ async def fetch_account_summary(
     include_past_budget_dates: bool | None = None,
     include_totals: bool | None = None,
     include_rollover_pool: bool | None = None,
+    force_refresh: bool = False,
 ) -> SummaryResponseObject:
     """Fetch a live budget summary for a specified date range.
 
@@ -37,13 +38,34 @@ async def fetch_account_summary(
         Whether top-level inflow and outflow totals should be included.
     include_rollover_pool : bool | None
         Whether rollover-pool details should be included.
+    force_refresh : bool
+        Whether to bypass client cache and force an upstream API call.
 
     Returns
     -------
     SummaryResponseObject
         Upstream budget summary response for the requested range.
     """
-    return await client.client.summary.get_budget_summary(
+    from lunchmoney_mcp.client import LunchableData
+
+    cache_key = (
+        start_date,
+        end_date,
+        include_exclude_from_budgets,
+        include_occurrences,
+        include_past_budget_dates,
+        include_totals,
+        include_rollover_pool,
+    )
+    data = getattr(client, "data", None)
+    if (
+        not force_refresh
+        and isinstance(data, LunchableData)
+        and cache_key in data.summaries
+    ):
+        return data.summaries[cache_key]
+
+    res = await client.client.summary.get_budget_summary(
         start_date=start_date,
         end_date=end_date,
         include_exclude_from_budgets=include_exclude_from_budgets,
@@ -52,3 +74,6 @@ async def fetch_account_summary(
         include_totals=include_totals,
         include_rollover_pool=include_rollover_pool,
     )
+    if isinstance(data, LunchableData):
+        data.summaries[cache_key] = res
+    return res

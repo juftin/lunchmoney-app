@@ -8,11 +8,12 @@ from lunchmoney.models import (
     UpsertBudgetRequestObject,
 )
 
-from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.client import LunchableData, LunchMoneyApp
 
 
 async def fetch_budget_settings(
     client: LunchMoneyApp,
+    force_refresh: bool = False,
 ) -> BudgetSettingsResponseObject:
     """Fetch the authenticated user's budget-period settings.
 
@@ -20,13 +21,26 @@ async def fetch_budget_settings(
     ----------
     client : LunchMoneyApp
         Configured Lunch Money API client.
+    force_refresh : bool
+        Whether to bypass client cache and force an upstream API call.
 
     Returns
     -------
     BudgetSettingsResponseObject
         Upstream budget-period settings.
     """
-    return await client.client.budgets.get_budget_settings()
+    data = getattr(client, "data", None)
+    if (
+        not force_refresh
+        and isinstance(data, LunchableData)
+        and data.budget_settings is not None
+    ):
+        return data.budget_settings
+
+    res = await client.client.budgets.get_budget_settings()
+    if isinstance(data, LunchableData):
+        data.budget_settings = res
+    return res
 
 
 async def set_budget_value(
@@ -47,9 +61,13 @@ async def set_budget_value(
     BudgetUpsertResponseObject
         Canonical budget value returned by Lunch Money.
     """
-    return await client.client.budgets.upsert_budget(
+    res = await client.client.budgets.upsert_budget(
         upsert_budget_request_object=request,
     )
+    data = getattr(client, "data", None)
+    if isinstance(data, LunchableData):
+        data.summaries.clear()
+    return res
 
 
 async def clear_budget_value(
@@ -72,3 +90,6 @@ async def clear_budget_value(
         category_id=category_id,
         start_date=start_date,
     )
+    data = getattr(client, "data", None)
+    if isinstance(data, LunchableData):
+        data.summaries.clear()
