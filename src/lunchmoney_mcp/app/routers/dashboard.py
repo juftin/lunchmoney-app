@@ -13,8 +13,11 @@ from fastapi.templating import Jinja2Templates
 from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.services.dashboard import DashboardData, fetch_dashboard_data
-
+from lunchmoney_mcp.services.dashboard import (
+    DashboardData,
+    fetch_dashboard_data,
+    humanize_time_ago,
+)
 
 router = APIRouter(tags=["Dashboard"])
 """FastAPI APIRouter for the authenticated financial dashboard."""
@@ -27,6 +30,7 @@ templates = Jinja2Templates(
         cache_size=0,
     ),
 )
+templates.env.filters["time_ago"] = humanize_time_ago
 """HTML templates used by dashboard routes."""
 
 

@@ -46,9 +46,11 @@
 
         init() {
             this.initChart();
+            this._formatLocalTimes();
 
             document.body.addEventListener("htmx:afterSettle", () => {
                 this.initChart();
+                this._formatLocalTimes();
                 this._setupCategoryFilter();
                 this._applySearchFilter();
             });
@@ -67,6 +69,22 @@
             });
 
             this._setupCategoryFilter();
+        },
+
+        _formatLocalTimes() {
+            document.querySelectorAll("time.js-local-time").forEach((el) => {
+                const iso = el.getAttribute("datetime");
+                if (!iso) return;
+                const date = new Date(iso);
+                if (isNaN(date.getTime())) return;
+                const formatted = new Intl.DateTimeFormat(navigator.language || "en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                }).format(date);
+                el.textContent = formatted;
+            });
         },
 
         /** ----- tabs ----- */

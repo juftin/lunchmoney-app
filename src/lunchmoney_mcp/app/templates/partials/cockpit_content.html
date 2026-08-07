@@ -343,8 +343,8 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Last watermark</dt>
                 <dd>
                     {% if dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at %}
-                    <time datetime="{{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}">
-                        {{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %H:%M UTC') }}
+                    <time datetime="{{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}" title="{{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %Y %H:%M:%S UTC') }}">
+                        {{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at) | time_ago }}
                     </time>
                     {% else %}
                     <span class="text-muted">Not yet synced</span>
@@ -355,7 +355,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Next estimate</dt>
                 <dd>
                     {% if dashboard.sync_status.transaction_next_sync_at %}
-                    <time datetime="{{ dashboard.sync_status.transaction_next_sync_at.isoformat() }}">
+                    <time class="js-local-time" datetime="{{ dashboard.sync_status.transaction_next_sync_at.isoformat() }}" title="{{ dashboard.sync_status.transaction_next_sync_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">
                         {{ dashboard.sync_status.transaction_next_sync_at.strftime('%b %d, %H:%M UTC') }}
                     </time>
                     {% else %}
@@ -383,8 +383,8 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Last watermark</dt>
                 <dd>
                     {% if dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at %}
-                    <time datetime="{{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}">
-                        {{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %H:%M UTC') }}
+                    <time datetime="{{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}" title="{{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %Y %H:%M:%S UTC') }}">
+                        {{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at) | time_ago }}
                     </time>
                     {% else %}
                     <span class="text-muted">Not yet synced</span>
@@ -395,7 +395,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Next estimate</dt>
                 <dd>
                     {% if dashboard.sync_status.metadata_next_sync_at %}
-                    <time datetime="{{ dashboard.sync_status.metadata_next_sync_at.isoformat() }}">
+                    <time class="js-local-time" datetime="{{ dashboard.sync_status.metadata_next_sync_at.isoformat() }}" title="{{ dashboard.sync_status.metadata_next_sync_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">
                         {{ dashboard.sync_status.metadata_next_sync_at.strftime('%b %d, %H:%M UTC') }}
                     </time>
                     {% else %}

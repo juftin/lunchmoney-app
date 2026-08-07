@@ -659,8 +659,26 @@ def test_dashboard_renders_syncing_component(
     assert "Persistent (SQLite)" in response.text
     assert "*/10 * * * *" in response.text
     assert "0 * * * *" in response.text
-    assert "Aug 02, 12:00 UTC" in response.text
-    assert "Aug 02, 12:10 UTC" in response.text
+    assert 'class="js-local-time"' in response.text
+
+
+def test_humanize_time_ago() -> None:
+    """Format timestamps into human-readable relative phrases."""
+    from lunchmoney_mcp.services.dashboard import humanize_time_ago
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    assert humanize_time_ago(None) == "Not yet synced"
+    assert (
+        humanize_time_ago(now - datetime.timedelta(seconds=20), now=now) == "just now"
+    )
+    assert (
+        humanize_time_ago(now - datetime.timedelta(minutes=5), now=now)
+        == "5 minutes ago"
+    )
+    assert (
+        humanize_time_ago(now - datetime.timedelta(hours=21), now=now) == "21 hours ago"
+    )
+    assert humanize_time_ago(now - datetime.timedelta(days=2), now=now) == "2 days ago"
 
 
 def test_dashboard_renders_disabled_cron_workloads(

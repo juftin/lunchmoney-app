@@ -41,6 +41,40 @@ ResultT = TypeVar("ResultT")
 """Type returned from one independently loaded dashboard section."""
 
 
+def humanize_time_ago(
+    dt: datetime.datetime | None,
+    now: datetime.datetime | None = None,
+) -> str:
+    """Return a human-friendly relative time string (e.g. '21 hours ago', '5 minutes ago', 'just now')."""
+    if dt is None:
+        return "Not yet synced"
+    if now is None:
+        now = datetime.datetime.now(datetime.timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+
+    diff_seconds = int((now - dt).total_seconds())
+    if diff_seconds < 0:
+        diff_seconds = 0
+
+    if diff_seconds < 60:
+        return "just now"
+    minutes = diff_seconds // 60
+    if minutes < 60:
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    days = hours // 24
+    if days < 30:
+        return f"{days} day{'s' if days != 1 else ''} ago"
+    months = days // 30
+    if months < 12:
+        return f"{months} month{'s' if months != 1 else ''} ago"
+    years = days // 365
+    return f"{years} year{'s' if years != 1 else ''} ago"
+
+
 def _normalize_cron(raw: str | None) -> str | None:
     """Normalize cron string and return None if disabled or empty."""
     if not raw:
