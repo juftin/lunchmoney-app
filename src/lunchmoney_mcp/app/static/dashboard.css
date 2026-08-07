@@ -210,21 +210,20 @@ body {
 .header-refresh-btn {
     display: grid;
     place-items: center;
-    width: 2.65rem;
-    height: 2.65rem;
+    width: 2rem;
+    height: 2rem;
     color: var(--muted);
-    background: var(--surface);
-    border: 1px solid var(--line);
+    background: transparent;
+    border: 0;
     border-radius: 0.4rem;
     cursor: pointer;
     margin: 0;
     padding: 0;
-    transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+    transition: color 150ms ease, background 150ms ease;
 }
 .header-refresh-btn:hover {
     color: var(--text);
-    background: var(--surface-raised);
-    border-color: var(--line);
+    background: var(--surface);
 }
 .header-refresh-btn:focus-visible {
     outline: 2px solid var(--accent);
