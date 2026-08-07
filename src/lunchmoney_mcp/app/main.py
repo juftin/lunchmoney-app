@@ -76,6 +76,10 @@ async def observe_request(
             content={"detail": "Internal server error"},
         )
     response.headers["X-Request-ID"] = request_id
+    if response.headers.get("content-type", "").startswith("text/html"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     _record_request(
         request=request,
         request_id=request_id,

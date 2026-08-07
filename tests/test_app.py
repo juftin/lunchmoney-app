@@ -670,3 +670,16 @@ def test_openapi_docs_served_at_api_docs(monkeypatch: pytest.MonkeyPatch) -> Non
     assert "SwaggerUIBundle" in docs.text
     assert "redoc" in redoc.text.lower()
     assert openapi.json()["info"]["title"] == "Lunch Money MCP"
+
+
+def test_html_responses_disable_browser_caching() -> None:
+    """Attach no-cache headers to HTML responses to prevent stale browser renders."""
+    from starlette.testclient import TestClient
+
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-cache, no-store, must-revalidate"
+    assert response.headers["Pragma"] == "no-cache"
+    assert response.headers["Expires"] == "0"
