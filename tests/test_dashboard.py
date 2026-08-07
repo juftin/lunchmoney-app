@@ -116,13 +116,34 @@ def _dashboard_data(*, unavailable_sections: tuple[str, ...] = ()) -> DashboardD
         scheduled_sync=scheduled_sync,
         sync_status=SyncStatusSummary(
             persistence_mode="Persistent (SQLite)",
+            db_driver="sqlite+aiosqlite",
+            stored_transactions=100,
+            stored_categories=10,
+            stored_accounts=2,
+            stored_tags=1,
+            transaction_cron="*/10 * * * *",
+            transaction_timezone="UTC",
+            transaction_last_synced_at=datetime.datetime(
+                2026, 8, 2, 12, tzinfo=datetime.timezone.utc
+            ),
+            transaction_next_sync_at=datetime.datetime(
+                2026, 8, 2, 12, 10, tzinfo=datetime.timezone.utc
+            ),
+            metadata_cron="0 * * * *",
+            metadata_timezone="UTC",
+            metadata_last_synced_at=datetime.datetime(
+                2026, 8, 2, 12, tzinfo=datetime.timezone.utc
+            ),
+            metadata_next_sync_at=datetime.datetime(
+                2026, 8, 2, 13, tzinfo=datetime.timezone.utc
+            ),
             last_synced_at=datetime.datetime(
                 2026, 8, 2, 12, tzinfo=datetime.timezone.utc
             ),
-            schedule_cron="0 * * * *",
+            schedule_cron="*/10 * * * *",
             schedule_timezone="UTC",
             next_sync_at=datetime.datetime(
-                2026, 8, 2, 13, tzinfo=datetime.timezone.utc
+                2026, 8, 2, 12, 10, tzinfo=datetime.timezone.utc
             ),
             embed_scheduler=False,
             scheduled_sync=scheduled_sync,
@@ -634,6 +655,7 @@ def test_dashboard_renders_syncing_component(
     assert "Metadata Workload" in response.text
     assert "Persistent (SQLite)" in response.text
     assert "sqlite+aiosqlite" in response.text
+    assert "*/10 * * * *" in response.text
     assert "0 * * * *" in response.text
     assert "Aug 02, 12:00 UTC" in response.text
-    assert "Aug 02, 13:00 UTC" in response.text
+    assert "Aug 02, 12:10 UTC" in response.text

@@ -223,17 +223,32 @@ async def fetch_dashboard_data(
     metadata_last_synced_at = (
         metadata_sync.last_synced_at if metadata_sync is not None else last_synced_at
     )
-    next_sync_at: datetime.datetime | None = None
-    if settings.schedule_cron:
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    transaction_cron = settings.schedule_transactions_cron or settings.schedule_cron
+    metadata_cron = settings.schedule_metadata_cron
+
+    transaction_next_sync_at: datetime.datetime | None = None
+    if transaction_cron:
         try:
             trigger = CronTrigger.from_crontab(
-                settings.schedule_cron,
+                transaction_cron,
                 timezone=settings.schedule_timezone,
             )
-            now = datetime.datetime.now(datetime.timezone.utc)
-            next_sync_at = trigger.get_next_fire_time(None, now)
+            transaction_next_sync_at = trigger.get_next_fire_time(None, now)
         except Exception:
-            next_sync_at = None
+            transaction_next_sync_at = None
+
+    metadata_next_sync_at: datetime.datetime | None = None
+    if metadata_cron:
+        try:
+            trigger = CronTrigger.from_crontab(
+                metadata_cron,
+                timezone=settings.schedule_timezone,
+            )
+            metadata_next_sync_at = trigger.get_next_fire_time(None, now)
+        except Exception:
+            metadata_next_sync_at = None
 
     sync_status = SyncStatusSummary(
         persistence_mode=persistence_mode,
@@ -242,18 +257,18 @@ async def fetch_dashboard_data(
         stored_categories=db_stats.get("categories", 0),
         stored_accounts=db_stats.get("accounts", 0),
         stored_tags=db_stats.get("tags", 0),
-        transaction_cron=settings.schedule_cron,
+        transaction_cron=transaction_cron,
         transaction_timezone=settings.schedule_timezone,
         transaction_last_synced_at=last_synced_at,
-        transaction_next_sync_at=next_sync_at,
-        metadata_cron=settings.schedule_cron,
+        transaction_next_sync_at=transaction_next_sync_at,
+        metadata_cron=metadata_cron,
         metadata_timezone=settings.schedule_timezone,
         metadata_last_synced_at=metadata_last_synced_at,
-        metadata_next_sync_at=next_sync_at,
+        metadata_next_sync_at=metadata_next_sync_at,
         last_synced_at=last_synced_at,
-        schedule_cron=settings.schedule_cron,
+        schedule_cron=transaction_cron,
         schedule_timezone=settings.schedule_timezone,
-        next_sync_at=next_sync_at,
+        next_sync_at=transaction_next_sync_at,
         embed_scheduler=settings.embed_scheduler,
         scheduled_sync=scheduled_sync,
     )

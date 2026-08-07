@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 SCHEDULE_ID: str = "lunchmoney-scheduled-sync"
 """Stable APScheduler identifier for the recurring synchronization schedule."""
+SCHEDULE_TRANSACTIONS_ID: str = "lunchmoney-scheduled-sync-transactions"
+"""Stable APScheduler identifier for transaction database synchronization."""
+SCHEDULE_METADATA_ID: str = "lunchmoney-scheduled-sync-metadata"
+"""Stable APScheduler identifier for metadata database synchronization."""
 
 _active_sync_tasks: set[asyncio.Task[None]] = set()
 """In-process scheduled sync tasks awaited during orderly scheduler shutdown."""
@@ -162,20 +166,34 @@ async def stop_scheduler(scheduler: AsyncIOScheduler) -> None:
 
 def _create_scheduler(
     settings: RuntimeSettings,
-    cron: str,
-    timezone: str,
+    cron: str | None = None,
+    timezone: str | None = None,
 ) -> AsyncIOScheduler:
-    """Create a scheduler and register its stable, coalescing synchronization job."""
+    """Create a scheduler and register its stable, coalescing synchronization jobs."""
+    resolved_timezone = timezone or settings.schedule_timezone
+    txn_cron = cron or settings.schedule_transactions_cron or settings.schedule_cron
+    meta_cron = settings.schedule_metadata_cron
+
     try:
-        trigger = CronTrigger.from_crontab(cron, timezone=timezone)
+        txn_trigger = CronTrigger.from_crontab(txn_cron, timezone=resolved_timezone)
+        meta_trigger = CronTrigger.from_crontab(meta_cron, timezone=resolved_timezone)
     except (TypeError, ValueError) as error:
         msg = f"Invalid scheduler cron or timezone: {error}"
         raise SchedulerConfigurationError(msg) from error
-    scheduler = build_scheduler(settings, timezone=timezone)
+
+    scheduler = build_scheduler(settings, timezone=resolved_timezone)
     scheduler.add_job(
         run_scheduled_sync,
-        trigger=trigger,
-        id=SCHEDULE_ID,
+        trigger=txn_trigger,
+        id=SCHEDULE_TRANSACTIONS_ID,
+        coalesce=True,
+        max_instances=1,
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        run_scheduled_sync,
+        trigger=meta_trigger,
+        id=SCHEDULE_METADATA_ID,
         coalesce=True,
         max_instances=1,
         replace_existing=True,
