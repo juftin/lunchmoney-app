@@ -307,4 +307,4 @@ async def test_non_incremental_sync_preserves_date_window_without_watermark(
         end_date=end_date,
         cache=False,
     )
-    assert await database.get_sync_metadata("transactions") is None
+    assert (await database.get_sync_metadata("transactions")) is not None

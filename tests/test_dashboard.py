@@ -708,3 +708,27 @@ def test_dashboard_renders_disabled_cron_workloads(
     assert response.status_code == 200
     assert 'id="sync-panel"' in response.text
     assert "Disabled" in response.text
+
+
+def test_dashboard_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Trigger an instant sync via POST /dashboard/sync and re-render cockpit content."""
+    from lunchmoney_mcp.services import sync as sync_service
+
+    monkeypatch.setattr(
+        sync_service,
+        "execute_sync",
+        AsyncMock(return_value=SimpleNamespace(synced=SimpleNamespace(user=1))),
+    )
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.post(
+                "/dashboard/sync",
+                headers={"X-API-Key": "dashboard-key", "HX-Request": "true"},
+            )
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert 'id="sync-panel"' in response.text
+    assert "Syncing status" in response.text

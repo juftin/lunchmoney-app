@@ -124,13 +124,12 @@ async def sync_database(
             last_synced_at=sync_started_at,
         )
     )
-    if incremental:
-        await db.upsert_sync_metadata(
-            SyncMetadata(
-                domain="transactions",
-                last_synced_at=sync_started_at,
-            )
+    await db.upsert_sync_metadata(
+        SyncMetadata(
+            domain="transactions",
+            last_synced_at=sync_started_at,
         )
+    )
 
     return SyncSummary(
         user=1 if user_obj else 0,

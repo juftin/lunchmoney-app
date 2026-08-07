@@ -140,4 +140,36 @@ async def dashboard(
     )
 
 
+@router.post(
+    path="/dashboard/sync",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def dashboard_sync(
+    request: Request,
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    period: Annotated[str | None, Query()] = None,
+) -> HTMLResponse:
+    """Trigger an instant database sync and re-render the dashboard cockpit content."""
+    from lunchmoney_mcp.services.sync import execute_sync
+
+    await execute_sync(db=db, client=client, days=30, incremental=False)
+    period_date = _parse_period(period)
+    data = await fetch_dashboard_data(db=db, client=client, period_start=period_date)
+    chart_data = _build_chart_data(data)
+    today = datetime.date.today()
+    context = {
+        "dashboard": data,
+        "chart_data": chart_data,
+        "is_hx_request": True,
+        "today": today,
+    }
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/cockpit_content.html",
+        context=context,
+    )
+
+
 __all__ = ["router"]

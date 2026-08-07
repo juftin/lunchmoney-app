@@ -268,15 +268,27 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         x-show="activeTab === 'sync'"
         style="display: none"
     >
-        <div class="panel-title">
+        <div class="panel-title" style="display: flex; align-items: center; justify-content: space-between;">
             <h2>Syncing status</h2>
-            {% if dashboard.sync_status and dashboard.sync_status.scheduled_sync %}
-            <span class="status-badge status-badge--{{ dashboard.sync_status.scheduled_sync.status }}">
-                {{ dashboard.sync_status.scheduled_sync.status | capitalize }}
-            </span>
-            {% else %}
-            <span class="status-badge status-badge--idle">Ready</span>
-            {% endif %}
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                {% if dashboard.sync_status and dashboard.sync_status.scheduled_sync %}
+                <span class="status-badge status-badge--{{ dashboard.sync_status.scheduled_sync.status }}">
+                    {{ dashboard.sync_status.scheduled_sync.status | capitalize }}
+                </span>
+                {% else %}
+                <span class="status-badge status-badge--idle">Ready</span>
+                {% endif %}
+                <button
+                    class="btn btn-sm btn-outline"
+                    type="button"
+                    style="margin: 0; padding: 0.25rem 0.6rem; font-size: 0.75rem;"
+                    hx-post="/dashboard/sync"
+                    hx-target="#dashboard-content"
+                    hx-swap="outerHTML"
+                >
+                    Sync Now
+                </button>
+            </div>
         </div>
         {% if dashboard.sync_status %}
         <dl class="period-summary sync-summary">
