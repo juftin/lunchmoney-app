@@ -201,6 +201,33 @@ body {
     box-shadow: 0 0 0 0.25rem rgba(50, 207, 130, 0.15);
     animation: live-pulse 2s infinite ease-in-out;
 }
+.refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: 0.4rem;
+    padding: 0.25rem 0.6rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.refresh-btn:hover {
+    background: var(--surface-raised);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.refresh-btn svg {
+    transition: transform 300ms ease;
+}
+.refresh-btn.htmx-request svg,
+.refresh-btn:active svg {
+    transform: rotate(180deg);
+}
 
 @keyframes live-pulse {
     0% {
