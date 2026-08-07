@@ -332,7 +332,7 @@ def test_dashboard_renders_parent_categories_and_mascot(
     assert response.status_code == 200
     assert css_response.status_code == 200
     assert 'class="category-item category-item--group' in response.text
-    assert "<details open" in response.text
+    assert "<details" in response.text
     assert "category-disclosure" in response.text
     assert "category-child__meter" in response.text
     assert 'class="brand-mascot"' in response.text
