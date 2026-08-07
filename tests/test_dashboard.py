@@ -630,6 +630,8 @@ def test_dashboard_renders_syncing_component(
     assert 'id="sync-panel"' in response.text
     assert "Engine & Storage" in response.text
     assert "Local DB Inventory" in response.text
+    assert "Transactions Workload" in response.text
+    assert "Metadata Workload" in response.text
     assert "Persistent (SQLite)" in response.text
     assert "sqlite+aiosqlite" in response.text
     assert "0 * * * *" in response.text

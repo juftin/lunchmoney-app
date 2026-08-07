@@ -325,15 +325,22 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             </div>
 
             <div class="period-summary__section">
-                <dt>Workloads & Watermarks</dt>
+                <dt>Transactions Workload</dt>
                 <dd></dd>
             </div>
             <div>
-                <dt>Last sync date</dt>
+                <dt>Schedule cron</dt>
                 <dd>
-                    {% if dashboard.sync_status.last_synced_at %}
-                    <time datetime="{{ dashboard.sync_status.last_synced_at.isoformat() }}">
-                        {{ dashboard.sync_status.last_synced_at.strftime('%b %d, %H:%M UTC') }}
+                    <code class="sync-code">{{ dashboard.sync_status.transaction_cron or dashboard.sync_status.schedule_cron }}</code>
+                    <span class="sync-tz">({{ dashboard.sync_status.transaction_timezone or dashboard.sync_status.schedule_timezone }})</span>
+                </dd>
+            </div>
+            <div>
+                <dt>Last watermark</dt>
+                <dd>
+                    {% if dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at %}
+                    <time datetime="{{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}">
+                        {{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %H:%M UTC') }}
                     </time>
                     {% else %}
                     <span class="text-muted">Not yet synced</span>
@@ -341,18 +348,47 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 </dd>
             </div>
             <div>
+                <dt>Next estimate</dt>
+                <dd>
+                    {% if dashboard.sync_status.transaction_next_sync_at or dashboard.sync_status.next_sync_at %}
+                    <time datetime="{{ (dashboard.sync_status.transaction_next_sync_at or dashboard.sync_status.next_sync_at).isoformat() }}">
+                        {{ (dashboard.sync_status.transaction_next_sync_at or dashboard.sync_status.next_sync_at).strftime('%b %d, %H:%M UTC') }}
+                    </time>
+                    {% else %}
+                    <span class="text-muted">Disabled</span>
+                    {% endif %}
+                </dd>
+            </div>
+
+            <div class="period-summary__section">
+                <dt>Metadata Workload</dt>
+                <dd></dd>
+            </div>
+            <div>
                 <dt>Schedule cron</dt>
                 <dd>
-                    <code class="sync-code">{{ dashboard.sync_status.schedule_cron }}</code>
-                    <span class="sync-tz">({{ dashboard.sync_status.schedule_timezone }})</span>
+                    <code class="sync-code">{{ dashboard.sync_status.metadata_cron or dashboard.sync_status.schedule_cron }}</code>
+                    <span class="sync-tz">({{ dashboard.sync_status.metadata_timezone or dashboard.sync_status.schedule_timezone }})</span>
                 </dd>
             </div>
             <div>
-                <dt>Next sync estimate</dt>
+                <dt>Last watermark</dt>
                 <dd>
-                    {% if dashboard.sync_status.next_sync_at %}
-                    <time datetime="{{ dashboard.sync_status.next_sync_at.isoformat() }}">
-                        {{ dashboard.sync_status.next_sync_at.strftime('%b %d, %H:%M UTC') }}
+                    {% if dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at %}
+                    <time datetime="{{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}">
+                        {{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %H:%M UTC') }}
+                    </time>
+                    {% else %}
+                    <span class="text-muted">Not yet synced</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt>Next estimate</dt>
+                <dd>
+                    {% if dashboard.sync_status.metadata_next_sync_at or dashboard.sync_status.next_sync_at %}
+                    <time datetime="{{ (dashboard.sync_status.metadata_next_sync_at or dashboard.sync_status.next_sync_at).isoformat() }}">
+                        {{ (dashboard.sync_status.metadata_next_sync_at or dashboard.sync_status.next_sync_at).strftime('%b %d, %H:%M UTC') }}
                     </time>
                     {% else %}
                     <span class="text-muted">Disabled</span>

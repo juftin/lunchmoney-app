@@ -118,6 +118,12 @@ async def sync_database(
         records.append(Transaction.from_api(model=txn))
 
     await db.upsert_many(records)
+    await db.upsert_sync_metadata(
+        SyncMetadata(
+            domain="metadata",
+            last_synced_at=sync_started_at,
+        )
+    )
     if incremental:
         await db.upsert_sync_metadata(
             SyncMetadata(

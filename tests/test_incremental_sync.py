@@ -235,7 +235,8 @@ async def test_successful_incremental_sync_creates_watermark_after_upsert(
         <= stored.last_synced_at
         <= datetime.datetime.now(datetime.timezone.utc)
     )
-    assert events == ["records", "watermark"]
+    assert events[0] == "records"
+    assert "watermark" in events[1:]
 
 
 @pytest.mark.asyncio

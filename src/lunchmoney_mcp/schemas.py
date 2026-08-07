@@ -352,6 +352,27 @@ class SyncStatusSummary(BaseModel):
     """Total account records (Plaid + manual) persisted in local database."""
     stored_tags: int = 0
     """Total tag records persisted in local database."""
+
+    # Workload 1: Transactions Database Sync
+    transaction_cron: str | None = None
+    """Cron expression for transaction database sync."""
+    transaction_timezone: str | None = None
+    """Timezone for transaction sync schedule."""
+    transaction_last_synced_at: datetime.datetime | None = None
+    """Watermark timestamp for transaction sync."""
+    transaction_next_sync_at: datetime.datetime | None = None
+    """Calculated next transaction sync timestamp."""
+
+    # Workload 2: Metadata Database Sync (Accounts, Categories, Tags, User)
+    metadata_cron: str | None = None
+    """Cron expression for metadata database sync (Accounts, Categories, Tags, User)."""
+    metadata_timezone: str | None = None
+    """Timezone for metadata sync schedule."""
+    metadata_last_synced_at: datetime.datetime | None = None
+    """Watermark timestamp for metadata sync."""
+    metadata_next_sync_at: datetime.datetime | None = None
+    """Calculated next metadata sync timestamp."""
+
     last_synced_at: datetime.datetime | None = None
     """Most recent transaction watermark or completed sync timestamp."""
     schedule_cron: str | None = None

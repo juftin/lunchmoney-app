@@ -140,6 +140,7 @@ async def fetch_dashboard_data(
     future_period_start = next_month_start if next_month_start <= today else None
     (
         sync_metadata_result,
+        metadata_sync_result,
         accounts_result,
         budget_summary_result,
         budget_settings_result,
@@ -149,6 +150,7 @@ async def fetch_dashboard_data(
         db_stats_result,
     ) = await asyncio.gather(
         _capture(db.get_sync_metadata("transactions")),
+        _capture(db.get_sync_metadata("metadata")),
         _capture(fetch_accounts(db=db)),
         _capture(
             fetch_account_summary(
@@ -184,6 +186,11 @@ async def fetch_dashboard_data(
         section_name="Cache freshness",
         unavailable_sections=unavailable_sections,
     )
+    metadata_sync = _available(
+        result=cast(SyncMetadata | Exception, metadata_sync_result),
+        section_name="Metadata sync status",
+        unavailable_sections=unavailable_sections,
+    )
     scheduled_sync = _available(
         result=cast(ScheduledSyncStatus | None | Exception, scheduled_sync_result),
         section_name="Scheduled sync status",
@@ -213,6 +220,9 @@ async def fetch_dashboard_data(
         db_driver = secret_settings.database_url.split("://")[0]
 
     last_synced_at = sync_metadata.last_synced_at if sync_metadata is not None else None
+    metadata_last_synced_at = (
+        metadata_sync.last_synced_at if metadata_sync is not None else last_synced_at
+    )
     next_sync_at: datetime.datetime | None = None
     if settings.schedule_cron:
         try:
@@ -232,6 +242,14 @@ async def fetch_dashboard_data(
         stored_categories=db_stats.get("categories", 0),
         stored_accounts=db_stats.get("accounts", 0),
         stored_tags=db_stats.get("tags", 0),
+        transaction_cron=settings.schedule_cron,
+        transaction_timezone=settings.schedule_timezone,
+        transaction_last_synced_at=last_synced_at,
+        transaction_next_sync_at=next_sync_at,
+        metadata_cron=settings.schedule_cron,
+        metadata_timezone=settings.schedule_timezone,
+        metadata_last_synced_at=metadata_last_synced_at,
+        metadata_next_sync_at=next_sync_at,
         last_synced_at=last_synced_at,
         schedule_cron=settings.schedule_cron,
         schedule_timezone=settings.schedule_timezone,
