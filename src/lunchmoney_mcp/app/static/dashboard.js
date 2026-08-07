@@ -40,7 +40,19 @@
             allExpanded: false,
             showApiKeyDialog: false,
             apiKeyInput: "",
+            isSyncing: false,
             _categoryFilterObserver: null,
+
+            triggerRefresh(evt) {
+                if (this.isSyncing) {
+                    if (evt) evt.preventDefault();
+                    return;
+                }
+                this.isSyncing = true;
+                setTimeout(() => {
+                    this.isSyncing = false;
+                }, 2000);
+            },
 
         /** ----- lifecycle ----- */
 
@@ -54,6 +66,7 @@
             }, 15000);
 
             document.body.addEventListener("htmx:afterSettle", () => {
+                this.isSyncing = false;
                 this.initChart();
                 this._formatLocalTimes();
                 this._updateRelativeTimes();
@@ -62,6 +75,7 @@
             });
 
             document.body.addEventListener("htmx:responseError", (evt) => {
+                this.isSyncing = false;
                 const xhr = evt.detail.xhr;
                 if (xhr && xhr.status === 401) {
                     this.showApiKeyDialog = true;

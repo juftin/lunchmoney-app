@@ -56,9 +56,12 @@
                 </div>
                 <button
                     class="header-refresh-btn"
+                    :class="{ 'is-spinning': isSyncing }"
+                    :disabled="isSyncing"
                     type="button"
                     title="Sync and refresh dashboard data"
                     aria-label="Refresh data"
+                    @click="triggerRefresh($event)"
                     hx-post="/dashboard/sync{% if dashboard.period_start %}?period={{ dashboard.period_start.isoformat() }}{% endif %}"
                     hx-target="#dashboard-content"
                     hx-swap="outerHTML"

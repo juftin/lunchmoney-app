@@ -225,16 +225,28 @@ body {
     color: var(--text);
     background: var(--surface);
 }
-.header-refresh-btn:focus-visible {
-    outline: 2px solid var(--accent);
-    color: var(--text);
+.header-refresh-btn:disabled,
+.header-refresh-btn.htmx-request,
+.header-refresh-btn.is-spinning {
+    pointer-events: none;
+    cursor: default;
+    opacity: 0.5;
 }
 .header-refresh-btn svg {
     transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .header-refresh-btn.htmx-request svg,
-.header-refresh-btn:active svg {
-    transform: rotate(360deg);
+.header-refresh-btn.is-spinning svg {
+    animation: slow-spin 2s linear infinite;
+}
+
+@keyframes slow-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @keyframes live-pulse {
