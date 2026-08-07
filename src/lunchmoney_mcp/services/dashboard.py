@@ -13,8 +13,14 @@ from lunchmoney.models import (
     TransactionObject,
 )
 
+from sqlalchemy.engine import make_url
+
 from lunchmoney_mcp.client import LunchMoneyApp
-from lunchmoney_mcp.config import get_secret_settings, get_settings
+from lunchmoney_mcp.config import (
+    IN_MEMORY_DATABASE_URL,
+    get_secret_settings,
+    get_settings,
+)
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import SyncMetadata
 from lunchmoney_mcp.schemas import (
@@ -208,16 +214,22 @@ async def fetch_dashboard_data(
 
     if settings.stateless:
         persistence_mode = "Stateless (In-Memory)"
-        db_driver = "sqlite+aiosqlite"
-    elif secret_settings.database_url.startswith("postgresql"):
-        persistence_mode = "Persistent (PostgreSQL)"
-        db_driver = secret_settings.database_url.split("://")[0]
-    elif secret_settings.database_url.startswith("sqlite"):
-        persistence_mode = "Persistent (SQLite)"
-        db_driver = secret_settings.database_url.split("://")[0]
+        raw_db_url = IN_MEMORY_DATABASE_URL
     else:
-        persistence_mode = "Persistent"
-        db_driver = secret_settings.database_url.split("://")[0]
+        raw_db_url = secret_settings.database_url
+        if secret_settings.database_url.startswith("postgresql"):
+            persistence_mode = "Persistent (PostgreSQL)"
+        elif secret_settings.database_url.startswith("sqlite"):
+            persistence_mode = "Persistent (SQLite)"
+        else:
+            persistence_mode = "Persistent"
+
+    try:
+        db_url = make_url(raw_db_url).render_as_string(hide_password=True)
+    except Exception:
+        db_url = raw_db_url
+
+    db_driver = db_url.split("://")[0]
 
     last_synced_at = sync_metadata.last_synced_at if sync_metadata is not None else None
     metadata_last_synced_at = (
@@ -253,6 +265,7 @@ async def fetch_dashboard_data(
     sync_status = SyncStatusSummary(
         persistence_mode=persistence_mode,
         db_driver=db_driver,
+        db_url=db_url,
         stored_transactions=db_stats.get("transactions", 0),
         stored_categories=db_stats.get("categories", 0),
         stored_accounts=db_stats.get("accounts", 0),

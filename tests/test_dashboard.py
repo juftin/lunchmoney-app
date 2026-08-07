@@ -117,6 +117,7 @@ def _dashboard_data(*, unavailable_sections: tuple[str, ...] = ()) -> DashboardD
         sync_status=SyncStatusSummary(
             persistence_mode="Persistent (SQLite)",
             db_driver="sqlite+aiosqlite",
+            db_url="sqlite+aiosqlite:///lunchmoney.db",
             stored_transactions=100,
             stored_categories=10,
             stored_accounts=2,
@@ -650,11 +651,12 @@ def test_dashboard_renders_syncing_component(
     assert response.status_code == 200
     assert 'id="sync-panel"' in response.text
     assert "Engine & Storage" in response.text
+    assert "Database URL" in response.text
+    assert "sqlite+aiosqlite:///lunchmoney.db" in response.text
     assert "Local DB Inventory" in response.text
     assert "Transactions Workload" in response.text
     assert "Metadata Workload" in response.text
     assert "Persistent (SQLite)" in response.text
-    assert "sqlite+aiosqlite" in response.text
     assert "*/10 * * * *" in response.text
     assert "0 * * * *" in response.text
     assert "Aug 02, 12:00 UTC" in response.text

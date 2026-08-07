@@ -289,8 +289,8 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dd><span class="sync-badge sync-badge--mode">{{ dashboard.sync_status.persistence_mode }}</span></dd>
             </div>
             <div>
-                <dt>Database driver</dt>
-                <dd><code class="sync-code">{{ dashboard.sync_status.db_driver }}</code></dd>
+                <dt>Database URL</dt>
+                <dd><code class="sync-code" title="{{ dashboard.sync_status.db_url }}">{{ dashboard.sync_status.db_url }}</code></dd>
             </div>
             <div>
                 <dt>Scheduler engine</dt>
