@@ -258,6 +258,7 @@ body {
 .left-rail {
     display: flex;
     flex-direction: column;
+    container-type: inline-size;
 }
 
 /* ------------------------------------------------------------------ */
@@ -291,9 +292,15 @@ body {
 
 .panel-switcher {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     margin: 0.85rem 1.4rem 0;
     border-bottom: 1px solid var(--line);
+}
+
+@container (max-width: 320px) {
+    .panel-switcher {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 .panel-switcher__button {
     padding: 0.45rem 0.25rem;
