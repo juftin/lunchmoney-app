@@ -8,19 +8,6 @@
     {% else %}
     <span>Awaiting sync</span>
     {% endif %}
-    <button
-        class="refresh-btn"
-        type="button"
-        title="Sync and refresh dashboard data"
-        aria-label="Refresh data"
-        hx-post="/dashboard/sync{% if dashboard.period_start %}?period={{ dashboard.period_start.isoformat() }}{% endif %}"
-        hx-target="#dashboard-content"
-        hx-swap="outerHTML"
-    >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-        </svg>
-    </button>
 </div>
 {% endif %} {%- set spending =
 dashboard.category_spending -%} {%- set accounts = dashboard.accounts -%} {%-

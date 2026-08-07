@@ -45,15 +45,17 @@
                 <span>Lunch Money</span>
             </a>
             {% include "partials/_period_control.html" %}
-            <div id="header-status" class="header-status">
-                <span class="live-dot" aria-hidden="true"></span>
-                {% if dashboard.transaction_last_synced_at %}
-                <time class="js-time-ago" data-prefix="Data synced" datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}" title="{{ dashboard.transaction_last_synced_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">Data synced {{ dashboard.transaction_last_synced_at | time_ago }}</time>
-                {% else %}
-                <span>Awaiting sync</span>
-                {% endif %}
+            <div class="header-right">
+                <div id="header-status" class="header-status">
+                    <span class="live-dot" aria-hidden="true"></span>
+                    {% if dashboard.transaction_last_synced_at %}
+                    <time class="js-time-ago" data-prefix="Data synced" datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}" title="{{ dashboard.transaction_last_synced_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">Data synced {{ dashboard.transaction_last_synced_at | time_ago }}</time>
+                    {% else %}
+                    <span>Awaiting sync</span>
+                    {% endif %}
+                </div>
                 <button
-                    class="refresh-btn"
+                    class="header-refresh-btn"
                     type="button"
                     title="Sync and refresh dashboard data"
                     aria-label="Refresh data"
@@ -61,7 +63,7 @@
                     hx-target="#dashboard-content"
                     hx-swap="outerHTML"
                 >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                     </svg>
                 </button>
