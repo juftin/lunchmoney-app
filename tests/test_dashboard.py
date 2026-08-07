@@ -708,6 +708,7 @@ def test_dashboard_renders_disabled_cron_workloads(
     assert response.status_code == 200
     assert 'id="sync-panel"' in response.text
     assert "Disabled" in response.text
+    assert "Unknown" in response.text
 
 
 def test_dashboard_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
