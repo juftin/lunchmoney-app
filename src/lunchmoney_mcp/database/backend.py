@@ -18,7 +18,7 @@ from sqlalchemy import event, update
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from lunchmoney_mcp.config import (
@@ -685,6 +685,31 @@ class LunchMoneyDatabase:
         async with self.session_factory() as session:
             result = await session.exec(statement)
             return result.first()
+
+    async def get_database_stats(self) -> dict[str, int]:
+        """Return stored record counts across core persistence models."""
+        async with self.session_factory() as session:
+            txn_count = (
+                await session.exec(select(func.count()).select_from(Transaction))
+            ).one()
+            cat_count = (
+                await session.exec(select(func.count()).select_from(Category))
+            ).one()
+            plaid_count = (
+                await session.exec(select(func.count()).select_from(PlaidAccount))
+            ).one()
+            manual_count = (
+                await session.exec(select(func.count()).select_from(ManualAccount))
+            ).one()
+            tag_count = (
+                await session.exec(select(func.count()).select_from(Tag))
+            ).one()
+            return {
+                "transactions": txn_count or 0,
+                "categories": cat_count or 0,
+                "accounts": (plaid_count or 0) + (manual_count or 0),
+                "tags": tag_count or 0,
+            }
 
     async def upsert(self, record: RecordT) -> RecordT:
         """Atomically insert or update one supported record and its owned graph."""

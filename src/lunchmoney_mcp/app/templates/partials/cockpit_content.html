@@ -279,10 +279,54 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             {% endif %}
         </div>
         {% if dashboard.sync_status %}
-        <dl class="sync-details">
+        <dl class="period-summary sync-summary">
+            <div class="period-summary__section">
+                <dt>Engine & Storage</dt>
+                <dd></dd>
+            </div>
             <div>
                 <dt>Persistence mode</dt>
                 <dd><span class="sync-badge sync-badge--mode">{{ dashboard.sync_status.persistence_mode }}</span></dd>
+            </div>
+            <div>
+                <dt>Database driver</dt>
+                <dd><code class="sync-code">{{ dashboard.sync_status.db_driver }}</code></dd>
+            </div>
+            <div>
+                <dt>Scheduler engine</dt>
+                <dd>
+                    {% if dashboard.sync_status.embed_scheduler %}
+                    <span class="sync-badge">Embedded</span>
+                    {% else %}
+                    <span class="sync-badge">External</span>
+                    {% endif %}
+                </dd>
+            </div>
+
+            <div class="period-summary__section">
+                <dt>Local DB Inventory</dt>
+                <dd></dd>
+            </div>
+            <div>
+                <dt>Transactions</dt>
+                <dd><strong>{{ "{:,}".format(dashboard.sync_status.stored_transactions) }}</strong></dd>
+            </div>
+            <div>
+                <dt>Categories</dt>
+                <dd><strong>{{ "{:,}".format(dashboard.sync_status.stored_categories) }}</strong></dd>
+            </div>
+            <div>
+                <dt>Accounts</dt>
+                <dd><strong>{{ "{:,}".format(dashboard.sync_status.stored_accounts) }}</strong></dd>
+            </div>
+            <div>
+                <dt>Tags</dt>
+                <dd><strong>{{ "{:,}".format(dashboard.sync_status.stored_tags) }}</strong></dd>
+            </div>
+
+            <div class="period-summary__section">
+                <dt>Workloads & Watermarks</dt>
+                <dd></dd>
             </div>
             <div>
                 <dt>Last sync date</dt>
@@ -297,14 +341,14 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 </dd>
             </div>
             <div>
-                <dt>Scheduled workloads</dt>
+                <dt>Schedule cron</dt>
                 <dd>
                     <code class="sync-code">{{ dashboard.sync_status.schedule_cron }}</code>
                     <span class="sync-tz">({{ dashboard.sync_status.schedule_timezone }})</span>
                 </dd>
             </div>
             <div>
-                <dt>Next sync time</dt>
+                <dt>Next sync estimate</dt>
                 <dd>
                     {% if dashboard.sync_status.next_sync_at %}
                     <time datetime="{{ dashboard.sync_status.next_sync_at.isoformat() }}">
@@ -312,16 +356,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                     </time>
                     {% else %}
                     <span class="text-muted">Disabled</span>
-                    {% endif %}
-                </dd>
-            </div>
-            <div>
-                <dt>Scheduler engine</dt>
-                <dd>
-                    {% if dashboard.sync_status.embed_scheduler %}
-                    <span class="sync-badge">Embedded</span>
-                    {% else %}
-                    <span class="sync-badge">External</span>
                     {% endif %}
                 </dd>
             </div>

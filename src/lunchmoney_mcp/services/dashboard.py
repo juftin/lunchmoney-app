@@ -146,6 +146,7 @@ async def fetch_dashboard_data(
         category_spending_result,
         transactions_result,
         scheduled_sync_result,
+        db_stats_result,
     ) = await asyncio.gather(
         _capture(db.get_sync_metadata("transactions")),
         _capture(fetch_accounts(db=db)),
@@ -175,6 +176,7 @@ async def fetch_dashboard_data(
             )
         ),
         _capture(get_scheduled_sync_status(db=db)),
+        _capture(db.get_database_stats()),
     )
     unavailable_sections: list[str] = []
     sync_metadata = _available(
@@ -187,18 +189,28 @@ async def fetch_dashboard_data(
         section_name="Scheduled sync status",
         unavailable_sections=unavailable_sections,
     )
+    db_stats_raw = _available(
+        result=cast(dict[str, int] | Exception, db_stats_result),
+        section_name="Database stats",
+        unavailable_sections=unavailable_sections,
+    )
+    db_stats = db_stats_raw if isinstance(db_stats_raw, dict) else {}
 
     settings = get_settings()
     secret_settings = get_secret_settings()
 
     if settings.stateless:
         persistence_mode = "Stateless (In-Memory)"
+        db_driver = "sqlite+aiosqlite"
     elif secret_settings.database_url.startswith("postgresql"):
         persistence_mode = "Persistent (PostgreSQL)"
+        db_driver = secret_settings.database_url.split("://")[0]
     elif secret_settings.database_url.startswith("sqlite"):
         persistence_mode = "Persistent (SQLite)"
+        db_driver = secret_settings.database_url.split("://")[0]
     else:
         persistence_mode = "Persistent"
+        db_driver = secret_settings.database_url.split("://")[0]
 
     last_synced_at = sync_metadata.last_synced_at if sync_metadata is not None else None
     next_sync_at: datetime.datetime | None = None
@@ -215,6 +227,11 @@ async def fetch_dashboard_data(
 
     sync_status = SyncStatusSummary(
         persistence_mode=persistence_mode,
+        db_driver=db_driver,
+        stored_transactions=db_stats.get("transactions", 0),
+        stored_categories=db_stats.get("categories", 0),
+        stored_accounts=db_stats.get("accounts", 0),
+        stored_tags=db_stats.get("tags", 0),
         last_synced_at=last_synced_at,
         schedule_cron=settings.schedule_cron,
         schedule_timezone=settings.schedule_timezone,

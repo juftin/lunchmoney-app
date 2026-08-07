@@ -547,6 +547,9 @@ async def test_dashboard_service_keeps_other_sections_available_on_failure(
         )
     )
     database.get_latest_scheduled_sync_run = AsyncMock(return_value=None)
+    database.get_database_stats = AsyncMock(
+        return_value={"transactions": 0, "categories": 0, "accounts": 0, "tags": 0}
+    )
     accounts = AccountsSummary()
     spending = GroupedSpendingResponse(
         start_date=datetime.date(2026, 7, 3),
@@ -625,8 +628,10 @@ def test_dashboard_renders_syncing_component(
 
     assert response.status_code == 200
     assert 'id="sync-panel"' in response.text
-    assert "Syncing status" in response.text
+    assert "Engine & Storage" in response.text
+    assert "Local DB Inventory" in response.text
     assert "Persistent (SQLite)" in response.text
+    assert "sqlite+aiosqlite" in response.text
     assert "0 * * * *" in response.text
     assert "Aug 02, 12:00 UTC" in response.text
     assert "Aug 02, 13:00 UTC" in response.text

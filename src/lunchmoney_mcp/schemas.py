@@ -342,6 +342,16 @@ class SyncStatusSummary(BaseModel):
 
     persistence_mode: str
     """Data persistence mode (e.g. Persistent (SQLite), Stateless (In-Memory))."""
+    db_driver: str = "sqlite+aiosqlite"
+    """Database driver / dialect name (e.g. sqlite+aiosqlite)."""
+    stored_transactions: int = 0
+    """Total transaction records persisted in local database."""
+    stored_categories: int = 0
+    """Total category records persisted in local database."""
+    stored_accounts: int = 0
+    """Total account records (Plaid + manual) persisted in local database."""
+    stored_tags: int = 0
+    """Total tag records persisted in local database."""
     last_synced_at: datetime.datetime | None = None
     """Most recent transaction watermark or completed sync timestamp."""
     schedule_cron: str | None = None
