@@ -47,10 +47,16 @@
         init() {
             this.initChart();
             this._formatLocalTimes();
+            this._updateRelativeTimes();
+
+            setInterval(() => {
+                this._updateRelativeTimes();
+            }, 15000);
 
             document.body.addEventListener("htmx:afterSettle", () => {
                 this.initChart();
                 this._formatLocalTimes();
+                this._updateRelativeTimes();
                 this._setupCategoryFilter();
                 this._applySearchFilter();
             });
@@ -84,6 +90,45 @@
                     minute: "2-digit",
                 }).format(date);
                 el.textContent = formatted;
+            });
+        },
+
+        _updateRelativeTimes() {
+            document.querySelectorAll("time.js-time-ago").forEach((el) => {
+                const iso = el.getAttribute("datetime");
+                if (!iso) return;
+                const date = new Date(iso);
+                if (isNaN(date.getTime())) return;
+
+                const now = new Date();
+                const diffSeconds = Math.max(0, Math.floor((now - date) / 1000));
+                let phrase = "just now";
+                if (diffSeconds >= 60) {
+                    const minutes = Math.floor(diffSeconds / 60);
+                    if (minutes < 60) {
+                        phrase = `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+                    } else {
+                        const hours = Math.floor(minutes / 60);
+                        if (hours < 24) {
+                            phrase = `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+                        } else {
+                            const days = Math.floor(hours / 24);
+                            if (days < 30) {
+                                phrase = `${days} day${days !== 1 ? "s" : ""} ago`;
+                            } else {
+                                const months = Math.floor(days / 30);
+                                if (months < 12) {
+                                    phrase = `${months} month${months !== 1 ? "s" : ""} ago`;
+                                } else {
+                                    const years = Math.floor(days / 365);
+                                    phrase = `${years} year${years !== 1 ? "s" : ""} ago`;
+                                }
+                            }
+                        }
+                    }
+                }
+                const prefix = el.dataset.prefix;
+                el.textContent = prefix ? `${prefix} ${phrase}` : phrase;
             });
         },
 

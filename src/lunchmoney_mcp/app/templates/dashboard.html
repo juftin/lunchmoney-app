@@ -48,7 +48,7 @@
             <div id="header-status" class="header-status">
                 <span class="live-dot" aria-hidden="true"></span>
                 {% if dashboard.transaction_last_synced_at %}
-                <time datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}" title="{{ dashboard.transaction_last_synced_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">Data synced {{ dashboard.transaction_last_synced_at | time_ago }}</time>
+                <time class="js-time-ago" data-prefix="Data synced" datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}" title="{{ dashboard.transaction_last_synced_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">Data synced {{ dashboard.transaction_last_synced_at | time_ago }}</time>
                 {% else %}
                 <span>Awaiting sync</span>
                 {% endif %}
