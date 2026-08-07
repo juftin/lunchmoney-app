@@ -6,6 +6,7 @@ from collections.abc import Awaitable
 from dataclasses import dataclass
 from typing import TypeVar, cast
 
+from apscheduler.triggers.cron import CronTrigger
 from lunchmoney.models import (
     BudgetSettingsResponseObject,
     SummaryResponseObject,
@@ -13,12 +14,14 @@ from lunchmoney.models import (
 )
 
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.config import get_secret_settings, get_settings
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import SyncMetadata
 from lunchmoney_mcp.schemas import (
     AccountsSummary,
     GroupedSpendingResponse,
     ScheduledSyncStatus,
+    SyncStatusSummary,
 )
 from lunchmoney_mcp.services.accounts import fetch_accounts
 from lunchmoney_mcp.services.budgets import fetch_budget_settings
@@ -60,6 +63,8 @@ class DashboardData:
         Recent cached transactions, when available.
     scheduled_sync : ScheduledSyncStatus | None
         Last persisted scheduled-sync outcome, if one exists.
+    sync_status : SyncStatusSummary | None
+        Composition of persistence mode, sync schedules, and next run estimates.
     unavailable_sections : tuple[str, ...]
         Safe labels for sections that could not be loaded.
     """
@@ -75,6 +80,7 @@ class DashboardData:
     category_spending: GroupedSpendingResponse | None
     transactions: list[TransactionObject] | None
     scheduled_sync: ScheduledSyncStatus | None
+    sync_status: SyncStatusSummary | None
     unavailable_sections: tuple[str, ...]
 
 
@@ -176,14 +182,53 @@ async def fetch_dashboard_data(
         section_name="Cache freshness",
         unavailable_sections=unavailable_sections,
     )
+    scheduled_sync = _available(
+        result=cast(ScheduledSyncStatus | None | Exception, scheduled_sync_result),
+        section_name="Scheduled sync status",
+        unavailable_sections=unavailable_sections,
+    )
+
+    settings = get_settings()
+    secret_settings = get_secret_settings()
+
+    if settings.stateless:
+        persistence_mode = "Stateless (In-Memory)"
+    elif secret_settings.database_url.startswith("postgresql"):
+        persistence_mode = "Persistent (PostgreSQL)"
+    elif secret_settings.database_url.startswith("sqlite"):
+        persistence_mode = "Persistent (SQLite)"
+    else:
+        persistence_mode = "Persistent"
+
+    last_synced_at = sync_metadata.last_synced_at if sync_metadata is not None else None
+    next_sync_at: datetime.datetime | None = None
+    if settings.schedule_cron:
+        try:
+            trigger = CronTrigger.from_crontab(
+                settings.schedule_cron,
+                timezone=settings.schedule_timezone,
+            )
+            now = datetime.datetime.now(datetime.timezone.utc)
+            next_sync_at = trigger.get_next_fire_time(None, now)
+        except Exception:
+            next_sync_at = None
+
+    sync_status = SyncStatusSummary(
+        persistence_mode=persistence_mode,
+        last_synced_at=last_synced_at,
+        schedule_cron=settings.schedule_cron,
+        schedule_timezone=settings.schedule_timezone,
+        next_sync_at=next_sync_at,
+        embed_scheduler=settings.embed_scheduler,
+        scheduled_sync=scheduled_sync,
+    )
+
     return DashboardData(
         period_start=resolved_period_start,
         period_end=period_end,
         previous_period_start=previous_period_start,
         next_period_start=future_period_start,
-        transaction_last_synced_at=(
-            sync_metadata.last_synced_at if sync_metadata is not None else None
-        ),
+        transaction_last_synced_at=last_synced_at,
         accounts=_available(
             result=cast(AccountsSummary | Exception, accounts_result),
             section_name="Account summary",
@@ -215,11 +260,8 @@ async def fetch_dashboard_data(
             section_name="Recent transactions",
             unavailable_sections=unavailable_sections,
         ),
-        scheduled_sync=_available(
-            result=cast(ScheduledSyncStatus | None | Exception, scheduled_sync_result),
-            section_name="Scheduled sync status",
-            unavailable_sections=unavailable_sections,
-        ),
+        scheduled_sync=scheduled_sync,
+        sync_status=sync_status,
         unavailable_sections=tuple(unavailable_sections),
     )
 

@@ -63,6 +63,18 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         >
             Activity
         </button>
+        <button
+            class="panel-switcher__button"
+            type="button"
+            role="tab"
+            :class="{ 'is-active': activeTab === 'sync' }"
+            :aria-selected="activeTab === 'sync' ? 'true' : 'false'"
+            aria-controls="sync-panel"
+            id="sync-tab"
+            @click="setTab('sync')"
+        >
+            Sync
+        </button>
     </div>
 
     <section
@@ -246,6 +258,79 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 run{% endif %}</strong
             >
         </div>
+    </section>
+
+    <section
+        class="rail-panel"
+        id="sync-panel"
+        role="tabpanel"
+        aria-labelledby="sync-tab"
+        x-show="activeTab === 'sync'"
+        style="display: none"
+    >
+        <div class="panel-title">
+            <h2>Syncing status</h2>
+            {% if dashboard.sync_status and dashboard.sync_status.scheduled_sync %}
+            <span class="status-badge status-badge--{{ dashboard.sync_status.scheduled_sync.status }}">
+                {{ dashboard.sync_status.scheduled_sync.status | capitalize }}
+            </span>
+            {% else %}
+            <span class="status-badge status-badge--idle">Ready</span>
+            {% endif %}
+        </div>
+        {% if dashboard.sync_status %}
+        <dl class="sync-details">
+            <div>
+                <dt>Persistence mode</dt>
+                <dd><strong>{{ dashboard.sync_status.persistence_mode }}</strong></dd>
+            </div>
+            <div>
+                <dt>Last sync date</dt>
+                <dd>
+                    {% if dashboard.sync_status.last_synced_at %}
+                    <time datetime="{{ dashboard.sync_status.last_synced_at.isoformat() }}">
+                        {{ dashboard.sync_status.last_synced_at.strftime('%b %d, %Y %H:%M UTC') }}
+                    </time>
+                    {% else %}
+                    <span>Not yet synced</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt>Scheduled workloads</dt>
+                <dd>
+                    <code>{{ dashboard.sync_status.schedule_cron }}</code>
+                    <small>({{ dashboard.sync_status.schedule_timezone }})</small>
+                </dd>
+            </div>
+            <div>
+                <dt>Next sync time</dt>
+                <dd>
+                    {% if dashboard.sync_status.next_sync_at %}
+                    <time datetime="{{ dashboard.sync_status.next_sync_at.isoformat() }}">
+                        {{ dashboard.sync_status.next_sync_at.strftime('%b %d, %Y %H:%M UTC') }}
+                    </time>
+                    {% else %}
+                    <span>Disabled</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div>
+                <dt>Scheduler engine</dt>
+                <dd>
+                    {% if dashboard.sync_status.embed_scheduler %}
+                    Embedded (Local FastAPI)
+                    {% else %}
+                    External / Standalone
+                    {% endif %}
+                </dd>
+            </div>
+        </dl>
+        {% else %}
+        <div class="empty-state empty-state--rail">
+            <p>Sync status unavailable.</p>
+        </div>
+        {% endif %}
     </section>
 </aside>
 

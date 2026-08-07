@@ -20,6 +20,7 @@ from lunchmoney_mcp.schemas import (
     AccountsSummary,
     GroupedSpendingResponse,
     ScheduledSyncStatus,
+    SyncStatusSummary,
 )
 from lunchmoney_mcp.services.dashboard import DashboardData
 from database.factories import (
@@ -51,6 +52,11 @@ def _budget_settings() -> BudgetSettingsResponseObject:
 
 def _dashboard_data(*, unavailable_sections: tuple[str, ...] = ()) -> DashboardData:
     """Create populated synthetic content for the dashboard template."""
+    scheduled_sync = ScheduledSyncStatus(
+        status="success",
+        started_at=datetime.datetime(2026, 8, 2, 11, tzinfo=datetime.timezone.utc),
+        finished_at=datetime.datetime(2026, 8, 2, 12, tzinfo=datetime.timezone.utc),
+    )
     return DashboardData(
         period_start=datetime.date(2026, 8, 1),
         period_end=datetime.date(2026, 8, 2),
@@ -107,10 +113,19 @@ def _dashboard_data(*, unavailable_sections: tuple[str, ...] = ()) -> DashboardD
                 }
             )
         ],
-        scheduled_sync=ScheduledSyncStatus(
-            status="success",
-            started_at=datetime.datetime(2026, 8, 2, 11, tzinfo=datetime.timezone.utc),
-            finished_at=datetime.datetime(2026, 8, 2, 12, tzinfo=datetime.timezone.utc),
+        scheduled_sync=scheduled_sync,
+        sync_status=SyncStatusSummary(
+            persistence_mode="Persistent (SQLite)",
+            last_synced_at=datetime.datetime(
+                2026, 8, 2, 12, tzinfo=datetime.timezone.utc
+            ),
+            schedule_cron="0 * * * *",
+            schedule_timezone="UTC",
+            next_sync_at=datetime.datetime(
+                2026, 8, 2, 13, tzinfo=datetime.timezone.utc
+            ),
+            embed_scheduler=False,
+            scheduled_sync=scheduled_sync,
         ),
         unavailable_sections=unavailable_sections,
     )
@@ -368,11 +383,8 @@ def test_dashboard_renders_empty_and_unavailable_states(
 ) -> None:
     """Render readable empty and partial-error states instead of JSON failures."""
     data = _dashboard_data(unavailable_sections=("Budget status",))
-    data = DashboardData(
-        period_start=data.period_start,
-        period_end=data.period_end,
-        previous_period_start=data.previous_period_start,
-        next_period_start=data.next_period_start,
+    data = replace(
+        data,
         transaction_last_synced_at=None,
         accounts=AccountsSummary(),
         budget_summary=None,
@@ -386,7 +398,6 @@ def test_dashboard_renders_empty_and_unavailable_states(
         ),
         transactions=[],
         scheduled_sync=None,
-        unavailable_sections=data.unavailable_sections,
     )
     _configure_dashboard(monkeypatch=monkeypatch, data=data)
     try:
@@ -599,3 +610,23 @@ async def test_dashboard_service_keeps_other_sections_available_on_failure(
         start_date=datetime.date(2026, 7, 1),
         end_date=datetime.date(2026, 7, 31),
     )
+
+
+def test_dashboard_renders_syncing_component(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Render syncing status panel with persistence mode, schedules, and next sync estimate."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(fastapi_app, base_url="http://localhost") as client:
+            response = client.get("/", headers={"X-API-Key": "dashboard-key"})
+    finally:
+        fastapi_app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert 'id="sync-panel"' in response.text
+    assert "Syncing status" in response.text
+    assert "Persistent (SQLite)" in response.text
+    assert "0 * * * *" in response.text
+    assert "Aug 02, 2026 12:00 UTC" in response.text
+    assert "Aug 02, 2026 13:00 UTC" in response.text

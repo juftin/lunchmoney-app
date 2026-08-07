@@ -503,6 +503,67 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Sync details                                                      */
+/* ------------------------------------------------------------------ */
+
+.sync-details {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    overflow: auto;
+}
+.sync-details div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.65rem 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    border-bottom: 1px solid var(--line);
+}
+.sync-details dt {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.sync-details dd {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.sync-details code {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.35rem;
+    border-radius: 0.25rem;
+    background: rgba(255, 255, 255, 0.05);
+}
+.status-badge {
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.status-badge--success {
+    background: rgba(50, 207, 130, 0.15);
+    color: var(--green);
+}
+.status-badge--failed {
+    background: rgba(255, 92, 108, 0.15);
+    color: var(--coral);
+}
+.status-badge--skipped,
+.status-badge--idle {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ */
 /*  Activity list                                                      */
 /* ------------------------------------------------------------------ */
 

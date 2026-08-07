@@ -94,6 +94,9 @@
                 case "3":
                     this.setTab("activity");
                     break;
+                case "4":
+                    this.setTab("sync");
+                    break;
                 case "j":
                 case "ArrowLeft":
                     this._clickPeriodButton("Previous month");

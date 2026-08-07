@@ -337,6 +337,25 @@ class ScheduledSyncStatus(BaseModel):
     """Record counts returned by a successful synchronization, when available."""
 
 
+class SyncStatusSummary(BaseModel):
+    """Synchronization status and engine environment metadata for dashboard display."""
+
+    persistence_mode: str
+    """Data persistence mode (e.g. Persistent (SQLite), Stateless (In-Memory))."""
+    last_synced_at: datetime.datetime | None = None
+    """Most recent transaction watermark or completed sync timestamp."""
+    schedule_cron: str | None = None
+    """Configured cron expression for scheduled sync workloads."""
+    schedule_timezone: str | None = None
+    """Configured timezone for interpreting the sync cron expression."""
+    next_sync_at: datetime.datetime | None = None
+    """Calculated next scheduled synchronization timestamp."""
+    embed_scheduler: bool = False
+    """Whether local scheduler is embedded in the FastAPI application lifespan."""
+    scheduled_sync: ScheduledSyncStatus | None = None
+    """Latest recorded outcome of scheduled synchronization."""
+
+
 class ChildCategorySpending(BaseModel):
     """Spending breakdown for a child category."""
 
