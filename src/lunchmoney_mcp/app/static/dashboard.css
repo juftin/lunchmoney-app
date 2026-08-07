@@ -291,7 +291,7 @@ body {
 
 .panel-switcher {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
     margin: 0.85rem 1.4rem 0;
     border-bottom: 1px solid var(--line);
 }
