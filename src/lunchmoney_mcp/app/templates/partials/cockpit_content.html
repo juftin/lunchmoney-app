@@ -34,7 +34,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
 </section>
 {% endif %}
 
-<aside class="left-rail" aria-label="Financial overview" x-data="leftRail">
+<aside class="left-rail" aria-label="Financial overview" :data-active-tab="activeTab" x-data="leftRail">
     <div class="panel-switcher" role="tablist" aria-label="Overview panel">
         <button
             class="panel-switcher__button"

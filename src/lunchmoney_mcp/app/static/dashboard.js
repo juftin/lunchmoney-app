@@ -50,8 +50,13 @@
                 }
             })(),
 
+            init() {
+                this.$root.setAttribute("data-active-tab", this.activeTab);
+            },
+
             setTab(tab) {
                 this.activeTab = tab;
+                this.$root.setAttribute("data-active-tab", tab);
                 try {
                     localStorage.setItem("lm_active_tab", tab);
                 } catch {

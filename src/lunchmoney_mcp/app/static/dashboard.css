@@ -308,6 +308,17 @@ body {
     container-type: inline-size;
 }
 
+.left-rail .rail-panel {
+    display: none !important;
+}
+
+.left-rail[data-active-tab="accounts"] #accounts-panel,
+.left-rail[data-active-tab="summary"] #summary-panel,
+.left-rail[data-active-tab="activity"] #activity-panel,
+.left-rail[data-active-tab="sync"] #sync-panel {
+    display: flex !important;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Welcome & headings                                                 */
 /* ------------------------------------------------------------------ */
