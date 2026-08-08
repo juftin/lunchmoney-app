@@ -1,4 +1,15 @@
-<div id="period-control" {% if is_hx_request %}hx-swap-oob="true"{% endif %} class="period-control" aria-label="Reporting period">
+<div
+    id="period-control"
+    {%
+    if
+    is_hx_request
+    %}hx-swap-oob="true"
+    {%
+    endif
+    %}
+    class="period-control"
+    aria-label="Reporting period"
+>
     <button
         class="period-control__button"
         type="button"
@@ -11,7 +22,8 @@
         <span aria-hidden="true">‹</span>
     </button>
     <span class="period-control__label">
-        {{ dashboard.period_start.strftime('%b %d, %Y') }} — {{ dashboard.period_end.strftime('%b %d, %Y') }}
+        {{ dashboard.period_start.strftime('%b %d, %Y') }} — {{
+        dashboard.period_end.strftime('%b %d, %Y') }}
     </span>
     {% if dashboard.next_period_start %}
     <button

@@ -1,7 +1,7 @@
 # Design: Lightweight SPA Dashboard
 
-> **Status**: Proposed  
-> **Author**: Agent  
+> **Status**: Proposed
+> **Author**: Agent
 > **Date**: 2026-08-03
 
 ## Table of Contents
@@ -106,26 +106,26 @@ Browser                                              FastAPI
 
 ## 4. Technology Stack
 
-| Layer | Tool | Size (CDN) | Role |
-|:------|:-----|:-----------|:-----|
-| **CSS Framework** | [Pico CSS](https://picocss.com) | ~20KB | Dark theme, typography, `<dialog>`, `<details>`, form/button defaults |
-| **HTML Over the Wire** | [HTMX](https://htmx.org) | ~14KB | Partial-page swaps, push-url, polling, AJAX navigation |
-| **DOM Morphing** | [Idiomorph](https://github.com/bigskysoftware/idiomorph) | ~5KB | Smooth transitions on DOM swaps (HTMX extension) |
-| **Client State** | [Alpine.js](https://alpinejs.dev) | ~15KB | Tab state, search filter, keyboard shortcuts, toasts, chart lifecycle |
-| **Charts** | [Frappe Charts](https://frappe.io/charts) | ~20KB | Donut chart for category spending breakdown |
-| **Icons** | [Lucide](https://lucide.dev) | inline SVG | Period nav arrows, empty-state icon |
+| Layer                  | Tool                                                     | Size (CDN) | Role                                                                  |
+| :--------------------- | :------------------------------------------------------- | :--------- | :-------------------------------------------------------------------- |
+| **CSS Framework**      | [Pico CSS](https://picocss.com)                          | ~20KB      | Dark theme, typography, `<dialog>`, `<details>`, form/button defaults |
+| **HTML Over the Wire** | [HTMX](https://htmx.org)                                 | ~14KB      | Partial-page swaps, push-url, polling, AJAX navigation                |
+| **DOM Morphing**       | [Idiomorph](https://github.com/bigskysoftware/idiomorph) | ~5KB       | Smooth transitions on DOM swaps (HTMX extension)                      |
+| **Client State**       | [Alpine.js](https://alpinejs.dev)                        | ~15KB      | Tab state, search filter, keyboard shortcuts, toasts, chart lifecycle |
+| **Charts**             | [Frappe Charts](https://frappe.io/charts)                | ~20KB      | Donut chart for category spending breakdown                           |
+| **Icons**              | [Lucide](https://lucide.dev)                             | inline SVG | Period nav arrows, empty-state icon                                   |
 
 **Total payload**: ~80KB. All served via CDN `<script>`/`<link>` tags. Zero build step.
 
 ### Why This Stack
 
-| Requirement | Why Not Vanilla JS | Why Not React/Vue/Svelte |
-|:------------|:-------------------|:--------------------------|
+| Requirement               | Why Not Vanilla JS                     | Why Not React/Vue/Svelte                                      |
+| :------------------------ | :------------------------------------- | :------------------------------------------------------------ |
 | Period nav without reload | Manual fetch + DOM render (~400 lines) | Framework boilerplate, build pipeline, duplicate server logic |
-| Smooth transitions | Manual FLIP animations | Framework-specific transition APIs |
-| Search/filter | Manual event binding + DOM walk | Framework component state |
-| Zero build | Yes | No — requires bundler |
-| Reuse server templates | Must reimplement in JS | Must reimplement in JS |
+| Smooth transitions        | Manual FLIP animations                 | Framework-specific transition APIs                            |
+| Search/filter             | Manual event binding + DOM walk        | Framework component state                                     |
+| Zero build                | Yes                                    | No — requires bundler                                         |
+| Reuse server templates    | Must reimplement in JS                 | Must reimplement in JS                                        |
 
 HTMX + Alpine is the only stack that satisfies all constraints: **no build step, server-rendered templates, declarative interactivity, and extensibility** — a new dashboard section is just a new Jinja2 partial + one `hx-get` attribute.
 
@@ -242,39 +242,39 @@ Browser                          FastAPI
 
 ### 7.1 New Files
 
-| File | Lines (est.) | Purpose |
-|:-----|:-------------|:--------|
-| `templates/dashboard.html` | ~200 | Full-page template with Pico classes, CDN links, Alpine root, structural layout |
-| `templates/partials/cockpit_content.html` | ~150 | Content area partial — extracted from old dashboard.html lines 169-508 |
-| `static/dashboard.css` | ~200 | Dashboard-specific layout only (grid, category tree, account groups, flow band) |
-| `static/dashboard.js` | ~80 | Alpine.js component — tab state, search, collapse-all, keyboard shortcuts, chart init, toast queue |
-| `docs/DESIGN_DASHBOARD_SPA.md` | this file | Design document |
+| File                                      | Lines (est.) | Purpose                                                                                            |
+| :---------------------------------------- | :----------- | :------------------------------------------------------------------------------------------------- |
+| `templates/dashboard.html`                | ~200         | Full-page template with Pico classes, CDN links, Alpine root, structural layout                    |
+| `templates/partials/cockpit_content.html` | ~150         | Content area partial — extracted from old dashboard.html lines 169-508                             |
+| `static/dashboard.css`                    | ~200         | Dashboard-specific layout only (grid, category tree, account groups, flow band)                    |
+| `static/dashboard.js`                     | ~80          | Alpine.js component — tab state, search, collapse-all, keyboard shortcuts, chart init, toast queue |
+| `docs/DESIGN_DASHBOARD_SPA.md`            | this file    | Design document                                                                                    |
 
 ### 7.2 Modified Files
 
-| File | Change |
-|:-----|:-------|
-| `routers/dashboard.py` | Add `HX-Request` header detection → return partial or full template. Add Pico CDN URL to template context |
-| `tests/test_dashboard.py` | Update assertions for new template structure and HTMX partial responses |
+| File                      | Change                                                                                                    |
+| :------------------------ | :-------------------------------------------------------------------------------------------------------- |
+| `routers/dashboard.py`    | Add `HX-Request` header detection → return partial or full template. Add Pico CDN URL to template context |
+| `tests/test_dashboard.py` | Update assertions for new template structure and HTMX partial responses                                   |
 
 ### 7.3 Removed Files
 
-| File | Reason |
-|:-----|:-------|
+| File                                  | Reason                                 |
+| :------------------------------------ | :------------------------------------- |
 | `static/vendor/tabler/tabler.min.css` | Replaced by Pico CSS (~20KB vs ~200KB) |
-| `static/dashboard.js` (old) | Replaced by Alpine component |
-| `static/dashboard.css` (old) | Replaced by Pico-based rewrite |
+| `static/dashboard.js` (old)           | Replaced by Alpine component           |
+| `static/dashboard.css` (old)          | Replaced by Pico-based rewrite         |
 
 ### 7.4 Untouched Files
 
-| File | Reason |
-|:-----|:-------|
-| `services/dashboard.py` | No changes — `fetch_dashboard_data()` reused verbatim |
-| `services/accounts.py`, `spending.py`, `budgets.py`, `summary.py`, `sync.py`, `transactions.py` | Unchanged |
-| `routers/accounts.py`, `spending.py`, `budgets.py`, `summary.py`, `sync.py`, `transactions.py` | Unchanged |
-| `app/main.py` | Unchanged — static mount, router registration, auth middleware all work as-is |
-| `app/auth.py` | Unchanged — API key auth still guards `GET /` and all REST routes |
-| `static/mascot.png` | Unchanged |
+| File                                                                                            | Reason                                                                        |
+| :---------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------- |
+| `services/dashboard.py`                                                                         | No changes — `fetch_dashboard_data()` reused verbatim                         |
+| `services/accounts.py`, `spending.py`, `budgets.py`, `summary.py`, `sync.py`, `transactions.py` | Unchanged                                                                     |
+| `routers/accounts.py`, `spending.py`, `budgets.py`, `summary.py`, `sync.py`, `transactions.py`  | Unchanged                                                                     |
+| `app/main.py`                                                                                   | Unchanged — static mount, router registration, auth middleware all work as-is |
+| `app/auth.py`                                                                                   | Unchanged — API key auth still guards `GET /` and all REST routes             |
+| `static/mascot.png`                                                                             | Unchanged                                                                     |
 
 ## 8. Router Design
 
@@ -370,15 +370,15 @@ All client state lives in a single Alpine.js component bound to `<body>`.
 
 ### Keyboard Shortcuts
 
-| Key | Action | Condition |
-|:----|:-------|:----------|
-| `1` | Switch to Accounts tab | Not in input |
-| `2` | Switch to Period tab | Not in input |
-| `3` | Switch to Activity tab | Not in input |
-| `j` | Previous month | Not in input |
-| `k` | Next month | Not in input |
-| `/` | Focus search input | Not in input |
-| `Escape` | Clear search, close dialog | Anywhere |
+| Key      | Action                     | Condition    |
+| :------- | :------------------------- | :----------- |
+| `1`      | Switch to Accounts tab     | Not in input |
+| `2`      | Switch to Period tab       | Not in input |
+| `3`      | Switch to Activity tab     | Not in input |
+| `j`      | Previous month             | Not in input |
+| `k`      | Next month                 | Not in input |
+| `/`      | Focus search input         | Not in input |
+| `Escape` | Clear search, close dialog | Anywhere     |
 
 Shortcuts are scoped: if focus is on `<input>`, `<textarea>`, `<select>`, or `[contenteditable]`, shortcuts are suppressed.
 
@@ -386,14 +386,14 @@ Shortcuts are scoped: if focus is on `<input>`, `<textarea>`, `<select>`, or `[c
 
 ### What Pico CSS Replaces
 
-| Former Custom CSS (lines) | Replaced By |
-|:--------------------------|:------------|
-| `:root` color tokens (1-20) | Pico dark theme CSS variables via `data-theme="dark"` |
-| `*` box-sizing + `body` defaults (22-31) | Pico reset |
-| `button`, `a` font inheritance (33-40) | Pico defaults |
-| Tabler vendor CSS (200KB) | Pico CSS (20KB) |
-| Alert/dialog styles (172-185) | Pico `<article>` + `<dialog>` |
-| Empty-state typography (729-755) | Pico typography + custom layout |
+| Former Custom CSS (lines)                | Replaced By                                           |
+| :--------------------------------------- | :---------------------------------------------------- |
+| `:root` color tokens (1-20)              | Pico dark theme CSS variables via `data-theme="dark"` |
+| `*` box-sizing + `body` defaults (22-31) | Pico reset                                            |
+| `button`, `a` font inheritance (33-40)   | Pico defaults                                         |
+| Tabler vendor CSS (200KB)                | Pico CSS (20KB)                                       |
+| Alert/dialog styles (172-185)            | Pico `<article>` + `<dialog>`                         |
+| Empty-state typography (729-755)         | Pico typography + custom layout                       |
 
 ### What Stays Custom (~200 lines)
 
@@ -432,12 +432,12 @@ All dashboard-specific layout — Pico is a classless CSS framework and doesn't 
 
 ```css
 :root {
-  --gold:   #efb20e;   /* active tab, brand accents, category names */
-  --green:  #32cf82;   /* positive amounts, status dot */
-  --coral:  #ff5c6c;   /* negative amounts */
-  --blue:   #5f7ce8;   /* category swatch 3 */
-  --purple: #a36ddd;   /* category swatch 4 */
-  --teal:   #1fb6a5;   /* category swatch 5 */
+    --gold: #efb20e; /* active tab, brand accents, category names */
+    --green: #32cf82; /* positive amounts, status dot */
+    --coral: #ff5c6c; /* negative amounts */
+    --blue: #5f7ce8; /* category swatch 3 */
+    --purple: #a36ddd; /* category swatch 4 */
+    --teal: #1fb6a5; /* category swatch 5 */
 }
 ```
 
@@ -445,37 +445,37 @@ These are convenience aliases layered on top of Pico's CSS variables. They are n
 
 ## 11. Responsive Breakpoints
 
-| Width | Layout |
-|:------|:-------|
-| > 900px | Two-column grid (left rail + workspace), `overflow: hidden` on body |
+| Width   | Layout                                                                         |
+| :------ | :----------------------------------------------------------------------------- |
+| > 900px | Two-column grid (left rail + workspace), `overflow: hidden` on body            |
 | ≤ 900px | Single-column stack, `overflow: auto` on body, panel-switcher spans full width |
-| ≤ 560px | Compact: tighter padding, smaller fonts, category meter column hidden |
+| ≤ 560px | Compact: tighter padding, smaller fonts, category meter column hidden          |
 
 All breakpoints are pure CSS `@media` queries. No JavaScript resize handling needed — Pico handles fluid typography, and the custom CSS handles grid reflows.
 
 ## 12. Accessibility
 
-| Feature | Implementation |
-|:--------|:---------------|
-| Skip link | `.skip-link` — `position: fixed`, revealed on focus, targets `#dashboard-content` |
-| Tab panel roles | `role="tablist"`, `role="tab"`, `role="tabpanel"`, `aria-selected`, `aria-controls`, `aria-labelledby` |
-| Period nav labels | `aria-label="Previous month"` / `"Next month"` on period nav buttons |
-| Live region | Dashboard alert uses `role="status"` for partial-data announcements |
-| Keyboard nav | All interactive elements are focusable. Keyboard shortcuts are additive, not replacements for native tab/arrow navigation |
-| Color | Positive/negative amounts use color **and** `+`/`-` sign prefix. Category swatches are supplementary to text labels |
-| Motion | `prefers-reduced-motion` respected for morphed transitions and loading spinners |
-| HTMX | `hx-target` swaps preserve focus where possible. Idiomorph preserves scroll position |
+| Feature           | Implementation                                                                                                            |
+| :---------------- | :------------------------------------------------------------------------------------------------------------------------ |
+| Skip link         | `.skip-link` — `position: fixed`, revealed on focus, targets `#dashboard-content`                                         |
+| Tab panel roles   | `role="tablist"`, `role="tab"`, `role="tabpanel"`, `aria-selected`, `aria-controls`, `aria-labelledby`                    |
+| Period nav labels | `aria-label="Previous month"` / `"Next month"` on period nav buttons                                                      |
+| Live region       | Dashboard alert uses `role="status"` for partial-data announcements                                                       |
+| Keyboard nav      | All interactive elements are focusable. Keyboard shortcuts are additive, not replacements for native tab/arrow navigation |
+| Color             | Positive/negative amounts use color **and** `+`/`-` sign prefix. Category swatches are supplementary to text labels       |
+| Motion            | `prefers-reduced-motion` respected for morphed transitions and loading spinners                                           |
+| HTMX              | `hx-target` swaps preserve focus where possible. Idiomorph preserves scroll position                                      |
 
 ## 13. Error Handling
 
 ### API Key
 
-| Scenario | Behavior |
-|:---------|:---------|
-| Key not configured on server, none in localStorage | API calls pass through (auth middleware allows un-keyed requests) |
-| Key configured on server, missing in localStorage | API calls return 401 → dialog shown, user enters key → stored in `localStorage` → retry |
-| Key configured on server, wrong in localStorage | API calls return 401 → dialog shown with error message → user re-enters |
-| Key configured, correct, stored | Normal operation, no dialog |
+| Scenario                                           | Behavior                                                                                |
+| :------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| Key not configured on server, none in localStorage | API calls pass through (auth middleware allows un-keyed requests)                       |
+| Key configured on server, missing in localStorage  | API calls return 401 → dialog shown, user enters key → stored in `localStorage` → retry |
+| Key configured on server, wrong in localStorage    | API calls return 401 → dialog shown with error message → user re-enters                 |
+| Key configured, correct, stored                    | Normal operation, no dialog                                                             |
 
 ### Section Failures (Graceful Degradation)
 
@@ -484,8 +484,11 @@ The server's `fetch_dashboard_data()` already wraps each section in `_capture()`
 ```html
 {% if dashboard.unavailable_sections %}
 <section class="dashboard-alert" role="status">
-  <strong>Partial data</strong>
-  <span>{{ dashboard.unavailable_sections | join(', ') }} will return on the next refresh.</span>
+    <strong>Partial data</strong>
+    <span
+        >{{ dashboard.unavailable_sections | join(', ') }} will return on the
+        next refresh.</span
+    >
 </section>
 {% endif %}
 ```
@@ -497,12 +500,12 @@ Individual sections fall back to their `.empty-state` markup when data is `None`
 HTMX fires `htmx:responseError` on non-2xx responses. Alpine listens for this:
 
 ```js
-document.body.addEventListener('htmx:responseError', (e) => {
-  if (e.detail.xhr.status === 401) {
-    this.showApiKeyDialog = true;
-  } else {
-    this.addToast(`Could not load ${e.detail.target.id}`, 'error');
-  }
+document.body.addEventListener("htmx:responseError", (e) => {
+    if (e.detail.xhr.status === 401) {
+        this.showApiKeyDialog = true;
+    } else {
+        this.addToast(`Could not load ${e.detail.target.id}`, "error");
+    }
 });
 ```
 
@@ -512,10 +515,10 @@ HTMX provides `hx-indicator` — a CSS class applied to an element during the re
 
 ```html
 <div hx-get="/..." hx-indicator="#loading-spinner">
-  <!-- content -->
+    <!-- content -->
 </div>
 <div id="loading-spinner" class="htmx-indicator">
-  <!-- spinner shown during request, hidden otherwise -->
+    <!-- spinner shown during request, hidden otherwise -->
 </div>
 ```
 
@@ -525,31 +528,31 @@ Pico CSS provides `aria-busy="true"` styling for loading states.
 
 ### Backend (pytest)
 
-| Test | Description |
-|:-----|:------------|
-| `test_dashboard_full_page` | `GET /` returns 200 with complete HTML document |
-| `test_dashboard_htmx_partial` | `GET /` with `HX-Request: true` header returns content-area partial only |
-| `test_dashboard_period_nav` | `GET /?period=2026-01-01` returns correct period data in template context |
-| `test_dashboard_unavailable_sections` | Partial data banner rendered when 3 of 7 sections fail |
-| `test_dashboard_auth` | `GET /` without API key returns 401 when key configured |
-| `test_dashboard_empty_state` | Empty-state markup rendered when accounts/transactions/spending is None |
-| `test_dashboard_html_contains_cdn_links` | Response includes Pico, HTMX, Alpine, Frappe CDN URLs |
-| `test_dashboard_html_contains_alpine_root` | Response includes `x-data="dashboard"` on `<body>` |
+| Test                                       | Description                                                               |
+| :----------------------------------------- | :------------------------------------------------------------------------ |
+| `test_dashboard_full_page`                 | `GET /` returns 200 with complete HTML document                           |
+| `test_dashboard_htmx_partial`              | `GET /` with `HX-Request: true` header returns content-area partial only  |
+| `test_dashboard_period_nav`                | `GET /?period=2026-01-01` returns correct period data in template context |
+| `test_dashboard_unavailable_sections`      | Partial data banner rendered when 3 of 7 sections fail                    |
+| `test_dashboard_auth`                      | `GET /` without API key returns 401 when key configured                   |
+| `test_dashboard_empty_state`               | Empty-state markup rendered when accounts/transactions/spending is None   |
+| `test_dashboard_html_contains_cdn_links`   | Response includes Pico, HTMX, Alpine, Frappe CDN URLs                     |
+| `test_dashboard_html_contains_alpine_root` | Response includes `x-data="dashboard"` on `<body>`                        |
 
 ### Frontend (manual verification, future: Playwright)
 
-| Test | Description |
-|:-----|:------------|
-| Tab switching | Click each tab, verify panel visibility, aria-selected updates |
-| Period navigation | Click prev/next month, verify URL updates, content swaps smoothly |
-| Live polling | Verify sync status dot updates within 60s |
-| Search filter | Type in search, verify category tree filters in real time |
-| Collapse all | Click toggle, verify all `<details>` open/close |
-| Keyboard shortcuts | Press 1/2/3, j/k, /, Escape — verify actions |
-| API key flow | Clear localStorage, refresh — verify dialog appears. Enter key — verify dismissed |
-| Responsive | Resize to 900px and 560px breakpoints, verify layout reflows |
-| Chart rendering | Verify donut chart renders on load and re-renders after period nav |
-| Empty states | Verify empty-state copy when no accounts, no transactions, no spending |
+| Test               | Description                                                                       |
+| :----------------- | :-------------------------------------------------------------------------------- |
+| Tab switching      | Click each tab, verify panel visibility, aria-selected updates                    |
+| Period navigation  | Click prev/next month, verify URL updates, content swaps smoothly                 |
+| Live polling       | Verify sync status dot updates within 60s                                         |
+| Search filter      | Type in search, verify category tree filters in real time                         |
+| Collapse all       | Click toggle, verify all `<details>` open/close                                   |
+| Keyboard shortcuts | Press 1/2/3, j/k, /, Escape — verify actions                                      |
+| API key flow       | Clear localStorage, refresh — verify dialog appears. Enter key — verify dismissed |
+| Responsive         | Resize to 900px and 560px breakpoints, verify layout reflows                      |
+| Chart rendering    | Verify donut chart renders on load and re-renders after period nav                |
+| Empty states       | Verify empty-state copy when no accounts, no transactions, no spending            |
 
 ## 15. Implementation Phases
 
@@ -557,40 +560,40 @@ Pico CSS provides `aria-busy="true"` styling for loading states.
 
 **Goal**: Working dashboard with Pico + HTMX + Alpine. No new features.
 
-| Step | Files | Verification |
-|:-----|:------|:------------|
-| 1.1 | Write `dashboard.css` (Pico-based, ~200 lines) | Visual parity with current dashboard at 1920px, 900px, 560px |
-| 1.2 | Extract `partials/cockpit_content.html` from old `dashboard.html` | Template renders without errors with test context |
-| 1.3 | Write `dashboard.html` (Pico classes, CDN links, Alpine root) | Page loads with correct structure |
-| 1.4 | Write Alpine component (`dashboard.js`) — tab switching only | Tab clicks switch panels, no page reload |
-| 1.5 | Update `routers/dashboard.py` — add `HX-Request` conditional | `GET /` returns full page; `GET /` with `HX-Request` returns partial |
-| 1.6 | Wire HTMX period nav: `hx-get`, `hx-target`, `hx-push-url` | Click next month → URL updates → content swaps → no full reload |
-| 1.7 | Remove Tabler CSS, old `dashboard.css`, old `dashboard.js` | No import errors, no missing styles |
-| 1.8 | Run `task fix && task lint && task check && task test` | All pass |
+| Step | Files                                                             | Verification                                                         |
+| :--- | :---------------------------------------------------------------- | :------------------------------------------------------------------- |
+| 1.1  | Write `dashboard.css` (Pico-based, ~200 lines)                    | Visual parity with current dashboard at 1920px, 900px, 560px         |
+| 1.2  | Extract `partials/cockpit_content.html` from old `dashboard.html` | Template renders without errors with test context                    |
+| 1.3  | Write `dashboard.html` (Pico classes, CDN links, Alpine root)     | Page loads with correct structure                                    |
+| 1.4  | Write Alpine component (`dashboard.js`) — tab switching only      | Tab clicks switch panels, no page reload                             |
+| 1.5  | Update `routers/dashboard.py` — add `HX-Request` conditional      | `GET /` returns full page; `GET /` with `HX-Request` returns partial |
+| 1.6  | Wire HTMX period nav: `hx-get`, `hx-target`, `hx-push-url`        | Click next month → URL updates → content swaps → no full reload      |
+| 1.7  | Remove Tabler CSS, old `dashboard.css`, old `dashboard.js`        | No import errors, no missing styles                                  |
+| 1.8  | Run `task fix && task lint && task check && task test`            | All pass                                                             |
 
 ### Phase 2 — Polish
 
 **Goal**: Animations, charts, live refresh, error handling.
 
-| Step | Files | Verification |
-|:-----|:------|:------------|
-| 2.1 | Add Idiomorph CDN + `hx-swap="morph:innerHTML"` | Period nav transitions are smooth, scroll preserved |
-| 2.2 | Add Frappe Charts CDN + `chart-data` JSON inline + Alpine `initChart()` | Donut chart renders on load, re-renders after period nav |
-| 2.3 | Add live polling: `hx-trigger="every 60s"` on sync status | Sync dot updates within 60s |
-| 2.4 | Add API key dialog (Pico `<dialog>` + Alpine) | 401 → dialog → enter key → stored → retry |
-| 2.5 | Add toast system (Alpine) | Error toasts appear on network failures |
-| 2.6 | Add loading indicators (`hx-indicator`, `aria-busy`) | Spinner shown during swaps |
+| Step | Files                                                                   | Verification                                             |
+| :--- | :---------------------------------------------------------------------- | :------------------------------------------------------- |
+| 2.1  | Add Idiomorph CDN + `hx-swap="morph:innerHTML"`                         | Period nav transitions are smooth, scroll preserved      |
+| 2.2  | Add Frappe Charts CDN + `chart-data` JSON inline + Alpine `initChart()` | Donut chart renders on load, re-renders after period nav |
+| 2.3  | Add live polling: `hx-trigger="every 60s"` on sync status               | Sync dot updates within 60s                              |
+| 2.4  | Add API key dialog (Pico `<dialog>` + Alpine)                           | 401 → dialog → enter key → stored → retry                |
+| 2.5  | Add toast system (Alpine)                                               | Error toasts appear on network failures                  |
+| 2.6  | Add loading indicators (`hx-indicator`, `aria-busy`)                    | Spinner shown during swaps                               |
 
 ### Phase 3 — Interactivity
 
 **Goal**: Search, keyboard, collapse-all, relative timestamps.
 
-| Step | Files | Verification |
-|:-----|:------|:------------|
-| 3.1 | Add category search filter (Alpine `x-model` + filter) | Typing filters tree, clearing restores |
-| 3.2 | Add collapse-all toggle (Alpine `toggleAllDetails()`) | Button toggles all `<details>` open/close |
-| 3.3 | Add keyboard shortcuts (Alpine `onKeydown()`) | 1/2/3 for tabs, j/k for months, / for search, Esc for clear |
-| 3.4 | Add relative timestamps (custom Alpine directive or filter) | "Synced 2 hours ago" instead of absolute datetime |
+| Step | Files                                                       | Verification                                                |
+| :--- | :---------------------------------------------------------- | :---------------------------------------------------------- |
+| 3.1  | Add category search filter (Alpine `x-model` + filter)      | Typing filters tree, clearing restores                      |
+| 3.2  | Add collapse-all toggle (Alpine `toggleAllDetails()`)       | Button toggles all `<details>` open/close                   |
+| 3.3  | Add keyboard shortcuts (Alpine `onKeydown()`)               | 1/2/3 for tabs, j/k for months, / for search, Esc for clear |
+| 3.4  | Add relative timestamps (custom Alpine directive or filter) | "Synced 2 hours ago" instead of absolute datetime           |
 
 ## 16. Rollback Plan
 
@@ -605,12 +608,12 @@ The service layer (`services/dashboard.py`) is never modified, so there is no da
 
 ## Appendix A: CDN URLs
 
-| Tool | URL |
-|:-----|:----|
-| Pico CSS | `https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css` |
-| HTMX | `https://unpkg.com/htmx.org@2/dist/htmx.min.js` |
-| Idiomorph | `https://unpkg.com/idiomorph/dist/idiomorph-ext.min.js` |
-| Alpine.js | `https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js` |
+| Tool          | URL                                                                           |
+| :------------ | :---------------------------------------------------------------------------- |
+| Pico CSS      | `https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css`               |
+| HTMX          | `https://unpkg.com/htmx.org@2/dist/htmx.min.js`                               |
+| Idiomorph     | `https://unpkg.com/idiomorph/dist/idiomorph-ext.min.js`                       |
+| Alpine.js     | `https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js`                     |
 | Frappe Charts | `https://cdn.jsdelivr.net/npm/frappe-charts@1/dist/frappe-charts.min.iife.js` |
 
 ## Appendix B: Template Context
@@ -643,10 +646,10 @@ The server renders spending data as JSON inline in the partial template:
 
 ```html
 <script id="chart-data" type="application/json">
-{
-  "labels": ["Groceries", "Dining Out", "Entertainment", ...],
-  "datasets": [{ "values": [450.00, 320.00, 180.00, ...] }]
-}
+    {
+      "labels": ["Groceries", "Dining Out", "Entertainment", ...],
+      "datasets": [{ "values": [450.00, 320.00, 180.00, ...] }]
+    }
 </script>
 <div id="category-donut"></div>
 ```
@@ -666,4 +669,3 @@ initChart() {
   });
 }
 ```
-

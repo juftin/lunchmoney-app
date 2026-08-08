@@ -1,6 +1,6 @@
 /** Override Pico dark-theme tokens with the dashboard colour palette. */
 
-:root[data-theme=dark] {
+:root[data-theme="dark"] {
     --pico-background-color: #252525;
     --pico-card-background-color: #303030;
     --pico-card-sectioning-background-color: #303030;
@@ -82,7 +82,7 @@ body {
     background:
         radial-gradient(
             circle at 85% 0,
-            rgba(32, 154, 116, 0.10),
+            rgba(32, 154, 116, 0.1),
             transparent 32rem
         ),
         var(--canvas);
@@ -219,7 +219,9 @@ body {
     cursor: pointer;
     margin: 0;
     padding: 0;
-    transition: color 150ms ease, background 150ms ease;
+    transition:
+        color 150ms ease,
+        background 150ms ease;
 }
 .header-refresh-btn:hover {
     color: var(--text);
@@ -500,7 +502,11 @@ body {
     color: var(--muted);
     font-size: 0.82rem;
     font-weight: 650;
-    background: linear-gradient(135deg, rgba(239, 178, 14, 0.08), rgba(50, 207, 130, 0.06));
+    background: linear-gradient(
+        135deg,
+        rgba(239, 178, 14, 0.08),
+        rgba(50, 207, 130, 0.06)
+    );
     border: 1px solid rgba(239, 178, 14, 0.2);
     border-radius: 0.5rem;
 }
@@ -801,7 +807,9 @@ body {
     height: 100%;
     min-width: 0.2rem;
     cursor: pointer;
-    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 150ms ease;
+    transition:
+        width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+        filter 150ms ease;
 }
 .flow-band__segment:hover {
     filter: brightness(1.35);
@@ -838,18 +846,42 @@ body {
 .flow-band__segment:only-child {
     border-radius: 999px;
 }
-.flow-band__segment--0 { background: var(--green); }
-.flow-band__segment--1 { background: var(--gold); }
-.flow-band__segment--2 { background: var(--coral); }
-.flow-band__segment--3 { background: var(--blue); }
-.flow-band__segment--4 { background: var(--purple); }
-.flow-band__segment--5 { background: var(--teal); }
-.flow-band__segment--6 { background: #f78c40; }
-.flow-band__segment--7 { background: #e06c9f; }
-.flow-band__segment--8 { background: #5cc9e8; }
-.flow-band__segment--9 { background: #a8d948; }
-.flow-band__segment--10 { background: #d4a843; }
-.flow-band__segment--11 { background: #7b8fe8; }
+.flow-band__segment--0 {
+    background: var(--green);
+}
+.flow-band__segment--1 {
+    background: var(--gold);
+}
+.flow-band__segment--2 {
+    background: var(--coral);
+}
+.flow-band__segment--3 {
+    background: var(--blue);
+}
+.flow-band__segment--4 {
+    background: var(--purple);
+}
+.flow-band__segment--5 {
+    background: var(--teal);
+}
+.flow-band__segment--6 {
+    background: #f78c40;
+}
+.flow-band__segment--7 {
+    background: #e06c9f;
+}
+.flow-band__segment--8 {
+    background: #5cc9e8;
+}
+.flow-band__segment--9 {
+    background: #a8d948;
+}
+.flow-band__segment--10 {
+    background: #d4a843;
+}
+.flow-band__segment--11 {
+    background: #7b8fe8;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Category table                                                     */
@@ -959,19 +991,43 @@ body {
     flex: 0 0 auto;
     border-radius: 50%;
 }
-.category-swatch--0 { background: var(--green); }
-.category-swatch--1 { background: var(--gold); }
-.category-swatch--2 { background: var(--coral); }
-.category-swatch--3 { background: var(--blue); }
-.category-swatch--4 { background: var(--purple); }
-.category-swatch--5 { background: var(--teal); }
+.category-swatch--0 {
+    background: var(--green);
+}
+.category-swatch--1 {
+    background: var(--gold);
+}
+.category-swatch--2 {
+    background: var(--coral);
+}
+.category-swatch--3 {
+    background: var(--blue);
+}
+.category-swatch--4 {
+    background: var(--purple);
+}
+.category-swatch--5 {
+    background: var(--teal);
+}
 
-.category-item--tone-0 { --category-color: var(--green); }
-.category-item--tone-1 { --category-color: var(--gold); }
-.category-item--tone-2 { --category-color: var(--coral); }
-.category-item--tone-3 { --category-color: var(--blue); }
-.category-item--tone-4 { --category-color: var(--purple); }
-.category-item--tone-5 { --category-color: var(--teal); }
+.category-item--tone-0 {
+    --category-color: var(--green);
+}
+.category-item--tone-1 {
+    --category-color: var(--gold);
+}
+.category-item--tone-2 {
+    --category-color: var(--coral);
+}
+.category-item--tone-3 {
+    --category-color: var(--blue);
+}
+.category-item--tone-4 {
+    --category-color: var(--purple);
+}
+.category-item--tone-5 {
+    --category-color: var(--teal);
+}
 
 .category-meter {
     display: block;

@@ -68,7 +68,11 @@ Run: `curl --fail --location --output src/lunchmoney_mcp/app/static/mascot.png h
 Use a decorative image in place of the top-left `LM` brand mark:
 
 ```html
-<img class="brand-mascot" src="{{ url_for('dashboard_static', path='/mascot.png') }}" alt="" />
+<img
+    class="brand-mascot"
+    src="{{ url_for('dashboard_static', path='/mascot.png') }}"
+    alt=""
+/>
 ```
 
 For each child, calculate its percentage against the same income or expense total as its parent; render the child name, meter, amount, and percentage. Render Income before Expenses, sort each section by descending top-level roll-up amount, and omit zero-spend parent and child rows.

@@ -1,26 +1,32 @@
-{% from "partials/_macros.html" import amount, currency_symbol, category_row with context -%}
-{% if is_hx_request %}
-{% include "partials/_period_control.html" %}
+{% from "partials/_macros.html" import amount, currency_symbol, category_row
+with context -%} {% if is_hx_request %} {% include
+"partials/_period_control.html" %}
 <div id="header-status" hx-swap-oob="true" class="header-status">
     <span class="live-dot" aria-hidden="true"></span>
     {% if dashboard.transaction_last_synced_at %}
-    <time class="js-time-ago" data-prefix="Data synced" datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}" title="{{ dashboard.transaction_last_synced_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">Data synced {{ dashboard.transaction_last_synced_at | time_ago }}</time>
+    <time
+        class="js-time-ago"
+        data-prefix="Data synced"
+        datetime="{{ dashboard.transaction_last_synced_at.isoformat() }}"
+        title="{{ dashboard.transaction_last_synced_at.strftime('%b %d, %Y %H:%M:%S UTC') }}"
+        >Data synced {{ dashboard.transaction_last_synced_at | time_ago }}</time
+    >
     {% else %}
     <span>Awaiting sync</span>
     {% endif %}
 </div>
-{% endif %} {%- set spending =
-dashboard.category_spending -%} {%- set accounts = dashboard.accounts -%} {%-
-set all_accounts = accounts.plaid_accounts + accounts.manual_accounts if
-accounts else [] -%} {%- set visible_accounts = all_accounts |
-selectattr('to_base') | list -%} {%- set account_total = namespace(value=0) -%}
-{%- for account in all_accounts -%} {%- if account.type in ['credit', 'loan']
--%} {%- set account_total.value = account_total.value - (account.to_base | abs)
--%} {%- else -%} {%- set account_total.value = account_total.value +
-account.to_base -%} {%- endif -%} {%- endfor -%} {%- set net_income =
-spending.total_income - spending.total_spending if spending else 0 -%} {%- set
-savings_rate = ((net_income / spending.total_income) * 100) if spending and
-spending.total_income else none -%} {% if dashboard.unavailable_sections %}
+{% endif %} {%- set spending = dashboard.category_spending -%} {%- set accounts
+= dashboard.accounts -%} {%- set all_accounts = accounts.plaid_accounts +
+accounts.manual_accounts if accounts else [] -%} {%- set visible_accounts =
+all_accounts | selectattr('to_base') | list -%} {%- set account_total =
+namespace(value=0) -%} {%- for account in all_accounts -%} {%- if account.type
+in ['credit', 'loan'] -%} {%- set account_total.value = account_total.value -
+(account.to_base | abs) -%} {%- else -%} {%- set account_total.value =
+account_total.value + account.to_base -%} {%- endif -%} {%- endfor -%} {%- set
+net_income = spending.total_income - spending.total_spending if spending else 0
+-%} {%- set savings_rate = ((net_income / spending.total_income) * 100) if
+spending and spending.total_income else none -%} {% if
+dashboard.unavailable_sections %}
 <section
     class="dashboard-alert"
     role="status"
@@ -34,8 +40,18 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
 </section>
 {% endif %}
 
-<aside class="left-rail" id="left-rail" aria-label="Financial overview" data-active-tab="accounts">
-    <div class="panel-switcher" id="panel-switcher" role="tablist" aria-label="Overview panel">
+<aside
+    class="left-rail"
+    id="left-rail"
+    aria-label="Financial overview"
+    data-active-tab="accounts"
+>
+    <div
+        class="panel-switcher"
+        id="panel-switcher"
+        role="tablist"
+        aria-label="Overview panel"
+    >
         <button
             class="panel-switcher__button"
             type="button"
@@ -108,7 +124,11 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             {% for group_name, grouped_accounts in account_groups %} {% if
             grouped_accounts %} {% set group_total = grouped_accounts |
             map(attribute='to_base') | sum %}
-            <details class="account-group" id="acc-group-{{ group_name | lower }}" open>
+            <details
+                class="account-group"
+                id="acc-group-{{ group_name | lower }}"
+                open
+            >
                 <summary>
                     <span
                         >{{ group_name }} ({{ grouped_accounts | length
@@ -262,12 +282,23 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         role="tabpanel"
         aria-labelledby="sync-tab"
     >
-        <div class="panel-title" style="display: flex; align-items: center; justify-content: space-between;">
+        <div
+            class="panel-title"
+            style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            "
+        >
             <h2>Syncing status</h2>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                {% if dashboard.sync_status and dashboard.sync_status.scheduled_sync %}
-                <span class="status-badge status-badge--{{ dashboard.sync_status.scheduled_sync.status }}">
-                    {{ dashboard.sync_status.scheduled_sync.status | capitalize }}
+            <div style="display: flex; align-items: center; gap: 0.5rem">
+                {% if dashboard.sync_status and
+                dashboard.sync_status.scheduled_sync %}
+                <span
+                    class="status-badge status-badge--{{ dashboard.sync_status.scheduled_sync.status }}"
+                >
+                    {{ dashboard.sync_status.scheduled_sync.status | capitalize
+                    }}
                 </span>
                 {% else %}
                 <span class="status-badge status-badge--idle">Ready</span>
@@ -275,7 +306,11 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <button
                     class="btn btn-sm btn-outline"
                     type="button"
-                    style="margin: 0; padding: 0.25rem 0.6rem; font-size: 0.75rem;"
+                    style="
+                        margin: 0;
+                        padding: 0.25rem 0.6rem;
+                        font-size: 0.75rem;
+                    "
                     hx-post="/dashboard/sync"
                     hx-target="#dashboard-content"
                     hx-swap="morph:innerHTML show:none"
@@ -292,11 +327,21 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             </div>
             <div>
                 <dt>Persistence mode</dt>
-                <dd><span class="sync-badge sync-badge--mode">{{ dashboard.sync_status.persistence_mode }}</span></dd>
+                <dd>
+                    <span class="sync-badge sync-badge--mode"
+                        >{{ dashboard.sync_status.persistence_mode }}</span
+                    >
+                </dd>
             </div>
             <div>
                 <dt>Database URL</dt>
-                <dd><code class="sync-code" title="{{ dashboard.sync_status.db_url }}">{{ dashboard.sync_status.db_url }}</code></dd>
+                <dd>
+                    <code
+                        class="sync-code"
+                        title="{{ dashboard.sync_status.db_url }}"
+                        >{{ dashboard.sync_status.db_url }}</code
+                    >
+                </dd>
             </div>
             <div>
                 <dt>Scheduler engine</dt>
@@ -315,19 +360,41 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             </div>
             <div>
                 <dt>Transactions</dt>
-                <dd><strong>{{ "{:,}".format(dashboard.sync_status.stored_transactions) }}</strong></dd>
+                <dd>
+                    <strong
+                        >{{
+                        "{:,}".format(dashboard.sync_status.stored_transactions)
+                        }}</strong
+                    >
+                </dd>
             </div>
             <div>
                 <dt>Categories</dt>
-                <dd><strong>{{ "{:,}".format(dashboard.sync_status.stored_categories) }}</strong></dd>
+                <dd>
+                    <strong
+                        >{{
+                        "{:,}".format(dashboard.sync_status.stored_categories)
+                        }}</strong
+                    >
+                </dd>
             </div>
             <div>
                 <dt>Accounts</dt>
-                <dd><strong>{{ "{:,}".format(dashboard.sync_status.stored_accounts) }}</strong></dd>
+                <dd>
+                    <strong
+                        >{{ "{:,}".format(dashboard.sync_status.stored_accounts)
+                        }}</strong
+                    >
+                </dd>
             </div>
             <div>
                 <dt>Tags</dt>
-                <dd><strong>{{ "{:,}".format(dashboard.sync_status.stored_tags) }}</strong></dd>
+                <dd>
+                    <strong
+                        >{{ "{:,}".format(dashboard.sync_status.stored_tags)
+                        }}</strong
+                    >
+                </dd>
             </div>
 
             <div class="period-summary__section">
@@ -338,8 +405,13 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Schedule</dt>
                 <dd>
                     {% if dashboard.sync_status.transaction_cron %}
-                    <code class="sync-code">{{ dashboard.sync_status.transaction_cron }}</code>
-                    <span class="sync-tz">({{ dashboard.sync_status.transaction_timezone or dashboard.sync_status.schedule_timezone }})</span>
+                    <code class="sync-code"
+                        >{{ dashboard.sync_status.transaction_cron }}</code
+                    >
+                    <span class="sync-tz"
+                        >({{ dashboard.sync_status.transaction_timezone or
+                        dashboard.sync_status.schedule_timezone }})</span
+                    >
                     {% else %}
                     <span class="text-muted">Disabled</span>
                     {% endif %}
@@ -348,9 +420,15 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             <div>
                 <dt>Last Sync</dt>
                 <dd>
-                    {% if dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at %}
-                    <time class="js-time-ago" datetime="{{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}" title="{{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %Y %H:%M:%S UTC') }}">
-                        {{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at) | time_ago }}
+                    {% if dashboard.sync_status.transaction_last_synced_at or
+                    dashboard.sync_status.last_synced_at %}
+                    <time
+                        class="js-time-ago"
+                        datetime="{{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}"
+                        title="{{ (dashboard.sync_status.transaction_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %Y %H:%M:%S UTC') }}"
+                    >
+                        {{ (dashboard.sync_status.transaction_last_synced_at or
+                        dashboard.sync_status.last_synced_at) | time_ago }}
                     </time>
                     {% else %}
                     <span class="text-muted">Not yet synced</span>
@@ -361,8 +439,14 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Next Sync</dt>
                 <dd>
                     {% if dashboard.sync_status.transaction_next_sync_at %}
-                    <time class="js-local-time" datetime="{{ dashboard.sync_status.transaction_next_sync_at.isoformat() }}" title="{{ dashboard.sync_status.transaction_next_sync_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">
-                        {{ dashboard.sync_status.transaction_next_sync_at.strftime('%b %d, %H:%M UTC') }}
+                    <time
+                        class="js-local-time"
+                        datetime="{{ dashboard.sync_status.transaction_next_sync_at.isoformat() }}"
+                        title="{{ dashboard.sync_status.transaction_next_sync_at.strftime('%b %d, %Y %H:%M:%S UTC') }}"
+                    >
+                        {{
+                        dashboard.sync_status.transaction_next_sync_at.strftime('%b
+                        %d, %H:%M UTC') }}
                     </time>
                     {% else %}
                     <span class="text-muted">Unknown</span>
@@ -378,8 +462,13 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Schedule</dt>
                 <dd>
                     {% if dashboard.sync_status.metadata_cron %}
-                    <code class="sync-code">{{ dashboard.sync_status.metadata_cron }}</code>
-                    <span class="sync-tz">({{ dashboard.sync_status.metadata_timezone or dashboard.sync_status.schedule_timezone }})</span>
+                    <code class="sync-code"
+                        >{{ dashboard.sync_status.metadata_cron }}</code
+                    >
+                    <span class="sync-tz"
+                        >({{ dashboard.sync_status.metadata_timezone or
+                        dashboard.sync_status.schedule_timezone }})</span
+                    >
                     {% else %}
                     <span class="text-muted">Disabled</span>
                     {% endif %}
@@ -388,9 +477,15 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             <div>
                 <dt>Last Sync</dt>
                 <dd>
-                    {% if dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at %}
-                    <time class="js-time-ago" datetime="{{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}" title="{{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %Y %H:%M:%S UTC') }}">
-                        {{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at) | time_ago }}
+                    {% if dashboard.sync_status.metadata_last_synced_at or
+                    dashboard.sync_status.last_synced_at %}
+                    <time
+                        class="js-time-ago"
+                        datetime="{{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).isoformat() }}"
+                        title="{{ (dashboard.sync_status.metadata_last_synced_at or dashboard.sync_status.last_synced_at).strftime('%b %d, %Y %H:%M:%S UTC') }}"
+                    >
+                        {{ (dashboard.sync_status.metadata_last_synced_at or
+                        dashboard.sync_status.last_synced_at) | time_ago }}
                     </time>
                     {% else %}
                     <span class="text-muted">Not yet synced</span>
@@ -401,8 +496,14 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 <dt>Next Sync</dt>
                 <dd>
                     {% if dashboard.sync_status.metadata_next_sync_at %}
-                    <time class="js-local-time" datetime="{{ dashboard.sync_status.metadata_next_sync_at.isoformat() }}" title="{{ dashboard.sync_status.metadata_next_sync_at.strftime('%b %d, %Y %H:%M:%S UTC') }}">
-                        {{ dashboard.sync_status.metadata_next_sync_at.strftime('%b %d, %H:%M UTC') }}
+                    <time
+                        class="js-local-time"
+                        datetime="{{ dashboard.sync_status.metadata_next_sync_at.isoformat() }}"
+                        title="{{ dashboard.sync_status.metadata_next_sync_at.strftime('%b %d, %Y %H:%M:%S UTC') }}"
+                    >
+                        {{
+                        dashboard.sync_status.metadata_next_sync_at.strftime('%b
+                        %d, %H:%M UTC') }}
                     </time>
                     {% else %}
                     <span class="text-muted">Unknown</span>
