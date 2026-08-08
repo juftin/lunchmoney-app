@@ -44,7 +44,7 @@
 }
 
 html {
-    font-size: 15px;
+    font-size: 16px;
     scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
     scrollbar-width: thin;
 }
@@ -1305,7 +1305,7 @@ li.category-child {
 
 @media (max-width: 560px) {
     html {
-        font-size: 14px;
+        font-size: 15px;
     }
     .cockpit {
         padding: 0.4rem 0.75rem 0.75rem;
