@@ -12,8 +12,8 @@
     {% if spending and spending.categories %}
     {% set income_abs = spending.total_income | abs %}
     {% set expense_abs = spending.total_spending | abs %}
-    {% set income_categories = spending.categories | selectattr('is_income') | selectattr('total_amount') | sort(attribute='total_amount', reverse=true) %}
-    {% set expense_categories = spending.categories | rejectattr('is_income') | selectattr('total_amount') | sort(attribute='total_amount', reverse=true) %}
+    {% set income_categories = spending.categories | selectattr('is_income') | selectattr('total_amount', 'ne', 0) | sort(attribute='total_amount', reverse=true) %}
+    {% set expense_categories = spending.categories | rejectattr('is_income') | selectattr('total_amount', 'ne', 0) | sort(attribute='total_amount', reverse=true) %}
     <div class="flow-bands" aria-label="Income and expense activity">
         <div class="flow-band flow-band--income">
             <span class="flow-band__label">Income</span>
@@ -44,8 +44,8 @@
             <span></span><span></span><span>Actual</span><span>Share</span>
         </div>
         <div class="category-explorer" data-category-explorer>
-            {% set income_categories = spending.categories | selectattr('is_income') | selectattr('total_amount') | sort(attribute='total_amount', reverse=true) %}
-            {% set expense_categories = spending.categories | rejectattr('is_income') | selectattr('total_amount') | sort(attribute='total_amount', reverse=true) %}
+            {% set income_categories = spending.categories | selectattr('is_income') | selectattr('transaction_count') | sort(attribute='total_amount', reverse=true) %}
+            {% set expense_categories = spending.categories | rejectattr('is_income') | selectattr('transaction_count') | sort(attribute='total_amount', reverse=true) %}
             {% if income_categories %}
             <section class="category-section">
                 <h3 class="category-section__heading">Income</h3>

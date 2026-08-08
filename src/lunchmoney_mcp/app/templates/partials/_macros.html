@@ -6,7 +6,7 @@ currency_symbol(currency) -%} {%- set code = currency | upper if currency else
 elif code == 'GBP' -%}£ {%- elif code == 'JPY' -%}¥ {%- else -%}{{ code }}{%-
 endif -%} {%- endmacro -%} {%- macro category_row(category, category_total,
 swatch_index) -%} {%- set children = category.children |
-selectattr('total_amount') | sort(attribute='total_amount', reverse=true) -%}
+selectattr('transaction_count') | sort(attribute='total_amount', reverse=true) -%}
 {%- set section_total = category_total | abs -%} {%- set percent =
 ((category.total_amount | abs / section_total) * 100) | round -%} {%- if
 children -%}
