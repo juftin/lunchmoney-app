@@ -48,18 +48,20 @@
             }
         };
 
-        const initialTab = (function () {
+        const applyStoredTab = () => {
             try {
                 const t = localStorage.getItem("lm_active_tab");
-                return ["accounts", "summary", "activity", "sync"].includes(t) ? t : "accounts";
+                if (t && ["accounts", "summary", "activity", "sync"].includes(t)) {
+                    window.setLeftRailTab(t);
+                }
             } catch {
-                return "accounts";
+                // Ignore storage errors
             }
-        })();
+        };
 
-        document.addEventListener("DOMContentLoaded", () => {
-            window.setLeftRailTab(initialTab);
-        });
+        document.addEventListener("DOMContentLoaded", applyStoredTab);
+        document.addEventListener("htmx:afterSwap", applyStoredTab);
+        document.body.addEventListener("htmx:afterSettle", applyStoredTab);
 
         Alpine.data("dashboard", () => ({
             activeTab: localStorage.getItem("lm_active_tab") || "accounts",
