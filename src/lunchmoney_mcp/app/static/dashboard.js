@@ -38,6 +38,28 @@
             },
         });
 
+        Alpine.data("leftRail", () => ({
+            activeTab: (function () {
+                try {
+                    const t = localStorage.getItem("lm_active_tab");
+                    return ["accounts", "summary", "activity", "sync"].includes(t)
+                        ? t
+                        : "accounts";
+                } catch {
+                    return "accounts";
+                }
+            })(),
+
+            setTab(tab) {
+                this.activeTab = tab;
+                try {
+                    localStorage.setItem("lm_active_tab", tab);
+                } catch {
+                    // Ignore storage errors
+                }
+            },
+        }));
+
         Alpine.data("dashboard", () => ({
             activeTab: localStorage.getItem("lm_active_tab") || "accounts",
             searchQuery: "",

@@ -34,11 +34,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
 </section>
 {% endif %}
 
-<aside
-    class="left-rail"
-    aria-label="Financial overview"
-    x-data="{ activeTab: (function() { try { const t = localStorage.getItem('lm_active_tab'); return ['accounts', 'summary', 'activity', 'sync'].includes(t) ? t : 'accounts'; } catch(e) { return 'accounts'; } })(), setTab(t) { this.activeTab = t; try { localStorage.setItem('lm_active_tab', t); } catch(e) {} } }"
->
+<aside class="left-rail" aria-label="Financial overview" x-data="leftRail">
     <div class="panel-switcher" role="tablist" aria-label="Overview panel">
         <button
             class="panel-switcher__button"
