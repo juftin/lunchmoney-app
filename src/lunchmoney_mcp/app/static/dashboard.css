@@ -1263,7 +1263,9 @@ li.category-child {
 #sync-now-btn.htmx-request {
     pointer-events: none;
     color: var(--gold);
-    border-color: rgba(239, 178, 14, 0.5);
+    background: rgba(239, 178, 14, 0.12);
+    border-color: rgba(239, 178, 14, 0.7);
+    box-shadow: 0 0 0 2px rgba(239, 178, 14, 0.15);
 }
 
 #sync-now-btn.htmx-request::after {
@@ -1273,13 +1275,13 @@ li.category-child {
     background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(239, 178, 14, 0.35) 40%,
-        rgba(239, 178, 14, 0.55) 50%,
-        rgba(239, 178, 14, 0.35) 60%,
+        rgba(239, 178, 14, 0.5) 35%,
+        rgba(255, 210, 80, 0.85) 50%,
+        rgba(239, 178, 14, 0.5) 65%,
         transparent 100%
     );
     background-size: 200% 100%;
-    animation: sync-progress 1.4s ease-in-out infinite;
+    animation: sync-progress 1.2s ease-in-out infinite;
 }
 
 @keyframes sync-progress {
