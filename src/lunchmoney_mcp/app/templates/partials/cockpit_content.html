@@ -304,9 +304,12 @@ dashboard.unavailable_sections %}
                 <span class="status-badge status-badge--idle">Ready</span>
                 {% endif %}
                 <button
+                    id="sync-now-btn"
                     class="btn btn-sm btn-outline"
                     type="button"
                     style="
+                        position: relative;
+                        overflow: hidden;
                         margin: 0;
                         padding: 0.25rem 0.6rem;
                         font-size: 0.75rem;

@@ -1257,6 +1257,41 @@ li.category-child {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Sync Now progress-bar animation                                    */
+/* ------------------------------------------------------------------ */
+
+#sync-now-btn.htmx-request {
+    pointer-events: none;
+    color: var(--gold);
+    border-color: rgba(239, 178, 14, 0.5);
+}
+
+#sync-now-btn.htmx-request::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(239, 178, 14, 0.35) 40%,
+        rgba(239, 178, 14, 0.55) 50%,
+        rgba(239, 178, 14, 0.35) 60%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: sync-progress 1.4s ease-in-out infinite;
+}
+
+@keyframes sync-progress {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Responsive: <= 900px                                               */
 /* ------------------------------------------------------------------ */
 
