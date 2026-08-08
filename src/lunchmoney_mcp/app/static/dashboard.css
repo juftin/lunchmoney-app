@@ -1281,7 +1281,7 @@ li.category-child {
         transparent 100%
     );
     background-size: 200% 100%;
-    animation: sync-progress 1.2s ease-in-out infinite;
+    animation: sync-progress 2.2s ease-in-out infinite;
 }
 
 @keyframes sync-progress {
