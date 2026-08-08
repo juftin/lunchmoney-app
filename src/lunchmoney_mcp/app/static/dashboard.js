@@ -19,9 +19,9 @@
         }
     });
 
-    document.addEventListener("htmx:afterSwap", (evt) => {
-        if (typeof Alpine !== "undefined" && evt.detail && evt.detail.target) {
-            Alpine.initTree(evt.detail.target);
+    document.addEventListener("htmx:afterSwap", () => {
+        if (typeof Alpine !== "undefined") {
+            Alpine.initTree(document.body);
         }
     });
 

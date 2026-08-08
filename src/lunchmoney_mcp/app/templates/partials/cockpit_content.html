@@ -91,6 +91,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         id="accounts-panel"
         role="tabpanel"
         aria-labelledby="accounts-tab"
+        x-cloak
         x-show="activeTab === 'accounts'"
         :style="activeTab === 'accounts' ? '' : 'display: none'"
     >
@@ -165,6 +166,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         id="summary-panel"
         role="tabpanel"
         aria-labelledby="summary-tab"
+        x-cloak
         x-show="activeTab === 'summary'"
         :style="activeTab === 'summary' ? '' : 'display: none'"
     >
@@ -227,6 +229,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         id="activity-panel"
         role="tabpanel"
         aria-labelledby="activity-tab"
+        x-cloak
         x-show="activeTab === 'activity'"
         :style="activeTab === 'activity' ? '' : 'display: none'"
     >
@@ -275,6 +278,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         id="sync-panel"
         role="tabpanel"
         aria-labelledby="sync-tab"
+        x-cloak
         x-show="activeTab === 'sync'"
         :style="activeTab === 'sync' ? '' : 'display: none'"
     >

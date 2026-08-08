@@ -372,6 +372,10 @@ body {
 /*  Rail panels                                                        */
 /* ------------------------------------------------------------------ */
 
+[x-cloak] {
+    display: none !important;
+}
+
 .rail-panel {
     display: flex;
     flex: 1;
