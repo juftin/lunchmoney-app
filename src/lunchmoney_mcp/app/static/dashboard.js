@@ -79,9 +79,26 @@
                     return;
                 }
                 this.isSyncing = true;
-                setTimeout(() => {
+
+                // Unlock only after BOTH: the 2-second minimum spin AND
+                // the HTMX request settling. Whichever finishes last wins.
+                const minDelay = new Promise((resolve) =>
+                    setTimeout(resolve, 2000),
+                );
+                const htmxDone = new Promise((resolve) => {
+                    const handler = () => {
+                        document.body.removeEventListener(
+                            "htmx:afterSettle",
+                            handler,
+                        );
+                        resolve();
+                    };
+                    document.body.addEventListener("htmx:afterSettle", handler);
+                });
+
+                Promise.all([minDelay, htmxDone]).then(() => {
                     this.isSyncing = false;
-                }, 2000);
+                });
             },
 
             /** ----- lifecycle ----- */
