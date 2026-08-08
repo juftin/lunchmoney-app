@@ -79,26 +79,30 @@
                     return;
                 }
                 this.isSyncing = true;
+                const start = Date.now();
+                const btn = evt?.currentTarget;
 
-                // Unlock only after BOTH: the 2-second minimum spin AND
-                // the HTMX request settling. Whichever finishes last wins.
-                const minDelay = new Promise((resolve) =>
-                    setTimeout(resolve, 2000),
-                );
-                const htmxDone = new Promise((resolve) => {
-                    const handler = () => {
-                        document.body.removeEventListener(
-                            "htmx:afterSettle",
-                            handler,
-                        );
-                        resolve();
-                    };
-                    document.body.addEventListener("htmx:afterSettle", handler);
-                });
+                const unlock = () => {
+                    const elapsed = Date.now() - start;
+                    const remaining = Math.max(0, 2000 - elapsed);
+                    setTimeout(() => {
+                        this.isSyncing = false;
+                    }, remaining);
+                };
 
-                Promise.all([minDelay, htmxDone]).then(() => {
-                    this.isSyncing = false;
-                });
+                if (btn) {
+                    // htmx:afterRequest fires on the triggering element when
+                    // the request completes (reliable across all swap types).
+                    btn.addEventListener("htmx:afterRequest", unlock, {
+                        once: true,
+                    });
+                }
+
+                // Safety net: always unlock after 10 s in case the event
+                // never fires (e.g. network error, no htmx on element).
+                setTimeout(() => {
+                    if (this.isSyncing) this.isSyncing = false;
+                }, 10000);
             },
 
             /** ----- lifecycle ----- */
