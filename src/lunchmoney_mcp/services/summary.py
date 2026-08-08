@@ -5,12 +5,14 @@ import datetime
 from lunchmoney.models import SummaryResponseObject
 
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.database import LunchMoneyDatabase
 
 
 async def fetch_account_summary(
     client: LunchMoneyApp,
     start_date: datetime.date,
     end_date: datetime.date,
+    db: LunchMoneyDatabase | None = None,
     include_exclude_from_budgets: bool | None = None,
     include_occurrences: bool | None = None,
     include_past_budget_dates: bool | None = None,
@@ -28,6 +30,8 @@ async def fetch_account_summary(
         Inclusive start of the requested budget range.
     end_date : datetime.date
         Inclusive end of the requested budget range.
+    db : LunchMoneyDatabase | None
+        Optional database instance containing persisted sync metadata.
     include_exclude_from_budgets : bool | None
         Whether excluded categories should be included.
     include_occurrences : bool | None
@@ -56,6 +60,10 @@ async def fetch_account_summary(
         include_rollover_pool,
     )
     if not force_refresh:
+        if db is not None:
+            meta = await db.get_sync_metadata("summary")
+            if meta and meta.payload:
+                return SummaryResponseObject.model_validate(meta.payload)
         if cache_key in client.data.summaries:
             return client.data.summaries[cache_key]
         for (st, en, *rest), summary in client.data.summaries.items():

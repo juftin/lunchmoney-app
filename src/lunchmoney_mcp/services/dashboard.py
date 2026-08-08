@@ -207,10 +207,11 @@ async def fetch_dashboard_data(
                 client=client,
                 start_date=resolved_period_start,
                 end_date=period_end,
+                db=db,
                 include_totals=True,
             )
         ),
-        _capture(fetch_budget_settings(client=client)),
+        _capture(fetch_budget_settings(client=client, db=db)),
         _capture(
             fetch_category_spending(
                 db=db,

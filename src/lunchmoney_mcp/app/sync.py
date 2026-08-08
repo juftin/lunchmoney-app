@@ -85,6 +85,13 @@ async def sync_database(
     try:
         budget_settings_obj = await client.client.budgets.get_budget_settings()
         client.data.budget_settings = budget_settings_obj
+        await db.upsert_sync_metadata(
+            SyncMetadata(
+                domain="budget_settings",
+                last_synced_at=sync_started_at,
+                payload=budget_settings_obj.model_dump(mode="json"),
+            )
+        )
     except Exception:
         pass
 
@@ -104,6 +111,13 @@ async def sync_database(
             None,
         )
         client.data.summaries[cache_key] = summary_obj
+        await db.upsert_sync_metadata(
+            SyncMetadata(
+                domain="summary",
+                last_synced_at=sync_started_at,
+                payload=summary_obj.model_dump(mode="json"),
+            )
+        )
     except Exception:
         pass
 

@@ -9,10 +9,12 @@ from lunchmoney.models import (
 )
 
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.database import LunchMoneyDatabase
 
 
 async def fetch_budget_settings(
     client: LunchMoneyApp,
+    db: LunchMoneyDatabase | None = None,
     force_refresh: bool = False,
 ) -> BudgetSettingsResponseObject:
     """Fetch the authenticated user's budget-period settings.
@@ -21,6 +23,8 @@ async def fetch_budget_settings(
     ----------
     client : LunchMoneyApp
         Configured Lunch Money API client.
+    db : LunchMoneyDatabase | None
+        Optional database instance containing persisted sync metadata.
     force_refresh : bool
         Whether to bypass client cache and force an upstream API call.
 
@@ -30,6 +34,10 @@ async def fetch_budget_settings(
         Upstream budget-period settings.
     """
     if not force_refresh:
+        if db is not None:
+            meta = await db.get_sync_metadata("budget_settings")
+            if meta and meta.payload:
+                return BudgetSettingsResponseObject.model_validate(meta.payload)
         if client.data.budget_settings is not None:
             return client.data.budget_settings
         return BudgetSettingsResponseObject.model_validate(
