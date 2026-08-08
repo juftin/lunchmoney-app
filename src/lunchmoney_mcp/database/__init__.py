@@ -8,6 +8,8 @@ from lunchmoney_mcp.database.backend import (
     run_migrations,
 )
 from lunchmoney_mcp.database.models import (
+    CachedApiResponse,
+    RecurringItem,
     Category,
     CategoryKind,
     ManualAccount,
@@ -24,6 +26,8 @@ from lunchmoney_mcp.database.models import (
 
 __all__ = [
     "Category",
+    "CachedApiResponse",
+    "RecurringItem",
     "CategoryKind",
     "DEFAULT_DATABASE_URL",
     "IN_MEMORY_DATABASE_URL",

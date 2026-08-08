@@ -2,6 +2,8 @@
 
 from lunchmoney_mcp.database.models.accounts import ManualAccount, PlaidAccount
 from lunchmoney_mcp.database.models.categories import Category, CategoryKind
+from lunchmoney_mcp.database.models.cache import CachedApiResponse
+from lunchmoney_mcp.database.models.recurring import RecurringItem
 from lunchmoney_mcp.database.models.sync import ScheduledSyncRun, SyncMetadata
 from lunchmoney_mcp.database.models.tags import Tag
 from lunchmoney_mcp.database.models.transactions import (
@@ -14,6 +16,8 @@ from lunchmoney_mcp.database.models.users import User
 
 __all__ = [
     "Category",
+    "CachedApiResponse",
+    "RecurringItem",
     "CategoryKind",
     "ManualAccount",
     "PlaidAccount",

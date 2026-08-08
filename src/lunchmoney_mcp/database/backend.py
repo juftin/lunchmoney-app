@@ -29,6 +29,8 @@ from lunchmoney_mcp.config import (
     get_runtime_mode,
 )
 from lunchmoney_mcp.database.models import (
+    CachedApiResponse,
+    RecurringItem,
     Category,
     ManualAccount,
     PlaidAccount,
@@ -47,7 +49,7 @@ RecordT = TypeVar("RecordT", bound=SQLModel)
 """A database record subtype used by record-loading helpers."""
 
 _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
-    {User, PlaidAccount, ManualAccount, Category, Tag, Transaction}
+    {User, PlaidAccount, ManualAccount, Category, Tag, Transaction, RecurringItem}
 )
 """Explicit record classes accepted by the convenience persistence API."""
 
@@ -607,7 +609,7 @@ class LunchMoneyDatabase:
     def __init__(self, database_url: str | None = None) -> None:
         """Create database resources for the resolved connection URL."""
         resolved_url = resolve_database_url(database_url)
-        self._is_stateless = resolved_url == IN_MEMORY_DATABASE_URL
+        self._is_stateless = "mode=memory" in resolved_url
         engine_kwargs: dict[str, Any] = {}
         if self._is_stateless:
             engine_kwargs["poolclass"] = StaticPool
@@ -639,6 +641,22 @@ class LunchMoneyDatabase:
         """Create all SQLModel tables for databases without migrations."""
         async with self.engine.begin() as connection:
             await connection.run_sync(SQLModel.metadata.create_all)
+
+    async def get_cached_response(self, key: str) -> dict[str, Any] | None:
+        """Return a JSON response snapshot by its stable cache key."""
+        async with self.session_factory() as session:
+            record = await session.get(CachedApiResponse, key)
+            return record.payload if record is not None else None
+
+    async def upsert_cached_response(self, key: str, payload: dict[str, Any]) -> None:
+        """Atomically replace one JSON response snapshot."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                record = await session.get(CachedApiResponse, key)
+                if record is None:
+                    session.add(CachedApiResponse(key=key, payload=payload))
+                else:
+                    record.payload = payload
 
     async def get_sync_metadata(self, domain: str) -> SyncMetadata | None:
         """Return the synchronization watermark for one domain, if present."""

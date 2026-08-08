@@ -10,7 +10,7 @@ from lunchmoney.models import (
     UpsertBudgetRequestObject,
 )
 
-from lunchmoney_mcp.app.dependencies import get_lunchmoney_app
+from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.services import (
     clear_budget_value,
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 @mcp.tool()
-async def get_budget_settings() -> BudgetSettingsResponseObject:
+async def get_budget_settings() -> BudgetSettingsResponseObject | None:
     """Fetch the authenticated user's budget-period settings.
 
     Returns
@@ -31,8 +31,7 @@ async def get_budget_settings() -> BudgetSettingsResponseObject:
     BudgetSettingsResponseObject
         Upstream budget-period settings.
     """
-    client: LunchMoneyApp = get_lunchmoney_app()
-    return await fetch_budget_settings(client=client)
+    return await fetch_budget_settings(db=get_database())
 
 
 @mcp.tool()

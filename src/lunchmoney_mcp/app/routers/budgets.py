@@ -11,8 +11,9 @@ from lunchmoney.models import (
     UpsertBudgetRequestObject,
 )
 
-from lunchmoney_mcp.app.dependencies import get_lunchmoney_app
+from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.services import (
     clear_budget_value,
     fetch_budget_settings,
@@ -29,8 +30,8 @@ router = APIRouter(tags=["Budgets"])
     operation_id="get_budget_settings",
 )
 async def get_budget_settings(
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-) -> BudgetSettingsResponseObject:
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+) -> BudgetSettingsResponseObject | None:
     """Fetch the authenticated user's budget-period settings.
 
     **Parameters:**
@@ -39,7 +40,7 @@ async def get_budget_settings(
 
     **Returns:** Upstream budget-period settings.
     """
-    return await fetch_budget_settings(client=client)
+    return await fetch_budget_settings(db=db)
 
 
 @router.put(

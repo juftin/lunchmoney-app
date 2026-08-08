@@ -8,6 +8,7 @@ from fastmcp.server.lifespan import lifespan
 from lunchmoney_mcp.app.dependencies import get_database
 from lunchmoney_mcp.app.auth import get_mcp_oauth_provider
 from lunchmoney_mcp.config import get_runtime_mode
+from lunchmoney_mcp.mcp.operations import DataOperationMiddleware
 
 
 @lifespan
@@ -23,7 +24,7 @@ async def mcp_lifespan(_: FastMCP[None]) -> AsyncIterator[dict[str, object]]:
         yield {}
     finally:
         await database.dispose()
-        get_database.cache_clear()
+        get_database.cache_clear()  # type: ignore[attr-defined]
 
 
 mcp: FastMCP[None] = FastMCP(
@@ -32,3 +33,5 @@ mcp: FastMCP[None] = FastMCP(
     lifespan=mcp_lifespan,
 )
 """Application-wide FastMCP server instance."""
+
+mcp.add_middleware(DataOperationMiddleware())

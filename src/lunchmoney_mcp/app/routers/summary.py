@@ -6,8 +6,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from lunchmoney.models import SummaryResponseObject
 
-from lunchmoney_mcp.app.dependencies import get_lunchmoney_app
-from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.app.dependencies import get_database
+from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.services import fetch_account_summary
 
 router = APIRouter(tags=["Summary"])
@@ -20,7 +20,7 @@ router = APIRouter(tags=["Summary"])
     operation_id="get_account_summary",
 )
 async def get_account_summary(
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     start_date: datetime.date,
     end_date: datetime.date,
     include_exclude_from_budgets: bool | None = None,
@@ -28,7 +28,7 @@ async def get_account_summary(
     include_past_budget_dates: bool | None = None,
     include_totals: bool | None = None,
     include_rollover_pool: bool | None = None,
-) -> SummaryResponseObject:
+) -> SummaryResponseObject | None:
     """Fetch a live budget summary for the requested date range.
 
     **Parameters:**
@@ -45,7 +45,7 @@ async def get_account_summary(
     **Returns:** Upstream budget summary response for the requested range.
     """
     return await fetch_account_summary(
-        client=client,
+        db=db,
         start_date=start_date,
         end_date=end_date,
         include_exclude_from_budgets=include_exclude_from_budgets,

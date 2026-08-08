@@ -57,14 +57,18 @@ _ = (
     mime_type="text/markdown",
 )
 async def account_summary_resource() -> str:
-    """Render the current month's live Lunch Money summary as Markdown."""
+    """Render the current month's cached Lunch Money summary as Markdown."""
     today = datetime.date.today()
     summary = await fetch_account_summary(
-        client=get_lunchmoney_app(),
+        db=get_database(),
         start_date=today.replace(day=1),
         end_date=today,
         include_totals=True,
     )
+    if summary is None:
+        return (
+            "# Lunch Money summary\n\nNo cached summary is available for this period."
+        )
     return f"# Lunch Money summary\n\n```json\n{summary.model_dump_json(indent=2)}\n```"
 
 

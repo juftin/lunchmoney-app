@@ -34,6 +34,17 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > - `LUNCHMONEY_STATELESS=true` selects a shared in-memory SQLite URL backed by `StaticPool` only when no explicit, environment, or dotenv database URL is configured.
 > - Startup and explicit synchronization call `LunchMoneyDatabase.create_tables()` on the cached database instance in stateless mode; persistent databases continue to use Alembic migrations.
 
+> **5. Ephemeral Storage Is Per Operation**:
+>
+> - `LUNCHMONEY_EPHEMERAL=true` is mutually exclusive with `LUNCHMONEY_STATELESS=true`.
+> - REST requests and MCP tool/resource calls create a private in-memory SQLite database, refresh upstream data into it, execute the operation, and dispose it in a `finally` block.
+> - Ephemeral mode does not initialize, migrate, or reuse the shared persistent or in-memory database.
+
+> **6. Recurring Matches Come From Transactions**:
+>
+> - Recurring definitions are persisted by ID, while `found_transactions` is derived from the synchronized `transactions.recurring_id` relationship for the caller's requested window.
+> - This prevents one synchronization window's recurring-match response from being reused for another window.
+
 ---
 
 ## System Architecture & Flow

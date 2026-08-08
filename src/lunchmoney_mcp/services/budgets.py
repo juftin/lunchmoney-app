@@ -9,11 +9,12 @@ from lunchmoney.models import (
 )
 
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.database import LunchMoneyDatabase
 
 
 async def fetch_budget_settings(
-    client: LunchMoneyApp,
-) -> BudgetSettingsResponseObject:
+    db: LunchMoneyDatabase,
+) -> BudgetSettingsResponseObject | None:
     """Fetch the authenticated user's budget-period settings.
 
     Parameters
@@ -26,7 +27,8 @@ async def fetch_budget_settings(
     BudgetSettingsResponseObject
         Upstream budget-period settings.
     """
-    return await client.client.budgets.get_budget_settings()
+    payload = await db.get_cached_response("budget-settings")
+    return BudgetSettingsResponseObject.model_validate(payload) if payload else None
 
 
 async def set_budget_value(

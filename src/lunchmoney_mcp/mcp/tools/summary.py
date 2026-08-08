@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 from lunchmoney.models import SummaryResponseObject
 
-from lunchmoney_mcp.app.dependencies import get_lunchmoney_app
+from lunchmoney_mcp.app.dependencies import get_database
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.services import fetch_account_summary
 
 if TYPE_CHECKING:
-    from lunchmoney_mcp.client import LunchMoneyApp
+    pass
 
 
 @mcp.tool()
@@ -22,7 +22,7 @@ async def get_account_summary(
     include_past_budget_dates: bool | None = None,
     include_totals: bool | None = None,
     include_rollover_pool: bool | None = None,
-) -> SummaryResponseObject:
+) -> SummaryResponseObject | None:
     """Fetch a live budget summary for the requested date range.
 
     Parameters
@@ -47,9 +47,8 @@ async def get_account_summary(
     SummaryResponseObject
         Upstream budget summary response for the requested range.
     """
-    client: LunchMoneyApp = get_lunchmoney_app()
     return await fetch_account_summary(
-        client=client,
+        db=get_database(),
         start_date=start_date,
         end_date=end_date,
         include_exclude_from_budgets=include_exclude_from_budgets,

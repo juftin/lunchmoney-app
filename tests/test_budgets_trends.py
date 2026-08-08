@@ -7,7 +7,7 @@ from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
-from unittest.mock import ANY, AsyncMock
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -81,23 +81,16 @@ def _budget_response() -> BudgetUpsertResponseObject:
 
 
 @pytest.mark.asyncio
-async def test_budget_settings_service_forwards_to_lunch_money_client() -> None:
-    """Fetch budget settings from the generated Lunch Money API client."""
+async def test_budget_settings_service_reads_cached_response() -> None:
+    """Read budget settings from the synchronized database response."""
     settings = _budget_settings()
-    get_budget_settings = AsyncMock(return_value=settings)
-    client = cast(
-        LunchMoneyApp,
-        SimpleNamespace(
-            client=SimpleNamespace(
-                budgets=SimpleNamespace(get_budget_settings=get_budget_settings)
-            )
-        ),
-    )
+    database = AsyncMock()
+    database.get_cached_response.return_value = settings.model_dump(mode="json")
 
-    result = await fetch_budget_settings(client=client)
+    result = await fetch_budget_settings(db=database)
 
     assert result == settings
-    get_budget_settings.assert_awaited_once_with()
+    database.get_cached_response.assert_awaited_once_with("budget-settings")
 
 
 @pytest.mark.asyncio
@@ -230,11 +223,12 @@ async def test_budget_settings_mcp_tool_delegates_to_service(
     budget_tools = sys.modules["lunchmoney_mcp.mcp.tools.budgets"]
     fetch_settings = AsyncMock(return_value=_budget_settings())
     monkeypatch.setattr(budget_tools, "fetch_budget_settings", fetch_settings)
-    monkeypatch.setattr(budget_tools, "get_lunchmoney_app", object)
+    database = object()
+    monkeypatch.setattr(budget_tools, "get_database", lambda: database)
 
     await mcp.call_tool("get_budget_settings", {})
 
-    fetch_settings.assert_awaited_once_with(client=ANY)
+    fetch_settings.assert_awaited_once_with(db=database)
 
 
 @pytest.mark.asyncio
