@@ -74,34 +74,35 @@
             _categoryFilterObserver: null,
 
             triggerRefresh(evt) {
-                if (this.isSyncing) {
-                    if (evt) evt.preventDefault();
-                    return;
-                }
-                this.isSyncing = true;
-                const start = Date.now();
                 const btn = evt?.currentTarget;
+                if (!btn || this.isSyncing) return;
 
-                const unlock = () => {
+                const start = Date.now();
+
+                // Apply immediately — don't wait for Alpine's next reactive
+                // flush so the animation starts on the same frame as the click.
+                this.isSyncing = true;
+                btn.classList.add("is-spinning");
+                btn.disabled = true;
+
+                const cleanup = () => {
                     const elapsed = Date.now() - start;
                     const remaining = Math.max(0, 2000 - elapsed);
                     setTimeout(() => {
+                        btn.classList.remove("is-spinning");
+                        btn.disabled = false;
                         this.isSyncing = false;
                     }, remaining);
                 };
 
-                if (btn) {
-                    // htmx:afterRequest fires on the triggering element when
-                    // the request completes (reliable across all swap types).
-                    btn.addEventListener("htmx:afterRequest", unlock, {
-                        once: true,
-                    });
-                }
+                // htmx:afterRequest fires on the triggering element when done.
+                btn.addEventListener("htmx:afterRequest", cleanup, {
+                    once: true,
+                });
 
-                // Safety net: always unlock after 10 s in case the event
-                // never fires (e.g. network error, no htmx on element).
+                // Safety net: always unlock after 10 s.
                 setTimeout(() => {
-                    if (this.isSyncing) this.isSyncing = false;
+                    if (this.isSyncing) cleanup();
                 }, 10000);
             },
 
