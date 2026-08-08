@@ -64,33 +64,31 @@
         document.addEventListener("htmx:afterSwap", applyStoredTab);
         document.body.addEventListener("htmx:afterSettle", applyStoredTab);
 
+        // ----------------------------------------------------------------
+        //  Refresh button animation (pure vanilla JS, no Alpine dependency)
+        // ----------------------------------------------------------------
+        document.addEventListener("DOMContentLoaded", () => {
+            const btn = document.getElementById("dashboard-refresh-btn");
+            if (!btn) return;
+
+            btn.addEventListener("click", () => {
+                if (btn.classList.contains("is-spinning")) return;
+                btn.classList.add("is-spinning");
+                btn.disabled = true;
+                setTimeout(() => {
+                    btn.classList.remove("is-spinning");
+                    btn.disabled = false;
+                }, 2500);
+            });
+        });
+
         Alpine.data("dashboard", () => ({
             activeTab: localStorage.getItem("lm_active_tab") || "accounts",
             searchQuery: "",
             allExpanded: false,
             showApiKeyDialog: false,
             apiKeyInput: "",
-            isSyncing: false,
             _categoryFilterObserver: null,
-
-            triggerRefresh() {
-                if (this.isSyncing) return;
-
-                // querySelector is more reliable than evt.currentTarget in
-                // Alpine's expression evaluation context.
-                const btn = document.querySelector(".header-refresh-btn");
-                if (!btn) return;
-
-                this.isSyncing = true;
-                btn.classList.add("is-spinning");
-                btn.disabled = true;
-
-                setTimeout(() => {
-                    btn.classList.remove("is-spinning");
-                    btn.disabled = false;
-                    this.isSyncing = false;
-                }, 2500);
-            },
 
             /** ----- lifecycle ----- */
 

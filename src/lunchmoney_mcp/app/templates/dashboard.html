@@ -68,20 +68,18 @@
                         {% endif %}
                     </div>
                     <button
+                        id="dashboard-refresh-btn"
                         class="header-refresh-btn"
-                        :class="{ 'is-spinning': isSyncing }"
-                        :disabled="isSyncing"
                         type="button"
                         title="Refresh dashboard data"
                         aria-label="Refresh data"
-                        @click="triggerRefresh($event)"
                         hx-get="/{% if dashboard.period_start %}?period={{ dashboard.period_start.isoformat() }}{% endif %}"
                         hx-target="#dashboard-content"
                         hx-swap="morph:innerHTML show:none"
                     >
                         <svg
-                            width="15"
-                            height="15"
+                            width="16"
+                            height="16"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
