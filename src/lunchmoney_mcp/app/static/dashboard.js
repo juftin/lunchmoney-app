@@ -73,45 +73,23 @@
             isSyncing: false,
             _categoryFilterObserver: null,
 
-            triggerRefresh(evt) {
-                const btn = evt?.currentTarget;
-                if (!btn || this.isSyncing) return;
+            triggerRefresh() {
+                if (this.isSyncing) return;
 
-                const start = Date.now();
+                // querySelector is more reliable than evt.currentTarget in
+                // Alpine's expression evaluation context.
+                const btn = document.querySelector(".header-refresh-btn");
+                if (!btn) return;
+
                 this.isSyncing = true;
                 btn.classList.add("is-spinning");
                 btn.disabled = true;
 
-                const doCleanup = () => {
-                    const elapsed = Date.now() - start;
-                    const remaining = Math.max(0, 2000 - elapsed);
-                    setTimeout(() => {
-                        btn.classList.remove("is-spinning");
-                        btn.disabled = false;
-                        this.isSyncing = false;
-                    }, remaining);
-                };
-
-                // Listen on document so we catch the bubbled event regardless
-                // of which element HTMX dispatches it on, then filter by elt.
-                const onAfterRequest = (e) => {
-                    if (e.detail?.elt !== btn) return;
-                    document.removeEventListener(
-                        "htmx:afterRequest",
-                        onAfterRequest,
-                    );
-                    doCleanup();
-                };
-                document.addEventListener("htmx:afterRequest", onAfterRequest);
-
-                // Safety net: always unlock after 10 s.
                 setTimeout(() => {
-                    document.removeEventListener(
-                        "htmx:afterRequest",
-                        onAfterRequest,
-                    );
-                    if (this.isSyncing) doCleanup();
-                }, 10000);
+                    btn.classList.remove("is-spinning");
+                    btn.disabled = false;
+                    this.isSyncing = false;
+                }, 2500);
             },
 
             /** ----- lifecycle ----- */
