@@ -40,6 +40,10 @@
 
         Alpine.data("leftRail", () => ({
             activeTab: (function () {
+                const domTab = document.getElementById("left-rail")?.getAttribute("data-active-tab");
+                if (domTab && ["accounts", "summary", "activity", "sync"].includes(domTab)) {
+                    return domTab;
+                }
                 try {
                     const t = localStorage.getItem("lm_active_tab");
                     return ["accounts", "summary", "activity", "sync"].includes(t)

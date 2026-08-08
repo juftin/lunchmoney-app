@@ -34,8 +34,8 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
 </section>
 {% endif %}
 
-<aside class="left-rail" aria-label="Financial overview" :data-active-tab="activeTab" x-data="leftRail">
-    <div class="panel-switcher" role="tablist" aria-label="Overview panel">
+<aside class="left-rail" id="left-rail" aria-label="Financial overview" :data-active-tab="activeTab" x-data="leftRail">
+    <div class="panel-switcher" id="panel-switcher" role="tablist" aria-label="Overview panel">
         <button
             class="panel-switcher__button"
             type="button"
@@ -104,7 +104,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         sort(attribute='to_base', reverse=true) | list %} {% set account_groups
         = [ ('Cash', cash_accs), ('Investment', invest_accs), ('Credit',
         credit_accs), ('Other', other_accs)] %}
-        <div class="account-tree">
+        <div class="account-tree" id="account-tree">
             {% for group_name, grouped_accounts in account_groups %} {% if
             grouped_accounts %} {% set group_total = grouped_accounts |
             map(attribute='to_base') | sum %}
@@ -161,7 +161,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             <span>Live</span>
         </div>
         {% if spending %}
-        <dl class="period-summary">
+        <dl class="period-summary" id="period-summary">
             <div class="period-summary__section">
                 <dt>Income</dt>
                 <dd></dd>
@@ -224,7 +224,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             >
         </div>
         {% if dashboard.transactions %}
-        <ul class="activity-list">
+        <ul class="activity-list" id="activity-list">
             {% for transaction in dashboard.transactions %}
             <li id="tx-item-{{ transaction.id }}">
                 <span
