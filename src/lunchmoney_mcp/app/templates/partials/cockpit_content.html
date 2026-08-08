@@ -93,7 +93,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         aria-labelledby="accounts-tab"
         x-cloak
         x-show="activeTab === 'accounts'"
-        :style="activeTab === 'accounts' ? '' : 'display: none'"
     >
         <div class="panel-title">
             <h2>Accounts overview</h2>
@@ -168,7 +167,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         aria-labelledby="summary-tab"
         x-cloak
         x-show="activeTab === 'summary'"
-        :style="activeTab === 'summary' ? '' : 'display: none'"
     >
         <div class="panel-title">
             <h2>Period summary</h2>
@@ -231,7 +229,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         aria-labelledby="activity-tab"
         x-cloak
         x-show="activeTab === 'activity'"
-        :style="activeTab === 'activity' ? '' : 'display: none'"
     >
         <div class="panel-title">
             <h2>Recent activity</h2>
@@ -280,7 +277,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         aria-labelledby="sync-tab"
         x-cloak
         x-show="activeTab === 'sync'"
-        :style="activeTab === 'sync' ? '' : 'display: none'"
     >
         <div class="panel-title" style="display: flex; align-items: center; justify-content: space-between;">
             <h2>Syncing status</h2>

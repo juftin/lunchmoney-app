@@ -19,11 +19,7 @@
         }
     });
 
-    document.addEventListener("htmx:afterSwap", () => {
-        if (typeof Alpine !== "undefined") {
-            Alpine.initTree(document.body);
-        }
-    });
+
 
     document.addEventListener("alpine:init", () => {
         Alpine.store("toasts", {
