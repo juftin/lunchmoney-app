@@ -19,16 +19,7 @@
         }
     });
 
-    document.addEventListener("htmx:afterSwap", (evt) => {
-        const target = evt.detail && evt.detail.target;
-        if (target && typeof Alpine !== "undefined") {
-            if (typeof Alpine.destroyTree === "function") {
-                Alpine.destroyTree(target);
-            }
-            delete target._x_dataStack;
-            Alpine.initTree(target);
-        }
-    });
+
 
 
 
@@ -186,16 +177,16 @@
 
             switch (event.key) {
                 case "1":
-                    this.setTab("accounts");
+                    document.getElementById("accounts-tab")?.click();
                     break;
                 case "2":
-                    this.setTab("summary");
+                    document.getElementById("summary-tab")?.click();
                     break;
                 case "3":
-                    this.setTab("activity");
+                    document.getElementById("activity-tab")?.click();
                     break;
                 case "4":
-                    this.setTab("sync");
+                    document.getElementById("sync-tab")?.click();
                     break;
                 case "j":
                 case "ArrowLeft":
