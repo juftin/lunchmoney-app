@@ -78,14 +78,11 @@
                 if (!btn || this.isSyncing) return;
 
                 const start = Date.now();
-
-                // Apply immediately — don't wait for Alpine's next reactive
-                // flush so the animation starts on the same frame as the click.
                 this.isSyncing = true;
                 btn.classList.add("is-spinning");
                 btn.disabled = true;
 
-                const cleanup = () => {
+                const doCleanup = () => {
                     const elapsed = Date.now() - start;
                     const remaining = Math.max(0, 2000 - elapsed);
                     setTimeout(() => {
@@ -95,14 +92,25 @@
                     }, remaining);
                 };
 
-                // htmx:afterRequest fires on the triggering element when done.
-                btn.addEventListener("htmx:afterRequest", cleanup, {
-                    once: true,
-                });
+                // Listen on document so we catch the bubbled event regardless
+                // of which element HTMX dispatches it on, then filter by elt.
+                const onAfterRequest = (e) => {
+                    if (e.detail?.elt !== btn) return;
+                    document.removeEventListener(
+                        "htmx:afterRequest",
+                        onAfterRequest,
+                    );
+                    doCleanup();
+                };
+                document.addEventListener("htmx:afterRequest", onAfterRequest);
 
                 // Safety net: always unlock after 10 s.
                 setTimeout(() => {
-                    if (this.isSyncing) cleanup();
+                    document.removeEventListener(
+                        "htmx:afterRequest",
+                        onAfterRequest,
+                    );
+                    if (this.isSyncing) doCleanup();
                 }, 10000);
             },
 
