@@ -82,6 +82,31 @@ async def sync_database(
         model=CategoryObject
     )
     tag_objs: dict[int, TagObject] = await client.refresh(model=TagObject)
+    try:
+        budget_settings_obj = await client.client.budgets.get_budget_settings()
+        client.data.budget_settings = budget_settings_obj
+    except Exception:
+        pass
+
+    try:
+        summary_obj = await client.client.summary.get_budget_summary(
+            start_date=resolved_start_date,
+            end_date=resolved_end_date,
+            include_totals=True,
+        )
+        cache_key = (
+            resolved_start_date,
+            resolved_end_date,
+            None,
+            None,
+            None,
+            True,
+            None,
+        )
+        client.data.summaries[cache_key] = summary_obj
+    except Exception:
+        pass
+
     transaction_watermark = (
         await db.get_sync_metadata("transactions") if incremental else None
     )

@@ -55,8 +55,12 @@ async def fetch_account_summary(
         include_totals,
         include_rollover_pool,
     )
-    if not force_refresh and cache_key in client.data.summaries:
-        return client.data.summaries[cache_key]
+    if not force_refresh:
+        if cache_key in client.data.summaries:
+            return client.data.summaries[cache_key]
+        for (st, en, *rest), summary in client.data.summaries.items():
+            if st == start_date and en == end_date:
+                return summary
 
     res = await client.client.summary.get_budget_summary(
         start_date=start_date,
