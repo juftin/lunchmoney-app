@@ -19,6 +19,17 @@
         }
     });
 
+    document.addEventListener("htmx:afterSwap", (evt) => {
+        const target = evt.detail && evt.detail.target;
+        if (target && typeof Alpine !== "undefined") {
+            if (typeof Alpine.destroyTree === "function") {
+                Alpine.destroyTree(target);
+            }
+            delete target._x_dataStack;
+            Alpine.initTree(target);
+        }
+    });
+
 
 
     document.addEventListener("alpine:init", () => {
