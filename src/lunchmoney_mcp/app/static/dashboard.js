@@ -103,26 +103,7 @@
 
     let savedScrollPositions = {};
 
-    document.addEventListener("htmx:beforeSwap", () => {
-        savedScrollPositions = {
-            windowY: window.scrollY,
-            leftRail: document.querySelector(".left-rail")?.scrollTop || 0,
-            categoryExplorer: document.querySelector("[data-category-explorer]")?.scrollTop || 0,
-            categoryTable: document.querySelector(".category-table")?.scrollTop || 0,
-            accountTree: document.querySelector(".account-tree")?.scrollTop || 0,
-            activityList: document.querySelector(".activity-list")?.scrollTop || 0,
-            dashboardContent: document.getElementById("dashboard-content")?.scrollTop || 0,
-        };
-    });
-
-    document.body.addEventListener("htmx:afterSettle", () => {
-        this.isSyncing = false;
-        this.initChart();
-        this._formatLocalTimes();
-        this._updateRelativeTimes();
-        this._setupCategoryFilter();
-        this._applySearchFilter();
-
+    const restoreScroll = () => {
         if (savedScrollPositions.leftRail !== undefined) {
             const leftRail = document.querySelector(".left-rail");
             if (leftRail) leftRail.scrollTop = savedScrollPositions.leftRail;
@@ -150,6 +131,30 @@
         if (savedScrollPositions.windowY !== undefined) {
             window.scrollTo(0, savedScrollPositions.windowY);
         }
+    };
+
+    document.addEventListener("htmx:beforeSwap", () => {
+        savedScrollPositions = {
+            windowY: window.scrollY,
+            leftRail: document.querySelector(".left-rail")?.scrollTop || 0,
+            categoryExplorer: document.querySelector("[data-category-explorer]")?.scrollTop || 0,
+            categoryTable: document.querySelector(".category-table")?.scrollTop || 0,
+            accountTree: document.querySelector(".account-tree")?.scrollTop || 0,
+            activityList: document.querySelector(".activity-list")?.scrollTop || 0,
+            dashboardContent: document.getElementById("dashboard-content")?.scrollTop || 0,
+        };
+    });
+
+    document.addEventListener("htmx:afterSwap", restoreScroll);
+
+    document.body.addEventListener("htmx:afterSettle", () => {
+        this.isSyncing = false;
+        this.initChart();
+        this._formatLocalTimes();
+        this._updateRelativeTimes();
+        this._setupCategoryFilter();
+        this._applySearchFilter();
+        restoreScroll();
     });
 
             document.body.addEventListener("htmx:responseError", (evt) => {

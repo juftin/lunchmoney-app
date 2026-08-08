@@ -108,7 +108,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             {% for group_name, grouped_accounts in account_groups %} {% if
             grouped_accounts %} {% set group_total = grouped_accounts |
             map(attribute='to_base') | sum %}
-            <details class="account-group" open>
+            <details class="account-group" id="acc-group-{{ group_name | lower }}" open>
                 <summary>
                     <span
                         >{{ group_name }} ({{ grouped_accounts | length
@@ -121,7 +121,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                 </summary>
                 <ul>
                     {% for account in grouped_accounts %}
-                    <li>
+                    <li id="account-item-{{ account.id }}">
                         <span class="account-name"
                             >{{ account.display_name or account.name }}</span
                         >
@@ -226,7 +226,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         {% if dashboard.transactions %}
         <ul class="activity-list">
             {% for transaction in dashboard.transactions %}
-            <li>
+            <li id="tx-item-{{ transaction.id }}">
                 <span
                     ><strong>{{ transaction.payee }}</strong
                     ><small
