@@ -40,8 +40,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             class="panel-switcher__button"
             type="button"
             role="tab"
-            :class="{ 'is-active': activeTab === 'accounts' }"
-            :aria-selected="activeTab === 'accounts' ? 'true' : 'false'"
             aria-controls="accounts-panel"
             id="accounts-tab"
             @click="setTab('accounts')"
@@ -52,8 +50,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             class="panel-switcher__button"
             type="button"
             role="tab"
-            :class="{ 'is-active': activeTab === 'summary' }"
-            :aria-selected="activeTab === 'summary' ? 'true' : 'false'"
             aria-controls="summary-panel"
             id="summary-tab"
             @click="setTab('summary')"
@@ -64,8 +60,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             class="panel-switcher__button"
             type="button"
             role="tab"
-            :class="{ 'is-active': activeTab === 'activity' }"
-            :aria-selected="activeTab === 'activity' ? 'true' : 'false'"
             aria-controls="activity-panel"
             id="activity-tab"
             @click="setTab('activity')"
@@ -76,8 +70,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
             class="panel-switcher__button"
             type="button"
             role="tab"
-            :class="{ 'is-active': activeTab === 'sync' }"
-            :aria-selected="activeTab === 'sync' ? 'true' : 'false'"
             aria-controls="sync-panel"
             id="sync-tab"
             @click="setTab('sync')"
@@ -91,8 +83,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         id="accounts-panel"
         role="tabpanel"
         aria-labelledby="accounts-tab"
-        x-cloak
-        x-show="activeTab === 'accounts'"
     >
         <div class="panel-title">
             <h2>Accounts overview</h2>
@@ -165,8 +155,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         id="summary-panel"
         role="tabpanel"
         aria-labelledby="summary-tab"
-        x-cloak
-        x-show="activeTab === 'summary'"
     >
         <div class="panel-title">
             <h2>Period summary</h2>
@@ -227,8 +215,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         id="activity-panel"
         role="tabpanel"
         aria-labelledby="activity-tab"
-        x-cloak
-        x-show="activeTab === 'activity'"
     >
         <div class="panel-title">
             <h2>Recent activity</h2>
@@ -275,8 +261,6 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
         id="sync-panel"
         role="tabpanel"
         aria-labelledby="sync-tab"
-        x-cloak
-        x-show="activeTab === 'sync'"
     >
         <div class="panel-title" style="display: flex; align-items: center; justify-content: space-between;">
             <h2>Syncing status</h2>

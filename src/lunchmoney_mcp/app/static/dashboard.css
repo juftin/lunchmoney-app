@@ -374,7 +374,11 @@ body {
     color: var(--text);
     outline: 0;
 }
-.panel-switcher__button.is-active {
+.panel-switcher__button.is-active,
+.left-rail[data-active-tab="accounts"] #accounts-tab,
+.left-rail[data-active-tab="summary"] #summary-tab,
+.left-rail[data-active-tab="activity"] #activity-tab,
+.left-rail[data-active-tab="sync"] #sync-tab {
     color: var(--gold);
     border-bottom-color: var(--gold);
 }
