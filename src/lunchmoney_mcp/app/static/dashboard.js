@@ -96,14 +96,56 @@
                 this._updateRelativeTimes();
             }, 15000);
 
-            document.body.addEventListener("htmx:afterSettle", () => {
-                this.isSyncing = false;
-                this.initChart();
-                this._formatLocalTimes();
-                this._updateRelativeTimes();
-                this._setupCategoryFilter();
-                this._applySearchFilter();
-            });
+    let savedScrollPositions = {};
+
+    document.addEventListener("htmx:beforeSwap", () => {
+        savedScrollPositions = {
+            windowY: window.scrollY,
+            leftRail: document.querySelector(".left-rail")?.scrollTop || 0,
+            categoryExplorer: document.querySelector("[data-category-explorer]")?.scrollTop || 0,
+            categoryTable: document.querySelector(".category-table")?.scrollTop || 0,
+            accountTree: document.querySelector(".account-tree")?.scrollTop || 0,
+            activityList: document.querySelector(".activity-list")?.scrollTop || 0,
+            dashboardContent: document.getElementById("dashboard-content")?.scrollTop || 0,
+        };
+    });
+
+    document.body.addEventListener("htmx:afterSettle", () => {
+        this.isSyncing = false;
+        this.initChart();
+        this._formatLocalTimes();
+        this._updateRelativeTimes();
+        this._setupCategoryFilter();
+        this._applySearchFilter();
+
+        if (savedScrollPositions.leftRail !== undefined) {
+            const leftRail = document.querySelector(".left-rail");
+            if (leftRail) leftRail.scrollTop = savedScrollPositions.leftRail;
+        }
+        if (savedScrollPositions.categoryExplorer !== undefined) {
+            const catExplorer = document.querySelector("[data-category-explorer]");
+            if (catExplorer) catExplorer.scrollTop = savedScrollPositions.categoryExplorer;
+        }
+        if (savedScrollPositions.categoryTable !== undefined) {
+            const catTable = document.querySelector(".category-table");
+            if (catTable) catTable.scrollTop = savedScrollPositions.categoryTable;
+        }
+        if (savedScrollPositions.accountTree !== undefined) {
+            const accTree = document.querySelector(".account-tree");
+            if (accTree) accTree.scrollTop = savedScrollPositions.accountTree;
+        }
+        if (savedScrollPositions.activityList !== undefined) {
+            const actList = document.querySelector(".activity-list");
+            if (actList) actList.scrollTop = savedScrollPositions.activityList;
+        }
+        if (savedScrollPositions.dashboardContent !== undefined) {
+            const dashContent = document.getElementById("dashboard-content");
+            if (dashContent) dashContent.scrollTop = savedScrollPositions.dashboardContent;
+        }
+        if (savedScrollPositions.windowY !== undefined) {
+            window.scrollTo(0, savedScrollPositions.windowY);
+        }
+    });
 
             document.body.addEventListener("htmx:responseError", (evt) => {
                 this.isSyncing = false;

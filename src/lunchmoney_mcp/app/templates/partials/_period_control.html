@@ -5,7 +5,7 @@
         aria-label="Previous month"
         hx-get="/?period={{ dashboard.previous_period_start.isoformat() }}"
         hx-target="#spending-workspace"
-        hx-swap="outerHTML"
+        hx-swap="outerHTML show:none"
         hx-push-url="true"
     >
         <span aria-hidden="true">‹</span>
@@ -20,7 +20,7 @@
         aria-label="Next month"
         hx-get="/?period={{ dashboard.next_period_start.isoformat() }}"
         hx-target="#spending-workspace"
-        hx-swap="outerHTML"
+        hx-swap="outerHTML show:none"
         hx-push-url="true"
     >
         <span aria-hidden="true">›</span>
