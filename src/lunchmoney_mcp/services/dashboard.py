@@ -2,6 +2,7 @@
 
 import asyncio
 import datetime
+import logging
 from collections.abc import Awaitable
 from dataclasses import dataclass
 from typing import TypeVar, cast
@@ -35,6 +36,8 @@ from lunchmoney_mcp.services.spending import fetch_category_spending
 from lunchmoney_mcp.services.summary import fetch_account_summary
 from lunchmoney_mcp.services.sync import get_scheduled_sync_status
 from lunchmoney_mcp.services.transactions import fetch_recent_transactions
+
+logger = logging.getLogger(__name__)
 
 
 ResultT = TypeVar("ResultT")
@@ -135,7 +138,7 @@ class DashboardData:
 
 
 async def _capture(operation: Awaitable[ResultT]) -> ResultT | Exception:
-    """Return an operation result while preserving a dashboard section failure."""
+    """Safely capture exceptions from concurrent dashboard data tasks."""
     try:
         return await operation
     except Exception as error:
@@ -149,6 +152,12 @@ def _available(
 ) -> ResultT | None:
     """Return successful data and record a safe label for unavailable content."""
     if isinstance(result, Exception):
+        logger.warning(
+            "Dashboard section '%s' unavailable: %s",
+            section_name,
+            result,
+            exc_info=result,
+        )
         unavailable_sections.append(section_name)
         return None
     return result
