@@ -38,36 +38,28 @@
             },
         });
 
-        Alpine.data("leftRail", () => ({
-            activeTab: (function () {
-                const domTab = document.getElementById("left-rail")?.getAttribute("data-active-tab");
-                if (domTab && ["accounts", "summary", "activity", "sync"].includes(domTab)) {
-                    return domTab;
-                }
-                try {
-                    const t = localStorage.getItem("lm_active_tab");
-                    return ["accounts", "summary", "activity", "sync"].includes(t)
-                        ? t
-                        : "accounts";
-                } catch {
-                    return "accounts";
-                }
-            })(),
+        window.setLeftRailTab = function(tab) {
+            const rail = document.getElementById("left-rail");
+            if (rail) rail.setAttribute("data-active-tab", tab);
+            try {
+                localStorage.setItem("lm_active_tab", tab);
+            } catch {
+                // Ignore storage errors
+            }
+        };
 
-            init() {
-                this.$root.setAttribute("data-active-tab", this.activeTab);
-            },
+        const initialTab = (function () {
+            try {
+                const t = localStorage.getItem("lm_active_tab");
+                return ["accounts", "summary", "activity", "sync"].includes(t) ? t : "accounts";
+            } catch {
+                return "accounts";
+            }
+        })();
 
-            setTab(tab) {
-                this.activeTab = tab;
-                this.$root.setAttribute("data-active-tab", tab);
-                try {
-                    localStorage.setItem("lm_active_tab", tab);
-                } catch {
-                    // Ignore storage errors
-                }
-            },
-        }));
+        document.addEventListener("DOMContentLoaded", () => {
+            window.setLeftRailTab(initialTab);
+        });
 
         Alpine.data("dashboard", () => ({
             activeTab: localStorage.getItem("lm_active_tab") || "accounts",
