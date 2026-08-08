@@ -23,6 +23,9 @@
         src="{{ url_for('dashboard_static', path='/dashboard.js') }}"
     ></script>
     <script
+        src="{{ url_for('dashboard_static', path='/vendor/idiomorph/idiomorph-ext.min.js') }}"
+    ></script>
+    <script
         defer
         src="{{ url_for('dashboard_static', path='/vendor/frappe/frappe-charts.min.js') }}"
     ></script>
@@ -31,7 +34,7 @@
         src="{{ url_for('dashboard_static', path='/vendor/alpine/alpine.min.js') }}"
     ></script>
 </head>
-<body x-data="dashboard" @keydown.window="onKeydown">
+<body x-data="dashboard" hx-ext="morph" @keydown.window="onKeydown">
     <a class="skip-link" href="#dashboard-content">Skip to dashboard content</a>
 
     <div class="cockpit">
@@ -64,7 +67,7 @@
                     @click="triggerRefresh($event)"
                     hx-get="/{% if dashboard.period_start %}?period={{ dashboard.period_start.isoformat() }}{% endif %}"
                     hx-target="#dashboard-content"
-                    hx-swap="innerHTML show:none"
+                    hx-swap="morph:innerHTML"
                 >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -80,7 +83,7 @@
             hx-get="/{% if dashboard.period_start %}?period={{ dashboard.period_start.isoformat() }}{% endif %}"
             hx-trigger="every 5m"
             hx-target="#dashboard-content"
-            hx-swap="innerHTML show:none"
+            hx-swap="morph:innerHTML"
             hx-disinherit="*"
         >
             {% include "partials/cockpit_content.html" %}
