@@ -6,7 +6,7 @@ from sqlalchemy.engine.result import ScalarResult
 from sqlmodel import col, select
 from sqlmodel.sql._expression_select_cls import SelectOfScalar
 
-from lunchmoney_mcp.database import LunchMoneyDatabase
+from lunchmoney_mcp.database import LunchMoneyDatabase, eager_options
 from lunchmoney.models import (
     ChildTransactionObject,
     CreateNewTransactionsRequest,
@@ -237,6 +237,7 @@ async def fetch_recent_transactions(
     async with db.session() as session:
         statement: SelectOfScalar[Transaction] = (
             select(Transaction)
+            .options(*eager_options(Transaction))
             .where(
                 Transaction.var_date >= cutoff,
                 Transaction.var_date <= resolved_end,

@@ -239,7 +239,7 @@ def _loader_attribute(value: Any) -> QueryableAttribute[Any]:
     return cast(QueryableAttribute[Any], value)
 
 
-def _eager_options(model: type[SQLModel]) -> tuple[Any, ...]:
+def eager_options(model: type[SQLModel]) -> tuple[Any, ...]:
     """Return explicit eager-loading rules for one supported record class."""
     if model is Category:
         parent = _loader_attribute(Category.parent)
@@ -294,6 +294,9 @@ def _eager_options(model: type[SQLModel]) -> tuple[Any, ...]:
             selectinload(group_children).selectinload(group_parent),
         )
     return ()
+
+
+_eager_options = eager_options
 
 
 def _clone_category_record(record: Category) -> Category:
