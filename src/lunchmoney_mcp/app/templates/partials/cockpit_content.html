@@ -278,7 +278,7 @@ spending.total_income else none -%} {% if dashboard.unavailable_sections %}
                     style="margin: 0; padding: 0.25rem 0.6rem; font-size: 0.75rem;"
                     hx-post="/dashboard/sync"
                     hx-target="#dashboard-content"
-                    hx-swap="morph:innerHTML"
+                    hx-swap="morph:innerHTML show:none"
                 >
                     Sync Now
                 </button>
