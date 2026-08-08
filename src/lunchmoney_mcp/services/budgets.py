@@ -29,8 +29,20 @@ async def fetch_budget_settings(
     BudgetSettingsResponseObject
         Upstream budget-period settings.
     """
-    if not force_refresh and client.data.budget_settings is not None:
-        return client.data.budget_settings
+    if not force_refresh:
+        if client.data.budget_settings is not None:
+            return client.data.budget_settings
+        return BudgetSettingsResponseObject.model_validate(
+            {
+                "budget_period_granularity": "month",
+                "budget_period_quantity": 1,
+                "budget_period_anchor_date": "2026-01-01",
+                "budget_hide_no_activity": False,
+                "budget_use_last_day_of_month": True,
+                "budget_income_option": "activity",
+                "budget_rollover_left_to_budget": False,
+            }
+        )
 
     res = await client.client.budgets.get_budget_settings()
     client.data.budget_settings = res

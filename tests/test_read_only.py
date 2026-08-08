@@ -102,6 +102,7 @@ async def test_live_summary_service_forwards_query_options() -> None:
         include_past_budget_dates=True,
         include_totals=True,
         include_rollover_pool=True,
+        force_refresh=True,
     )
 
     assert result == summary

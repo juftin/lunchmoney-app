@@ -61,6 +61,7 @@ async def fetch_account_summary(
         for (st, en, *rest), summary in client.data.summaries.items():
             if st == start_date and en == end_date:
                 return summary
+        return SummaryResponseObject.model_validate({"aligned": True, "categories": []})
 
     res = await client.client.summary.get_budget_summary(
         start_date=start_date,

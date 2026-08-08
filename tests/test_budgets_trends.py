@@ -95,7 +95,7 @@ async def test_budget_settings_service_forwards_to_lunch_money_client() -> None:
         ),
     )
 
-    result = await fetch_budget_settings(client=client)
+    result = await fetch_budget_settings(client=client, force_refresh=True)
 
     assert result == settings
     get_budget_settings.assert_awaited_once_with()
