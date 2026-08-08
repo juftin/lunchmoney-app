@@ -59,10 +59,10 @@
                     :class="{ 'is-spinning': isSyncing }"
                     :disabled="isSyncing"
                     type="button"
-                    title="Sync and refresh dashboard data"
+                    title="Refresh dashboard data"
                     aria-label="Refresh data"
                     @click="triggerRefresh($event)"
-                    hx-post="/dashboard/sync{% if dashboard.period_start %}?period={{ dashboard.period_start.isoformat() }}{% endif %}"
+                    hx-get="/{% if dashboard.period_start %}?period={{ dashboard.period_start.isoformat() }}{% endif %}"
                     hx-target="#dashboard-content"
                     hx-swap="innerHTML"
                 >
