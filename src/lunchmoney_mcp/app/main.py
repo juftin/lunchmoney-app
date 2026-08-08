@@ -14,7 +14,6 @@ from fastmcp.utilities.lifespan import combine_lifespans
 
 from lunchmoney_mcp.app.auth import verify_api_key
 from lunchmoney_mcp.app.lifespan import lifespan
-from lunchmoney_mcp.app.security import apply_security_middleware
 from lunchmoney_mcp.app.routers import (
     accounts_router,
     budgets_router,
@@ -29,9 +28,10 @@ from lunchmoney_mcp.app.routers import (
     transactions_router,
     user_router,
 )
+from lunchmoney_mcp.app.security import apply_security_middleware
+from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.logging_config import apply_logging_config
 from lunchmoney_mcp.mcp import mcp
-from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.observability import log_event, metrics
 from lunchmoney_mcp.schemas import RootResponse
 
@@ -165,8 +165,9 @@ app = FastAPI(
     lifespan=combine_lifespans(mcp_app.lifespan, lifespan),
 )
 
-app.middleware("http")(verify_api_key)
-app.middleware("http")(observe_request)
+app.middleware(middleware_type="http")(verify_api_key)
+app.middleware(middleware_type="http")(observe_request)
+# app.middleware(middleware_type="http")(mcp_ui)
 apply_security_middleware(app=app, settings=get_settings())
 
 __all__: list[str] = [
