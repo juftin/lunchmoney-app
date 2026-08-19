@@ -138,6 +138,8 @@ def _model_rank(record: SQLModel) -> int:
         return 3
     if record_type is Transaction:
         return 4
+    if record_type is RecurringItem:
+        return 5
     msg = f"Unsupported SQLModel record: {record_type.__name__}"
     raise TypeError(msg)
 
@@ -174,7 +176,7 @@ def _dependency_order(records: list[SQLModel]) -> list[tuple[int, SQLModel]]:
             dependents[parent_index].add(index)
 
     ordered: list[tuple[int, SQLModel]] = []
-    for rank in range(5):
+    for rank in range(6):
         rank_indices = [
             index for index, record in enumerate(records) if _model_rank(record) == rank
         ]
@@ -214,6 +216,8 @@ def _record_primary_key(record: SQLModel) -> int:
         return cast(Tag, record).id
     if record_type is Transaction:
         return cast(Transaction, record).id
+    if record_type is RecurringItem:
+        return cast(RecurringItem, record).id
     msg = f"Unsupported SQLModel record: {record_type.__name__}"
     raise TypeError(msg)
 
@@ -232,6 +236,8 @@ def _primary_key_attribute(model: type[SQLModel]) -> Any:
         return Tag.id
     if model is Transaction:
         return Transaction.id
+    if model is RecurringItem:
+        return RecurringItem.id
     msg = f"Unsupported SQLModel model: {model.__name__}"
     raise TypeError(msg)
 

@@ -8,6 +8,9 @@ from lunchmoney_mcp.app.dependencies import get_lunchmoney_app, get_shared_datab
 from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.services.operations import data_operation
 
+_EXPLICIT_SYNC_TOOLS: frozenset[str] = frozenset({"sync_data", "get_sync_status"})
+"""MCP tools that establish storage but perform their own refresh or lookup."""
+
 
 class DataOperationMiddleware(Middleware):
     """Refresh and bind the configured database for each MCP data operation."""
@@ -19,6 +22,7 @@ class DataOperationMiddleware(Middleware):
         async with data_operation(
             client=get_lunchmoney_app(),
             database=None if get_settings().ephemeral else get_shared_database(),
+            refresh=context.message.name not in _EXPLICIT_SYNC_TOOLS,
         ):
             return await call_next(context)
 

@@ -38,6 +38,9 @@ apply_logging_config()
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+_EXPLICIT_SYNC_PATHS: frozenset[str] = frozenset({"/api/sync", "/api/sync/status"})
+"""REST operations that establish storage but perform their own refresh."""
+
 fastapi_app = FastAPI(
     title="Lunch Money MCP",
     description="Lunch Money Model Context Protocol Server & API",
@@ -60,6 +63,7 @@ async def bind_data_operation(
     async with data_operation(
         client=get_lunchmoney_app(),
         database=None if get_settings().ephemeral else get_shared_database(),
+        refresh=request.url.path not in _EXPLICIT_SYNC_PATHS,
     ):
         return await call_next(request)
 

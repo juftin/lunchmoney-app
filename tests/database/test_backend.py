@@ -12,6 +12,7 @@ from lunchmoney_mcp.database import (
     DEFAULT_DATABASE_URL,
     IN_MEMORY_DATABASE_URL,
     LunchMoneyDatabase,
+    RecurringItem,
     User,
 )
 from lunchmoney_mcp.database.backend import resolve_database_url
@@ -101,6 +102,23 @@ async def test_stateless_database_create_tables_persists_across_sessions() -> No
         await database.upsert(user)
 
         assert (await database.get(User, 1)) is not None
+
+
+@pytest.mark.asyncio
+async def test_database_persists_recurring_items() -> None:
+    """Store recurring definitions synchronized alongside relational records."""
+    recurring_item = RecurringItem(
+        id=701,
+        payload={"description": "Synthetic recurring item"},
+    )
+
+    async with LunchMoneyDatabase(IN_MEMORY_DATABASE_URL) as database:
+        await database.create_tables()
+        await database.upsert(recurring_item)
+
+        stored = await database.get(RecurringItem, 701)
+
+    assert stored == recurring_item
 
 
 @pytest.mark.asyncio

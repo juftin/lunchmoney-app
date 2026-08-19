@@ -50,3 +50,28 @@ async def test_shared_operation_does_not_dispose_database(
         assert get_operation_database() is database
 
     assert get_operation_database() is None
+
+
+@pytest.mark.asyncio
+async def test_ephemeral_operation_can_skip_automatic_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Let explicit synchronization own the only upstream refresh it performs."""
+    import lunchmoney_mcp.services.operations as operations
+
+    database = Mock()
+    database.create_tables = AsyncMock()
+    database.dispose = AsyncMock()
+    sync_database = AsyncMock()
+    monkeypatch.setattr(operations, "LunchMoneyDatabase", Mock(return_value=database))
+    monkeypatch.setattr(operations, "sync_database", sync_database)
+    monkeypatch.setattr(
+        operations, "get_settings", lambda: RuntimeSettings(ephemeral=True)
+    )
+
+    async with data_operation(client=Mock(), database=None, refresh=False):
+        pass
+
+    database.create_tables.assert_awaited_once()
+    sync_database.assert_not_awaited()
+    database.dispose.assert_awaited_once()
