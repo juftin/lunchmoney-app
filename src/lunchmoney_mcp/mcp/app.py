@@ -7,14 +7,14 @@ from fastmcp.server.lifespan import lifespan
 
 from lunchmoney_mcp.app.dependencies import get_database
 from lunchmoney_mcp.app.auth import get_mcp_oauth_provider
-from lunchmoney_mcp.config import get_runtime_mode
+from lunchmoney_mcp.config import get_runtime_mode, get_settings
 from lunchmoney_mcp.mcp.operations import DataOperationMiddleware
 
 
 @lifespan
 async def mcp_lifespan(_: FastMCP[None]) -> AsyncIterator[dict[str, object]]:
     """Own ephemeral storage only while the standalone MCP runtime is active."""
-    if get_runtime_mode() != "mcp":
+    if get_runtime_mode() != "mcp" or get_settings().ephemeral:
         yield {}
         return
 

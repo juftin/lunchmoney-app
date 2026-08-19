@@ -2,14 +2,9 @@
 
 import datetime
 
-from lunchmoney.models import (
-    RecurringObject,
-    RecurringObjectMatches,
-    RecurringObjectMatchesFoundTransactionsInner,
-)
+from lunchmoney.models import RecurringObject
 
 from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.database.models import RecurringItem, Transaction
 
 
 async def fetch_recurring_items(
@@ -22,8 +17,8 @@ async def fetch_recurring_items(
 
     Parameters
     ----------
-    client : LunchMoneyApp
-        Configured Lunch Money API client.
+    db : LunchMoneyDatabase
+        Database containing synchronized recurring response snapshots.
     start_date : datetime.date | None
         Optional matching window start date.
     end_date : datetime.date | None
@@ -36,32 +31,18 @@ async def fetch_recurring_items(
     list[RecurringObject]
         Recurring items returned by Lunch Money for the requested window.
     """
-    del include_suggested
-    transactions = await db.list(Transaction)
-    items: list[RecurringObject] = []
-    for item in await db.list(RecurringItem):
-        recurring = RecurringObject.model_validate(item.payload)
-        matches = [
-            RecurringObjectMatchesFoundTransactionsInner.model_validate(
-                {"var_date": transaction.var_date, "transaction_id": transaction.id}
-            )
-            for transaction in transactions
-            if transaction.recurring_id == recurring.id
-            and (start_date is None or transaction.var_date >= start_date)
-            and (end_date is None or transaction.var_date <= end_date)
-        ]
-        items.append(
-            recurring.model_copy(
-                update={
-                    "matches": RecurringObjectMatches(
-                        request_start_date=start_date,
-                        request_end_date=end_date,
-                        found_transactions=matches,
-                    )
-                }
-            )
-        )
-    return items
+    cache_key = (
+        f"recurring:{start_date}:{end_date}"
+        if start_date is not None or end_date is not None
+        else "recurring:latest"
+    )
+    payload = await db.get_cached_response(cache_key)
+    if payload is None:
+        return []
+    items = [RecurringObject.model_validate(item) for item in payload["items"]]
+    if include_suggested is True:
+        return items
+    return [item for item in items if item.status != "suggested"]
 
 
 async def fetch_recurring_item_by_id(
@@ -74,8 +55,8 @@ async def fetch_recurring_item_by_id(
 
     Parameters
     ----------
-    client : LunchMoneyApp
-        Configured Lunch Money API client.
+    db : LunchMoneyDatabase
+        Database containing synchronized recurring response snapshots.
     recurring_item_id : int
         Identifier of the recurring item to retrieve.
     start_date : datetime.date | None

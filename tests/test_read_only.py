@@ -23,7 +23,6 @@ from lunchmoney_mcp.database.models import (
     Category,
     ManualAccount,
     PlaidAccount,
-    RecurringItem,
     Tag,
     Transaction,
 )
@@ -105,10 +104,9 @@ async def test_recurring_services_read_period_snapshot() -> None:
     """Read recurring items and single items from a period snapshot."""
     recurring_item = _recurring_item()
     database = AsyncMock()
-    recurring_record = RecurringItem(
-        id=recurring_item.id, payload=recurring_item.model_dump(mode="json")
-    )
-    database.list.side_effect = [[], [recurring_record], [], [recurring_record]]
+    database.get_cached_response.return_value = {
+        "items": [recurring_item.model_dump(mode="json")]
+    }
     start_date = datetime.date(2026, 1, 1)
     end_date = datetime.date(2026, 1, 31)
 
@@ -125,13 +123,30 @@ async def test_recurring_services_read_period_snapshot() -> None:
         end_date=end_date,
     )
 
-    assert [item.model_copy(update={"matches": None}) for item in listed] == [
-        recurring_item
-    ]
-    assert selected is not None
-    assert selected.model_copy(update={"matches": None}) == recurring_item
-    assert listed[0].matches is not None
-    assert listed[0].matches.found_transactions == []
+    assert listed == [recurring_item]
+    assert selected == recurring_item
+    database.get_cached_response.assert_awaited_with("recurring:2026-01-01:2026-01-31")
+
+
+@pytest.mark.asyncio
+async def test_recurring_service_filters_suggested_items_by_default() -> None:
+    """Return suggested recurring items only when the caller explicitly requests them."""
+    recurring_item = _recurring_item()
+    suggested = recurring_item.model_copy(update={"id": 82, "status": "suggested"})
+    database = AsyncMock()
+    database.get_cached_response.return_value = {
+        "items": [
+            recurring_item.model_dump(mode="json"),
+            suggested.model_dump(mode="json"),
+        ]
+    }
+
+    default_items = await fetch_recurring_items(db=database)
+    all_items = await fetch_recurring_items(db=database, include_suggested=True)
+
+    assert default_items == [recurring_item]
+    assert all_items == [recurring_item, suggested]
+    database.get_cached_response.assert_awaited_with("recurring:latest")
 
 
 @pytest.mark.asyncio

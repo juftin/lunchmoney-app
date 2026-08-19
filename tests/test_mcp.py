@@ -67,12 +67,35 @@ async def test_mcp_runtime_lifespan_creates_and_disposes_ephemeral_storage(
     get_database = Mock(return_value=database)
     monkeypatch.setattr(mcp_app_module, "get_database", get_database)
     monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
+    monkeypatch.setattr(
+        mcp_app_module, "get_settings", lambda: RuntimeSettings(ephemeral=False)
+    )
 
     async with mcp_app_module.mcp_lifespan(mcp):
         database.create_tables.assert_awaited_once_with()
 
     database.dispose.assert_awaited_once_with()
     get_database.cache_clear.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_mcp_runtime_lifespan_skips_storage_in_ephemeral_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Leave private per-operation storage to the MCP operation middleware."""
+    import lunchmoney_mcp.mcp.app as mcp_app_module
+
+    get_database = Mock()
+    monkeypatch.setattr(mcp_app_module, "get_database", get_database)
+    monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
+    monkeypatch.setattr(
+        mcp_app_module, "get_settings", lambda: RuntimeSettings(ephemeral=True)
+    )
+
+    async with mcp_app_module.mcp_lifespan(mcp):
+        pass
+
+    get_database.assert_not_called()
 
 
 @pytest.mark.parametrize(

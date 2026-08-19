@@ -126,7 +126,9 @@ async def sync_database(
             include_rollover_pool=True,
         )
         recurring_response = await upstream.recurring_items.get_all_recurring(
-            start_date=resolved_start_date, end_date=resolved_end_date
+            start_date=resolved_start_date,
+            end_date=resolved_end_date,
+            include_suggested=True,
         )
 
     records: list[SQLModel] = []
@@ -153,6 +155,16 @@ async def sync_database(
             summary.model_dump(mode="json"),
         )
     if recurring_response is not None:
+        recurring_payload = {
+            "items": [
+                item.model_dump(mode="json")
+                for item in recurring_response.recurring_items or []
+            ]
+        }
+        await db.upsert_cached_response(
+            f"recurring:{resolved_start_date}:{resolved_end_date}", recurring_payload
+        )
+        await db.upsert_cached_response("recurring:latest", recurring_payload)
         await db.upsert_many(
             [
                 RecurringItem(

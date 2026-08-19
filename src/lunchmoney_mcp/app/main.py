@@ -55,7 +55,7 @@ async def bind_data_operation(
 ) -> Response:
     """Bind one persistence-mode database lifecycle to a complete request."""
     operational_paths = {"/api", "/health", "/healthz", "/ready", "/readyz", "/metrics"}
-    if request.url.path in operational_paths:
+    if request.url.path in operational_paths or request.url.path.startswith("/mcp"):
         return await call_next(request)
     async with data_operation(
         client=get_lunchmoney_app(),

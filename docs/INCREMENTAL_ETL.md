@@ -40,10 +40,11 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > - REST requests and MCP tool/resource calls create a private in-memory SQLite database, refresh upstream data into it, execute the operation, and dispose it in a `finally` block.
 > - Ephemeral mode does not initialize, migrate, or reuse the shared persistent or in-memory database.
 
-> **6. Recurring Matches Come From Transactions**:
+> **6. Recurring Matches Are Period Snapshots**:
 >
-> - Recurring definitions are persisted by ID, while `found_transactions` is derived from the synchronized `transactions.recurring_id` relationship for the caller's requested window.
-> - This prevents one synchronization window's recurring-match response from being reused for another window.
+> - Recurring definitions are persisted by ID, and each synchronization window retains its complete upstream match payload under a period-specific cache key.
+> - The same payload is retained as the latest snapshot for recurring reads without an explicit period.
+> - This preserves expected, found, and missing occurrence details, while preventing one synchronization window from being reused for another.
 
 ---
 
