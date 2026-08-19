@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from lunchmoney.models import SummaryResponseObject
 
-from lunchmoney_mcp.app.dependencies import get_database
+from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.services import fetch_account_summary
 
@@ -49,6 +49,7 @@ async def get_account_summary(
     """
     return await fetch_account_summary(
         db=get_database(),
+        client=get_lunchmoney_app(),
         start_date=start_date,
         end_date=end_date,
         include_exclude_from_budgets=include_exclude_from_budgets,

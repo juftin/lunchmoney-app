@@ -4,12 +4,14 @@ import datetime
 
 from lunchmoney.models import SummaryResponseObject
 
+from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import Category
 
 
 async def fetch_account_summary(
     db: LunchMoneyDatabase,
+    client: LunchMoneyApp,
     start_date: datetime.date,
     end_date: datetime.date,
     include_exclude_from_budgets: bool | None = None,
@@ -17,7 +19,7 @@ async def fetch_account_summary(
     include_past_budget_dates: bool | None = None,
     include_totals: bool | None = None,
     include_rollover_pool: bool | None = None,
-) -> SummaryResponseObject | None:
+) -> SummaryResponseObject:
     """Fetch a live budget summary for a specified date range.
 
     Parameters
@@ -46,7 +48,17 @@ async def fetch_account_summary(
     """
     payload = await db.get_cached_response(f"summary:{start_date}:{end_date}")
     if payload is None:
-        return None
+        summary = await client.client.summary.get_budget_summary(
+            start_date=start_date,
+            end_date=end_date,
+            include_exclude_from_budgets=True,
+            include_occurrences=True,
+            include_past_budget_dates=True,
+            include_totals=True,
+            include_rollover_pool=True,
+        )
+        payload = summary.model_dump(mode="json")
+        await db.upsert_cached_response(f"summary:{start_date}:{end_date}", payload)
     summary = SummaryResponseObject.model_validate(payload)
     categories = {category.id: category for category in await db.list(Category)}
     rows = summary.categories

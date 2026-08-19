@@ -1,6 +1,8 @@
 """Regression tests for Sprint 1 read-only services and registrations."""
 
 import datetime
+from types import SimpleNamespace
+from typing import cast
 from unittest.mock import AsyncMock, create_autospec
 
 import pytest
@@ -81,9 +83,11 @@ async def test_summary_service_reads_period_snapshot() -> None:
     summary = SummaryResponseObject.model_validate({"aligned": True, "categories": []})
     database = AsyncMock()
     database.get_cached_response.return_value = summary.model_dump(mode="json")
+    client = create_autospec(LunchMoneyApp, instance=True)
 
     result = await fetch_account_summary(
         db=database,
+        client=client,
         start_date=datetime.date(2026, 1, 1),
         end_date=datetime.date(2026, 1, 31),
         include_exclude_from_budgets=True,
@@ -107,17 +111,20 @@ async def test_recurring_services_read_period_snapshot() -> None:
     database.get_cached_response.return_value = {
         "items": [recurring_item.model_dump(mode="json")]
     }
+    client = create_autospec(LunchMoneyApp, instance=True)
     start_date = datetime.date(2026, 1, 1)
     end_date = datetime.date(2026, 1, 31)
 
     listed = await fetch_recurring_items(
         db=database,
+        client=client,
         start_date=start_date,
         end_date=end_date,
         include_suggested=True,
     )
     selected = await fetch_recurring_item_by_id(
         db=database,
+        client=client,
         recurring_item_id=recurring_item.id,
         start_date=start_date,
         end_date=end_date,
@@ -140,13 +147,91 @@ async def test_recurring_service_filters_suggested_items_by_default() -> None:
             suggested.model_dump(mode="json"),
         ]
     }
+    client = create_autospec(LunchMoneyApp, instance=True)
 
-    default_items = await fetch_recurring_items(db=database)
-    all_items = await fetch_recurring_items(db=database, include_suggested=True)
+    default_items = await fetch_recurring_items(db=database, client=client)
+    all_items = await fetch_recurring_items(
+        db=database, client=client, include_suggested=True
+    )
 
     assert default_items == [recurring_item]
     assert all_items == [recurring_item, suggested]
     database.get_cached_response.assert_awaited_with("recurring:latest")
+
+
+@pytest.mark.asyncio
+async def test_recurring_service_refreshes_a_missing_requested_window() -> None:
+    """Fetch and cache a requested recurring window absent from synchronized snapshots."""
+    recurring_item = _recurring_item()
+    get_all_recurring = AsyncMock(
+        return_value=SimpleNamespace(recurring_items=[recurring_item])
+    )
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                recurring_items=SimpleNamespace(get_all_recurring=get_all_recurring)
+            )
+        ),
+    )
+    database = AsyncMock()
+    database.get_cached_response.return_value = None
+    start_date = datetime.date(2025, 1, 1)
+
+    result = await fetch_recurring_items(
+        db=database,
+        client=client,
+        start_date=start_date,
+    )
+
+    assert result == [recurring_item]
+    get_all_recurring.assert_awaited_once_with(
+        start_date=start_date,
+        end_date=None,
+        include_suggested=True,
+    )
+    database.upsert_cached_response.assert_awaited_once_with(
+        "recurring:2025-01-01:None",
+        {"items": [recurring_item.model_dump(mode="json")]},
+    )
+
+
+@pytest.mark.asyncio
+async def test_summary_service_refreshes_a_missing_requested_window() -> None:
+    """Fetch and cache a requested summary window absent from synchronized snapshots."""
+    summary = SummaryResponseObject.model_validate({"aligned": True, "categories": []})
+    get_budget_summary = AsyncMock(return_value=summary)
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                summary=SimpleNamespace(get_budget_summary=get_budget_summary)
+            )
+        ),
+    )
+    database = AsyncMock()
+    database.get_cached_response.return_value = None
+    database.list.return_value = []
+    start_date = datetime.date(2025, 1, 1)
+    end_date = datetime.date(2025, 1, 31)
+
+    result = await fetch_account_summary(
+        db=database,
+        client=client,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    assert result.aligned is True
+    get_budget_summary.assert_awaited_once_with(
+        start_date=start_date,
+        end_date=end_date,
+        include_exclude_from_budgets=True,
+        include_occurrences=True,
+        include_past_budget_dates=True,
+        include_totals=True,
+        include_rollover_pool=True,
+    )
 
 
 @pytest.mark.asyncio

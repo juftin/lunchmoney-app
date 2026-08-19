@@ -61,6 +61,7 @@ async def account_summary_resource() -> str:
     today = datetime.date.today()
     summary = await fetch_account_summary(
         db=get_database(),
+        client=get_lunchmoney_app(),
         start_date=today.replace(day=1),
         end_date=today,
         include_totals=True,

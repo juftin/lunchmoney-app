@@ -4,11 +4,13 @@ import datetime
 
 from lunchmoney.models import RecurringObject
 
+from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
 
 
 async def fetch_recurring_items(
     db: LunchMoneyDatabase,
+    client: LunchMoneyApp,
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
     include_suggested: bool | None = None,
@@ -19,6 +21,8 @@ async def fetch_recurring_items(
     ----------
     db : LunchMoneyDatabase
         Database containing synchronized recurring response snapshots.
+    client : LunchMoneyApp
+        Configured Lunch Money API client used to populate an absent snapshot.
     start_date : datetime.date | None
         Optional matching window start date.
     end_date : datetime.date | None
@@ -38,7 +42,17 @@ async def fetch_recurring_items(
     )
     payload = await db.get_cached_response(cache_key)
     if payload is None:
-        return []
+        response = await client.client.recurring_items.get_all_recurring(
+            start_date=start_date,
+            end_date=end_date,
+            include_suggested=True,
+        )
+        payload = {
+            "items": [
+                item.model_dump(mode="json") for item in response.recurring_items or []
+            ]
+        }
+        await db.upsert_cached_response(cache_key, payload)
     items = [RecurringObject.model_validate(item) for item in payload["items"]]
     if include_suggested is True:
         return items
@@ -47,6 +61,7 @@ async def fetch_recurring_items(
 
 async def fetch_recurring_item_by_id(
     db: LunchMoneyDatabase,
+    client: LunchMoneyApp,
     recurring_item_id: int,
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
@@ -57,6 +72,8 @@ async def fetch_recurring_item_by_id(
     ----------
     db : LunchMoneyDatabase
         Database containing synchronized recurring response snapshots.
+    client : LunchMoneyApp
+        Configured Lunch Money API client used to populate an absent snapshot.
     recurring_item_id : int
         Identifier of the recurring item to retrieve.
     start_date : datetime.date | None
@@ -69,5 +86,10 @@ async def fetch_recurring_item_by_id(
     RecurringObject
         Upstream recurring item matching the supplied identifier.
     """
-    items = await fetch_recurring_items(db=db, start_date=start_date, end_date=end_date)
+    items = await fetch_recurring_items(
+        db=db,
+        client=client,
+        start_date=start_date,
+        end_date=end_date,
+    )
     return next((item for item in items if item.id == recurring_item_id), None)
