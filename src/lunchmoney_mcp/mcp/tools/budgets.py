@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 @mcp.tool()
-async def get_budget_settings() -> BudgetSettingsResponseObject | None:
+async def get_budget_settings() -> BudgetSettingsResponseObject:
     """Fetch the authenticated user's budget-period settings.
 
     Returns
@@ -31,7 +31,7 @@ async def get_budget_settings() -> BudgetSettingsResponseObject | None:
     BudgetSettingsResponseObject
         Upstream budget-period settings.
     """
-    return await fetch_budget_settings(db=get_database())
+    return await fetch_budget_settings(db=get_database(), client=get_lunchmoney_app())
 
 
 @mcp.tool()
@@ -40,7 +40,7 @@ async def upsert_budget(
 ) -> BudgetUpsertResponseObject:
     """Set one category's budget value for a budget period."""
     client: LunchMoneyApp = get_lunchmoney_app()
-    return await set_budget_value(client=client, request=request)
+    return await set_budget_value(client=client, db=get_database(), request=request)
 
 
 @mcp.tool()
@@ -52,6 +52,7 @@ async def clear_budget(
     client: LunchMoneyApp = get_lunchmoney_app()
     await clear_budget_value(
         client=client,
+        db=get_database(),
         category_id=category_id,
         start_date=start_date,
     )

@@ -215,6 +215,7 @@ async def test_deletes_reconcile_cached_transaction_relationships() -> None:
 
     assert category_transaction.category_id is None
     category_database.upsert_many.assert_awaited_once_with([category_transaction])
+    category_database.delete_cached_responses.assert_awaited()
     category_database.delete.assert_awaited_once_with(Category, category.id)
     account_database.delete.assert_any_await(Transaction, account_transaction.id)
     account_database.delete.assert_any_await(ManualAccount, account.id)

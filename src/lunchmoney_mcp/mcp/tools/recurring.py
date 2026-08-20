@@ -49,7 +49,7 @@ async def get_recurring_item(
     recurring_item_id: int,
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
-) -> RecurringObject | None:
+) -> RecurringObject:
     """Fetch one live recurring item with optional matching information.
 
     Parameters

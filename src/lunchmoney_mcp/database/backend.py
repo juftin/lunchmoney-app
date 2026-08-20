@@ -14,7 +14,7 @@ from typing_extensions import Self
 from alembic import command
 from alembic.config import Config
 
-from sqlalchemy import event, update
+from sqlalchemy import delete, event, update
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlalchemy.pool import StaticPool
@@ -663,6 +663,16 @@ class LunchMoneyDatabase:
                     session.add(CachedApiResponse(key=key, payload=payload))
                 else:
                     record.payload = payload
+
+    async def delete_cached_responses(self, prefix: str) -> None:
+        """Delete every response snapshot whose key starts with ``prefix``."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                await session.exec(
+                    delete(CachedApiResponse).where(
+                        cast(Any, CachedApiResponse.key).startswith(prefix)
+                    )
+                )
 
     async def get_sync_metadata(self, domain: str) -> SyncMetadata | None:
         """Return the synchronization watermark for one domain, if present."""

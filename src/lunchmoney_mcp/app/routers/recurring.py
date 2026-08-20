@@ -58,7 +58,7 @@ async def get_recurring_item(
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
-) -> RecurringObject | None:
+) -> RecurringObject:
     """Fetch one live recurring item with optional matching information.
 
     **Parameters:**

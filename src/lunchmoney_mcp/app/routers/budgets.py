@@ -31,7 +31,8 @@ router = APIRouter(tags=["Budgets"])
 )
 async def get_budget_settings(
     db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> BudgetSettingsResponseObject | None:
+    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+) -> BudgetSettingsResponseObject:
     """Fetch the authenticated user's budget-period settings.
 
     **Parameters:**
@@ -40,7 +41,7 @@ async def get_budget_settings(
 
     **Returns:** Upstream budget-period settings.
     """
-    return await fetch_budget_settings(db=db)
+    return await fetch_budget_settings(db=db, client=client)
 
 
 @router.put(
@@ -51,9 +52,10 @@ async def get_budget_settings(
 async def upsert_budget(
     request: UpsertBudgetRequestObject,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> BudgetUpsertResponseObject:
     """Set one category's budget value for a budget period."""
-    return await set_budget_value(client=client, request=request)
+    return await set_budget_value(client=client, db=db, request=request)
 
 
 @router.delete(
@@ -65,10 +67,12 @@ async def clear_budget(
     category_id: int,
     start_date: datetime.date,
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
 ) -> None:
     """Clear one category's budget value for a budget period."""
     await clear_budget_value(
         client=client,
+        db=db,
         category_id=category_id,
         start_date=start_date,
     )

@@ -146,6 +146,7 @@ async def _store_category(
 ) -> CategoryObject:
     """Persist an upstream category response and preserve all its fields."""
     await db.upsert(Category.from_api(category))
+    await db.delete_cached_responses("summary:")
     return category
 
 
@@ -238,3 +239,4 @@ async def delete_category(
     if affected_transactions:
         await db.upsert_many(affected_transactions)
     await db.delete(Category, category_id)
+    await db.delete_cached_responses("summary:")

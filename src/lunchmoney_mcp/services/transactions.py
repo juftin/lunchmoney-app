@@ -42,6 +42,7 @@ async def _store_transactions(
     ]
     for record in records:
         await db.upsert(record)
+    await db.delete_cached_responses("summary:")
     return transactions
 
 
@@ -286,6 +287,7 @@ async def bulk_delete_transactions(
     )
     for transaction_id in request.ids:
         await db.delete(Transaction, transaction_id)
+    await db.delete_cached_responses("summary:")
 
 
 async def update_transaction(
@@ -312,6 +314,7 @@ async def delete_transaction(
     """Delete one transaction upstream before removing its cached record."""
     await client.client.transactions.delete_transaction_by_id(id=transaction_id)
     await db.delete(Transaction, transaction_id)
+    await db.delete_cached_responses("summary:")
 
 
 async def group_transactions(
@@ -342,6 +345,8 @@ async def ungroup_transactions(
     ]
     if restored:
         await _store_transactions(db=db, transactions=restored)
+    else:
+        await db.delete_cached_responses("summary:")
 
 
 async def split_transaction(

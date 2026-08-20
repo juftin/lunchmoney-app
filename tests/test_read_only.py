@@ -26,6 +26,7 @@ from lunchmoney_mcp.database.models import (
     Category,
     ManualAccount,
     PlaidAccount,
+    RecurringItem,
     Tag,
     Transaction,
 )
@@ -112,7 +113,15 @@ async def test_recurring_services_read_period_snapshot() -> None:
     database.get_cached_response.return_value = {
         "items": [recurring_item.model_dump(mode="json")]
     }
-    client = create_autospec(LunchMoneyApp, instance=True)
+    get_recurring_by_id = AsyncMock(return_value=recurring_item)
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                recurring_items=SimpleNamespace(get_recurring_by_id=get_recurring_by_id)
+            )
+        ),
+    )
     start_date = datetime.date(2026, 1, 1)
     end_date = datetime.date(2026, 1, 31)
 
@@ -133,7 +142,33 @@ async def test_recurring_services_read_period_snapshot() -> None:
 
     assert listed == [recurring_item]
     assert selected == recurring_item
+    get_recurring_by_id.assert_awaited_once_with(
+        id=recurring_item.id,
+        start_date=start_date,
+        end_date=end_date,
+    )
     database.get_cached_response.assert_awaited_with("recurring:2026-01-01:2026-01-31")
+
+
+@pytest.mark.asyncio
+async def test_recurring_item_service_reads_an_undated_cached_item() -> None:
+    """Use the persisted item definition for an undated ID lookup."""
+    recurring_item = _recurring_item()
+    database = AsyncMock()
+    database.get.return_value = RecurringItem(
+        id=recurring_item.id,
+        payload=recurring_item.model_dump(mode="json"),
+    )
+    client = create_autospec(LunchMoneyApp, instance=True)
+
+    result = await fetch_recurring_item_by_id(
+        db=database,
+        client=client,
+        recurring_item_id=recurring_item.id,
+    )
+
+    assert result == recurring_item
+    database.get.assert_awaited_once_with(RecurringItem, recurring_item.id)
 
 
 @pytest.mark.asyncio

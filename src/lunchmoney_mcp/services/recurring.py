@@ -6,6 +6,7 @@ from lunchmoney.models import RecurringObject
 
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
+from lunchmoney_mcp.database.models import RecurringItem
 
 
 async def fetch_recurring_items(
@@ -65,7 +66,7 @@ async def fetch_recurring_item_by_id(
     recurring_item_id: int,
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
-) -> RecurringObject | None:
+) -> RecurringObject:
     """Fetch one recurring item and its optional matching details.
 
     Parameters
@@ -86,10 +87,16 @@ async def fetch_recurring_item_by_id(
     RecurringObject
         Upstream recurring item matching the supplied identifier.
     """
-    items = await fetch_recurring_items(
-        db=db,
-        client=client,
+    if start_date is None and end_date is None:
+        cached_item = await db.get(RecurringItem, recurring_item_id)
+        if cached_item is not None:
+            return RecurringObject.model_validate(cached_item.payload)
+
+    item = await client.client.recurring_items.get_recurring_by_id(
+        id=recurring_item_id,
         start_date=start_date,
         end_date=end_date,
     )
-    return next((item for item in items if item.id == recurring_item_id), None)
+    if start_date is None and end_date is None:
+        await db.upsert(RecurringItem(id=item.id, payload=item.model_dump(mode="json")))
+    return item

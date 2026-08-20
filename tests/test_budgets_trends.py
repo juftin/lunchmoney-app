@@ -7,7 +7,7 @@ from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, create_autospec
 
 import pytest
 import pytest_asyncio
@@ -86,11 +86,37 @@ async def test_budget_settings_service_reads_cached_response() -> None:
     settings = _budget_settings()
     database = AsyncMock()
     database.get_cached_response.return_value = settings.model_dump(mode="json")
+    client = create_autospec(LunchMoneyApp, instance=True)
 
-    result = await fetch_budget_settings(db=database)
+    result = await fetch_budget_settings(db=database, client=client)
 
     assert result == settings
     database.get_cached_response.assert_awaited_once_with("budget-settings")
+
+
+@pytest.mark.asyncio
+async def test_budget_settings_service_refreshes_a_missing_snapshot() -> None:
+    """Fetch and cache budget settings when persistent storage has no snapshot."""
+    settings = _budget_settings()
+    get_budget_settings = AsyncMock(return_value=settings)
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                budgets=SimpleNamespace(get_budget_settings=get_budget_settings)
+            )
+        ),
+    )
+    database = AsyncMock()
+    database.get_cached_response.return_value = None
+
+    result = await fetch_budget_settings(db=database, client=client)
+
+    assert result == settings
+    get_budget_settings.assert_awaited_once_with()
+    database.upsert_cached_response.assert_awaited_once_with(
+        "budget-settings", settings.model_dump(mode="json")
+    )
 
 
 @pytest.mark.asyncio
@@ -111,10 +137,12 @@ async def test_budget_mutation_services_forward_to_lunch_money_client() -> None:
             )
         ),
     )
+    database = create_autospec(LunchMoneyDatabase, instance=True)
 
-    result = await set_budget_value(client=client, request=request)
+    result = await set_budget_value(client=client, db=database, request=request)
     await clear_budget_value(
         client=client,
+        db=database,
         category_id=request.category_id,
         start_date=request.start_date,
     )
@@ -125,6 +153,8 @@ async def test_budget_mutation_services_forward_to_lunch_money_client() -> None:
         category_id=request.category_id,
         start_date=request.start_date,
     )
+    assert database.delete_cached_responses.await_count == 2
+    database.delete_cached_responses.assert_awaited_with("summary:")
 
 
 @pytest.mark.asyncio
@@ -224,11 +254,13 @@ async def test_budget_settings_mcp_tool_delegates_to_service(
     fetch_settings = AsyncMock(return_value=_budget_settings())
     monkeypatch.setattr(budget_tools, "fetch_budget_settings", fetch_settings)
     database = object()
+    client = object()
     monkeypatch.setattr(budget_tools, "get_database", lambda: database)
+    monkeypatch.setattr(budget_tools, "get_lunchmoney_app", lambda: client)
 
     await mcp.call_tool("get_budget_settings", {})
 
-    fetch_settings.assert_awaited_once_with(db=database)
+    fetch_settings.assert_awaited_once_with(db=database, client=client)
 
 
 @pytest.mark.asyncio

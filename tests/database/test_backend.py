@@ -122,6 +122,22 @@ async def test_database_persists_recurring_items() -> None:
 
 
 @pytest.mark.asyncio
+async def test_database_deletes_cached_responses_by_prefix() -> None:
+    """Remove every summary snapshot without affecting other cached responses."""
+    async with LunchMoneyDatabase(IN_MEMORY_DATABASE_URL) as database:
+        await database.create_tables()
+        await database.upsert_cached_response("summary:2026-01-01:2026-01-31", {})
+        await database.upsert_cached_response("budget-settings", {})
+
+        await database.delete_cached_responses("summary:")
+
+        assert (
+            await database.get_cached_response("summary:2026-01-01:2026-01-31")
+        ) is None
+        assert await database.get_cached_response("budget-settings") == {}
+
+
+@pytest.mark.asyncio
 async def test_documented_sqlite_example_uses_public_api(
     migrated_database_url: str,
 ) -> None:
