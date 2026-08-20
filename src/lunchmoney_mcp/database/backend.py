@@ -14,7 +14,7 @@ from typing_extensions import Self
 from alembic import command
 from alembic.config import Config
 
-from sqlalchemy import event, update
+from sqlalchemy import delete, event, update
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlalchemy.pool import StaticPool
@@ -29,6 +29,8 @@ from lunchmoney_mcp.config import (
     get_runtime_mode,
 )
 from lunchmoney_mcp.database.models import (
+    CachedApiResponse,
+    RecurringItem,
     Category,
     ManualAccount,
     PlaidAccount,
@@ -47,7 +49,7 @@ RecordT = TypeVar("RecordT", bound=SQLModel)
 """A database record subtype used by record-loading helpers."""
 
 _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
-    {User, PlaidAccount, ManualAccount, Category, Tag, Transaction}
+    {User, PlaidAccount, ManualAccount, Category, Tag, Transaction, RecurringItem}
 )
 """Explicit record classes accepted by the convenience persistence API."""
 
@@ -136,6 +138,8 @@ def _model_rank(record: SQLModel) -> int:
         return 3
     if record_type is Transaction:
         return 4
+    if record_type is RecurringItem:
+        return 5
     msg = f"Unsupported SQLModel record: {record_type.__name__}"
     raise TypeError(msg)
 
@@ -172,7 +176,7 @@ def _dependency_order(records: list[SQLModel]) -> list[tuple[int, SQLModel]]:
             dependents[parent_index].add(index)
 
     ordered: list[tuple[int, SQLModel]] = []
-    for rank in range(5):
+    for rank in range(6):
         rank_indices = [
             index for index, record in enumerate(records) if _model_rank(record) == rank
         ]
@@ -212,6 +216,8 @@ def _record_primary_key(record: SQLModel) -> int:
         return cast(Tag, record).id
     if record_type is Transaction:
         return cast(Transaction, record).id
+    if record_type is RecurringItem:
+        return cast(RecurringItem, record).id
     msg = f"Unsupported SQLModel record: {record_type.__name__}"
     raise TypeError(msg)
 
@@ -230,6 +236,8 @@ def _primary_key_attribute(model: type[SQLModel]) -> Any:
         return Tag.id
     if model is Transaction:
         return Transaction.id
+    if model is RecurringItem:
+        return RecurringItem.id
     msg = f"Unsupported SQLModel model: {model.__name__}"
     raise TypeError(msg)
 
@@ -610,7 +618,7 @@ class LunchMoneyDatabase:
     def __init__(self, database_url: str | None = None) -> None:
         """Create database resources for the resolved connection URL."""
         resolved_url = resolve_database_url(database_url)
-        self._is_stateless = resolved_url == IN_MEMORY_DATABASE_URL
+        self._is_stateless = "mode=memory" in resolved_url
         engine_kwargs: dict[str, Any] = {}
         if self._is_stateless:
             engine_kwargs["poolclass"] = StaticPool
@@ -642,6 +650,32 @@ class LunchMoneyDatabase:
         """Create all SQLModel tables for databases without migrations."""
         async with self.engine.begin() as connection:
             await connection.run_sync(SQLModel.metadata.create_all)
+
+    async def get_cached_response(self, key: str) -> dict[str, Any] | None:
+        """Return a JSON response snapshot by its stable cache key."""
+        async with self.session_factory() as session:
+            record = await session.get(CachedApiResponse, key)
+            return record.payload if record is not None else None
+
+    async def upsert_cached_response(self, key: str, payload: dict[str, Any]) -> None:
+        """Atomically replace one JSON response snapshot."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                record = await session.get(CachedApiResponse, key)
+                if record is None:
+                    session.add(CachedApiResponse(key=key, payload=payload))
+                else:
+                    record.payload = payload
+
+    async def delete_cached_responses(self, prefix: str) -> None:
+        """Delete every response snapshot whose key starts with ``prefix``."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                await session.exec(
+                    delete(CachedApiResponse).where(
+                        cast(Any, CachedApiResponse.key).startswith(prefix)
+                    )
+                )
 
     async def get_sync_metadata(self, domain: str) -> SyncMetadata | None:
         """Return the synchronization watermark for one domain, if present."""

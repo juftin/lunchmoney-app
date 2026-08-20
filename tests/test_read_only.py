@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, create_autospec
 
 import pytest
 from lunchmoney.models import (
-    GetAllRecurring200Response,
+    CategoryObject,
     RecurringObject,
     SummaryResponseObject,
 )
@@ -20,12 +20,13 @@ from database.factories import (
     transaction_object,
 )
 from lunchmoney_mcp.app.main import fastapi_app
-from lunchmoney_mcp.client import LunchableData, LunchMoneyApp
+from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.database.models import (
     Category,
     ManualAccount,
     PlaidAccount,
+    RecurringItem,
     Tag,
     Transaction,
 )
@@ -79,21 +80,15 @@ def _recurring_item() -> RecurringObject:
 
 
 @pytest.mark.asyncio
-async def test_live_summary_service_forwards_query_options() -> None:
-    """Forward every supported budget-summary option to the Lunch Money client."""
+async def test_summary_service_reads_period_snapshot() -> None:
+    """Read a summary snapshot using its synchronized transaction period."""
     summary = SummaryResponseObject.model_validate({"aligned": True, "categories": []})
-    get_budget_summary = AsyncMock(return_value=summary)
-    client = cast(
-        LunchMoneyApp,
-        SimpleNamespace(
-            data=LunchableData(),
-            client=SimpleNamespace(
-                summary=SimpleNamespace(get_budget_summary=get_budget_summary)
-            ),
-        ),
-    )
+    database = AsyncMock()
+    database.get_cached_response.return_value = summary.model_dump(mode="json")
+    client = create_autospec(LunchMoneyApp, instance=True)
 
     result = await fetch_account_summary(
+        db=database,
         client=client,
         start_date=datetime.date(2026, 1, 1),
         end_date=datetime.date(2026, 1, 31),
@@ -102,13 +97,172 @@ async def test_live_summary_service_forwards_query_options() -> None:
         include_past_budget_dates=True,
         include_totals=True,
         include_rollover_pool=True,
-        force_refresh=True,
     )
 
     assert result == summary
+    database.get_cached_response.assert_awaited_once_with(
+        "summary:2026-01-01:2026-01-31"
+    )
+
+
+@pytest.mark.asyncio
+async def test_recurring_services_read_period_snapshot() -> None:
+    """Read recurring items and single items from a period snapshot."""
+    recurring_item = _recurring_item()
+    database = AsyncMock()
+    database.get_cached_response.return_value = {
+        "items": [recurring_item.model_dump(mode="json")]
+    }
+    get_recurring_by_id = AsyncMock(return_value=recurring_item)
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                recurring_items=SimpleNamespace(get_recurring_by_id=get_recurring_by_id)
+            )
+        ),
+    )
+    start_date = datetime.date(2026, 1, 1)
+    end_date = datetime.date(2026, 1, 31)
+
+    listed = await fetch_recurring_items(
+        db=database,
+        client=client,
+        start_date=start_date,
+        end_date=end_date,
+        include_suggested=True,
+    )
+    selected = await fetch_recurring_item_by_id(
+        db=database,
+        client=client,
+        recurring_item_id=recurring_item.id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    assert listed == [recurring_item]
+    assert selected == recurring_item
+    get_recurring_by_id.assert_awaited_once_with(
+        id=recurring_item.id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    database.get_cached_response.assert_awaited_with("recurring:2026-01-01:2026-01-31")
+
+
+@pytest.mark.asyncio
+async def test_recurring_item_service_reads_an_undated_cached_item() -> None:
+    """Use the persisted item definition for an undated ID lookup."""
+    recurring_item = _recurring_item()
+    database = AsyncMock()
+    database.get.return_value = RecurringItem(
+        id=recurring_item.id,
+        payload=recurring_item.model_dump(mode="json"),
+    )
+    client = create_autospec(LunchMoneyApp, instance=True)
+
+    result = await fetch_recurring_item_by_id(
+        db=database,
+        client=client,
+        recurring_item_id=recurring_item.id,
+    )
+
+    assert result == recurring_item
+    database.get.assert_awaited_once_with(RecurringItem, recurring_item.id)
+
+
+@pytest.mark.asyncio
+async def test_recurring_service_filters_suggested_items_by_default() -> None:
+    """Return suggested recurring items only when the caller explicitly requests them."""
+    recurring_item = _recurring_item()
+    suggested = recurring_item.model_copy(update={"id": 82, "status": "suggested"})
+    database = AsyncMock()
+    database.get_cached_response.return_value = {
+        "items": [
+            recurring_item.model_dump(mode="json"),
+            suggested.model_dump(mode="json"),
+        ]
+    }
+    client = create_autospec(LunchMoneyApp, instance=True)
+
+    default_items = await fetch_recurring_items(db=database, client=client)
+    all_items = await fetch_recurring_items(
+        db=database, client=client, include_suggested=True
+    )
+
+    assert default_items == [recurring_item]
+    assert all_items == [recurring_item, suggested]
+    database.get_cached_response.assert_awaited_with("recurring:latest")
+
+
+@pytest.mark.asyncio
+async def test_recurring_service_refreshes_a_missing_requested_window() -> None:
+    """Fetch and cache a requested recurring window absent from synchronized snapshots."""
+    recurring_item = _recurring_item()
+    get_all_recurring = AsyncMock(
+        return_value=SimpleNamespace(recurring_items=[recurring_item])
+    )
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                recurring_items=SimpleNamespace(get_all_recurring=get_all_recurring)
+            )
+        ),
+    )
+    database = AsyncMock()
+    database.get_cached_response.return_value = None
+    start_date = datetime.date(2025, 1, 1)
+
+    result = await fetch_recurring_items(
+        db=database,
+        client=client,
+        start_date=start_date,
+    )
+
+    assert result == [recurring_item]
+    get_all_recurring.assert_awaited_once_with(
+        start_date=start_date,
+        end_date=None,
+        include_suggested=True,
+    )
+    database.upsert_cached_response.assert_awaited_once_with(
+        "recurring:2025-01-01:None",
+        {"items": [recurring_item.model_dump(mode="json")]},
+    )
+
+
+@pytest.mark.asyncio
+async def test_summary_service_refreshes_a_missing_requested_window() -> None:
+    """Fetch and cache a requested summary window absent from synchronized snapshots."""
+    summary = SummaryResponseObject.model_validate({"aligned": True, "categories": []})
+    get_budget_summary = AsyncMock(return_value=summary)
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                summary=SimpleNamespace(get_budget_summary=get_budget_summary)
+            ),
+            refresh=AsyncMock(return_value={}),
+        ),
+    )
+    database = AsyncMock()
+    database.get_cached_response.return_value = None
+    database.list.return_value = []
+    start_date = datetime.date(2025, 1, 1)
+    end_date = datetime.date(2025, 1, 31)
+
+    result = await fetch_account_summary(
+        db=database,
+        client=client,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    assert result.aligned is True
     get_budget_summary.assert_awaited_once_with(
-        start_date=datetime.date(2026, 1, 1),
-        end_date=datetime.date(2026, 1, 31),
+        start_date=start_date,
+        end_date=end_date,
         include_exclude_from_budgets=True,
         include_occurrences=True,
         include_past_budget_dates=True,
@@ -118,51 +272,54 @@ async def test_live_summary_service_forwards_query_options() -> None:
 
 
 @pytest.mark.asyncio
-async def test_live_recurring_services_forward_matching_options() -> None:
-    """Forward recurring-item query windows and preserve upstream objects."""
-    recurring_item = _recurring_item()
-    recurring_response = GetAllRecurring200Response(recurring_items=[recurring_item])
-    get_all_recurring = AsyncMock(return_value=recurring_response)
-    get_recurring_by_id = AsyncMock(return_value=recurring_item)
+async def test_summary_service_refreshes_categories_before_filtering_a_new_snapshot() -> (
+    None
+):
+    """Exclude budget-hidden categories from a newly fetched summary snapshot."""
+    category = category_object()
+    summary = SummaryResponseObject.model_validate(
+        {
+            "aligned": True,
+            "categories": [
+                {
+                    "category_id": category.id,
+                    "totals": {
+                        "other_activity": 0,
+                        "recurring_activity": 0,
+                        "budgeted": 0,
+                        "available": 0,
+                        "recurring_remaining": 0,
+                        "recurring_expected": 0,
+                    },
+                }
+            ],
+        }
+    )
+    get_budget_summary = AsyncMock(return_value=summary)
+    refresh = AsyncMock(return_value={category.id: category})
     client = cast(
         LunchMoneyApp,
         SimpleNamespace(
             client=SimpleNamespace(
-                recurring_items=SimpleNamespace(
-                    get_all_recurring=get_all_recurring,
-                    get_recurring_by_id=get_recurring_by_id,
-                )
-            )
+                summary=SimpleNamespace(get_budget_summary=get_budget_summary)
+            ),
+            refresh=refresh,
         ),
     )
-    start_date = datetime.date(2026, 1, 1)
-    end_date = datetime.date(2026, 1, 31)
+    database = AsyncMock()
+    database.get_cached_response.return_value = None
+    database.list.return_value = [Category.from_api(category)]
 
-    listed = await fetch_recurring_items(
+    result = await fetch_account_summary(
+        db=database,
         client=client,
-        start_date=start_date,
-        end_date=end_date,
-        include_suggested=True,
-    )
-    selected = await fetch_recurring_item_by_id(
-        client=client,
-        recurring_item_id=recurring_item.id,
-        start_date=start_date,
-        end_date=end_date,
+        start_date=datetime.date(2025, 1, 1),
+        end_date=datetime.date(2025, 1, 31),
     )
 
-    assert listed == [recurring_item]
-    assert selected == recurring_item
-    get_all_recurring.assert_awaited_once_with(
-        start_date=start_date,
-        end_date=end_date,
-        include_suggested=True,
-    )
-    get_recurring_by_id.assert_awaited_once_with(
-        id=recurring_item.id,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    assert result.categories == []
+    refresh.assert_awaited_once_with(model=CategoryObject, cache=False)
+    database.upsert_many.assert_awaited_once_with([Category.from_api(category)])
 
 
 @pytest.mark.asyncio

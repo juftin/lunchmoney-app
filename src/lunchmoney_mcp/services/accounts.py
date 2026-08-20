@@ -231,6 +231,8 @@ async def delete_manual_account(
         if affected_transactions:
             await db.upsert_many(affected_transactions)
     await db.delete(ManualAccount, account_id)
+    if delete_items:
+        await db.delete_cached_responses("summary:")
 
 
 async def trigger_plaid_fetch(

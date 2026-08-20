@@ -13,52 +13,34 @@ from lunchmoney_mcp.database import LunchMoneyDatabase
 
 
 async def fetch_budget_settings(
+    db: LunchMoneyDatabase,
     client: LunchMoneyApp,
-    db: LunchMoneyDatabase | None = None,
-    force_refresh: bool = False,
 ) -> BudgetSettingsResponseObject:
     """Fetch the authenticated user's budget-period settings.
 
     Parameters
     ----------
+    db : LunchMoneyDatabase
+        Database containing synchronized budget-settings snapshots.
     client : LunchMoneyApp
-        Configured Lunch Money API client.
-    db : LunchMoneyDatabase | None
-        Optional database instance containing persisted sync metadata.
-    force_refresh : bool
-        Whether to bypass client cache and force an upstream API call.
+        Configured Lunch Money API client used to populate an absent snapshot.
 
     Returns
     -------
     BudgetSettingsResponseObject
         Upstream budget-period settings.
     """
-    if not force_refresh:
-        if db is not None:
-            meta = await db.get_sync_metadata("budget_settings")
-            if meta and meta.payload:
-                return BudgetSettingsResponseObject.model_validate(meta.payload)
-        if client.data.budget_settings is not None:
-            return client.data.budget_settings
-        return BudgetSettingsResponseObject.model_validate(
-            {
-                "budget_period_granularity": "month",
-                "budget_period_quantity": 1,
-                "budget_period_anchor_date": "2026-01-01",
-                "budget_hide_no_activity": False,
-                "budget_use_last_day_of_month": True,
-                "budget_income_option": "activity",
-                "budget_rollover_left_to_budget": False,
-            }
-        )
-
-    res = await client.client.budgets.get_budget_settings()
-    client.data.budget_settings = res
-    return res
+    payload = await db.get_cached_response("budget-settings")
+    if payload is not None:
+        return BudgetSettingsResponseObject.model_validate(payload)
+    settings = await client.client.budgets.get_budget_settings()
+    await db.upsert_cached_response("budget-settings", settings.model_dump(mode="json"))
+    return settings
 
 
 async def set_budget_value(
     client: LunchMoneyApp,
+    db: LunchMoneyDatabase,
     request: UpsertBudgetRequestObject,
 ) -> BudgetUpsertResponseObject:
     """Set a category's budget value for one budget period upstream.
@@ -67,6 +49,8 @@ async def set_budget_value(
     ----------
     client : LunchMoneyApp
         Configured Lunch Money API client.
+    db : LunchMoneyDatabase
+        Database whose affected summary snapshots must be invalidated.
     request : UpsertBudgetRequestObject
         Validated category, period, amount, and optional currency or notes.
 
@@ -75,15 +59,16 @@ async def set_budget_value(
     BudgetUpsertResponseObject
         Canonical budget value returned by Lunch Money.
     """
-    res = await client.client.budgets.upsert_budget(
+    response = await client.client.budgets.upsert_budget(
         upsert_budget_request_object=request,
     )
-    client.data.summaries.clear()
-    return res
+    await db.delete_cached_responses("summary:")
+    return response
 
 
 async def clear_budget_value(
     client: LunchMoneyApp,
+    db: LunchMoneyDatabase,
     category_id: int,
     start_date: datetime.date,
 ) -> None:
@@ -93,6 +78,8 @@ async def clear_budget_value(
     ----------
     client : LunchMoneyApp
         Configured Lunch Money API client.
+    db : LunchMoneyDatabase
+        Database whose affected summary snapshots must be invalidated.
     category_id : int
         Identifier of the budget category to clear.
     start_date : datetime.date
@@ -102,4 +89,4 @@ async def clear_budget_value(
         category_id=category_id,
         start_date=start_date,
     )
-    client.data.summaries.clear()
+    await db.delete_cached_responses("summary:")

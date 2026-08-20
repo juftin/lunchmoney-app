@@ -5,7 +5,7 @@ from ipaddress import ip_address
 import os
 from typing import Any, Literal, cast
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, CliSettingsSource, SettingsConfigDict
 
 DEFAULT_DATABASE_URL: str = "sqlite+aiosqlite:///lunchmoney.db"
@@ -148,11 +148,25 @@ class StatelessSettings(BaseModel):
     )
     """Whether to use the shared in-memory database."""
 
+    ephemeral: bool = Field(
+        default=False,
+        description="Use a fresh in-memory database for each operation and discard it afterwards",
+    )
+    """Whether each operation must refresh and discard its in-memory database."""
+
     sync_safety_margin_minutes: int = Field(
         default=5,
         description="Safety overlap margin in minutes for incremental ETL queries",
     )
     """Safety overlap margin for incremental ETL queries."""
+
+    @model_validator(mode="after")
+    def _validate_memory_modes(self) -> "StatelessSettings":
+        """Reject mutually exclusive shared-memory and ephemeral modes."""
+        if self.stateless and self.ephemeral:
+            msg = "stateless and ephemeral cannot both be enabled"
+            raise ValueError(msg)
+        return self
 
 
 class SyncCliSettings(StatelessSettings, RuntimeSettingsBase):

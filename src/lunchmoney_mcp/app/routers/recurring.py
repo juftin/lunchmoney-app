@@ -6,8 +6,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from lunchmoney.models import RecurringObject
 
-from lunchmoney_mcp.app.dependencies import get_lunchmoney_app
+from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.client import LunchMoneyApp
+from lunchmoney_mcp.database import LunchMoneyDatabase
 from lunchmoney_mcp.services import fetch_recurring_item_by_id, fetch_recurring_items
 
 router = APIRouter(tags=["Recurring Items"])
@@ -20,6 +21,7 @@ router = APIRouter(tags=["Recurring Items"])
     operation_id="list_recurring_items",
 )
 async def list_recurring_items(
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
@@ -37,6 +39,7 @@ async def list_recurring_items(
     **Returns:** Recurring items returned by Lunch Money.
     """
     return await fetch_recurring_items(
+        db=db,
         client=client,
         start_date=start_date,
         end_date=end_date,
@@ -51,6 +54,7 @@ async def list_recurring_items(
 )
 async def get_recurring_item(
     recurring_item_id: int,
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
     client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
@@ -67,6 +71,7 @@ async def get_recurring_item(
     **Returns:** Recurring item returned by Lunch Money.
     """
     return await fetch_recurring_item_by_id(
+        db=db,
         client=client,
         recurring_item_id=recurring_item_id,
         start_date=start_date,

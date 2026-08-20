@@ -1,6 +1,10 @@
 """Tests for Model Context Protocol (MCP) tools and Pydantic response models."""
 
 import sys
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
@@ -67,12 +71,68 @@ async def test_mcp_runtime_lifespan_creates_and_disposes_ephemeral_storage(
     get_database = Mock(return_value=database)
     monkeypatch.setattr(mcp_app_module, "get_database", get_database)
     monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
+    monkeypatch.setattr(
+        mcp_app_module, "get_settings", lambda: RuntimeSettings(ephemeral=False)
+    )
 
     async with mcp_app_module.mcp_lifespan(mcp):
         database.create_tables.assert_awaited_once_with()
 
     database.dispose.assert_awaited_once_with()
     get_database.cache_clear.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_mcp_runtime_lifespan_skips_storage_in_ephemeral_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Leave private per-operation storage to the MCP operation middleware."""
+    import lunchmoney_mcp.mcp.app as mcp_app_module
+
+    get_database = Mock()
+    monkeypatch.setattr(mcp_app_module, "get_database", get_database)
+    monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
+    monkeypatch.setattr(
+        mcp_app_module, "get_settings", lambda: RuntimeSettings(ephemeral=True)
+    )
+
+    async with mcp_app_module.mcp_lifespan(mcp):
+        pass
+
+    get_database.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_explicit_mcp_sync_skips_automatic_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Let the sync tool run only its caller-requested upstream synchronization."""
+    import lunchmoney_mcp.mcp.operations as operations_module
+
+    observed_refresh: list[bool] = []
+
+    @asynccontextmanager
+    async def fake_data_operation(**kwargs: Any) -> AsyncIterator[object]:
+        """Record lifecycle refresh settings without creating application storage."""
+        observed_refresh.append(kwargs["refresh"])
+        yield object()
+
+    async def call_next(_: object) -> str:
+        """Return a sentinel result from the simulated MCP tool."""
+        return "synchronized"
+
+    monkeypatch.setattr(operations_module, "data_operation", fake_data_operation)
+    monkeypatch.setattr(operations_module, "get_lunchmoney_app", object)
+    monkeypatch.setattr(operations_module, "get_shared_database", object)
+    monkeypatch.setattr(operations_module, "get_settings", RuntimeSettings)
+    context = SimpleNamespace(message=SimpleNamespace(name="sync_data"))
+
+    result = await operations_module.DataOperationMiddleware().on_call_tool(
+        context, call_next
+    )
+
+    assert result == "synchronized"
+    assert observed_refresh == [False]
 
 
 @pytest.mark.parametrize(

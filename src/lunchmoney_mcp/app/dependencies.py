@@ -10,10 +10,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.config import get_secret_settings
 from lunchmoney_mcp.database import LunchMoneyDatabase
+from lunchmoney_mcp.services.operations import get_operation_database
 
 
 @cache
-def get_database() -> LunchMoneyDatabase:
+def get_shared_database() -> LunchMoneyDatabase:
     """FastAPI dependency supplying the shared cached LunchMoneyDatabase instance.
 
     Returns
@@ -22,6 +23,17 @@ def get_database() -> LunchMoneyDatabase:
         Shared database access wrapper.
     """
     return LunchMoneyDatabase()
+
+
+def get_database() -> LunchMoneyDatabase:
+    """Return the active operation database or the process-shared database."""
+    return get_operation_database() or get_shared_database()
+
+
+get_database.cache_clear = get_shared_database.cache_clear  # type: ignore[attr-defined]
+"""Compatibility hook for callers resetting the shared database fixture."""
+get_database.cache_info = get_shared_database.cache_info  # type: ignore[attr-defined]
+"""Compatibility hook exposing shared database cache state."""
 
 
 async def get_db_session(
@@ -58,4 +70,9 @@ def get_lunchmoney_app() -> LunchMoneyApp:
     )
 
 
-__all__ = ["get_database", "get_db_session", "get_lunchmoney_app"]
+__all__ = [
+    "get_database",
+    "get_db_session",
+    "get_lunchmoney_app",
+    "get_shared_database",
+]

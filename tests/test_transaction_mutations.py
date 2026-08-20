@@ -148,6 +148,8 @@ async def test_transaction_writes_cache_canonical_upstream_responses() -> None:
         split_transaction_request=split_request,
     )
     assert database.upsert.await_count == 5
+    assert database.delete_cached_responses.await_count == 5
+    database.delete_cached_responses.assert_awaited_with("summary:")
 
 
 @pytest.mark.asyncio
@@ -198,6 +200,8 @@ async def test_transaction_deletes_reconcile_cached_records_after_upstream_succe
     database.delete.assert_any_await(Transaction, 101)
     database.delete.assert_any_await(Transaction, transaction.id)
     database.upsert.assert_awaited_once()
+    assert database.delete_cached_responses.await_count == 4
+    database.delete_cached_responses.assert_awaited_with("summary:")
 
 
 @pytest.mark.asyncio

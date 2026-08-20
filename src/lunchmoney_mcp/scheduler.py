@@ -9,8 +9,9 @@ import sys
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
+from lunchmoney_mcp.app.dependencies import get_lunchmoney_app, get_shared_database
 from lunchmoney_mcp.config import RuntimeSettings, get_settings
+from lunchmoney_mcp.services.operations import data_operation
 from lunchmoney_mcp.services import run_scheduled_sync as execute_scheduled_sync
 
 logger = logging.getLogger(__name__)
@@ -267,11 +268,18 @@ async def run_scheduled_sync() -> None:
         _active_sync_tasks.add(task)
     try:
         settings = get_settings()
-        result = await execute_scheduled_sync(
-            db=get_database(),
-            client=get_lunchmoney_app(),
+        client = get_lunchmoney_app()
+        async with data_operation(
+            client=client,
+            database=None if settings.ephemeral else get_shared_database(),
             days=settings.schedule_days,
-        )
+            refresh=False,
+        ) as db:
+            result = await execute_scheduled_sync(
+                db=db,
+                client=client,
+                days=settings.schedule_days,
+            )
         log_method = logger.info if result.status == "success" else logger.warning
         log_method(
             "Scheduled synchronization %s; started=%s finished=%s",

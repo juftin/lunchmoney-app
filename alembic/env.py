@@ -12,6 +12,8 @@ from sqlmodel import SQLModel
 
 from lunchmoney_mcp.database.backend import resolve_database_url
 from lunchmoney_mcp.database.models import (  # noqa: F401
+    CachedApiResponse,
+    RecurringItem,
     Category,
     ManualAccount,
     PlaidAccount,

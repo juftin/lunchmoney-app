@@ -213,14 +213,14 @@ async def fetch_dashboard_data(
         _capture(fetch_accounts(db=db)),
         _capture(
             fetch_account_summary(
+                db=db,
                 client=client,
                 start_date=resolved_period_start,
                 end_date=period_end,
-                db=db,
                 include_totals=True,
             )
         ),
-        _capture(fetch_budget_settings(client=client, db=db)),
+        _capture(fetch_budget_settings(db=db, client=client)),
         _capture(
             fetch_category_spending(
                 db=db,
