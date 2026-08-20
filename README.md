@@ -47,5 +47,3 @@ Try asking:
 - [MCP guide](docs/MCP_GUIDE.md): client configuration, remote connections, and OAuth.
 - [CLI guide](docs/CLI.md): commands, data handling, scheduling, and shell completion.
 - [Operations runbook](docs/OPERATIONS.md): self-hosting, Docker Compose, security, and backups.
-- [Database guide](docs/DATABASE.md): database configuration and the Python persistence API.
-- [Contributing guide](docs/contributing.md): local development and project contribution.

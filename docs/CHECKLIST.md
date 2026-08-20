@@ -178,7 +178,8 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operat
       controls across operational commands, with privacy-preserving stdio defaults.
 - [x] **Documentation Information Architecture**: Keep the README focused on
       end-user MCP setup and move CLI and database reference material into
-      dedicated guides.
+      dedicated guides; exclude engineering plans and handoff documents from
+      the published documentation site.
 
 ---
 

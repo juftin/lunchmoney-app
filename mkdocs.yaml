@@ -2,13 +2,14 @@
 
 site_name: lunchmoney-mcp
 nav:
-    - Home: index.md
-    - MCP guide: MCP_GUIDE.md
-    - CLI guide: CLI.md
-    - Operations: OPERATIONS.md
-    - Database guide: DATABASE.md
-    - API documentation: reference/
-    - Contributing: contributing.md
+    - Get started: index.md
+    - Use with an MCP client: MCP_GUIDE.md
+    - Command line: CLI.md
+    - Self-hosting: OPERATIONS.md
+    - Developers:
+          - Database API: DATABASE.md
+          - API reference: reference/
+          - Contributing: contributing.md
 theme:
     name: material
     features:
@@ -39,6 +40,13 @@ extra:
     generator: false
 exclude_docs: |
     gen_pages.py
+    AGENT_HANDOFF.md
+    CHECKLIST.md
+    DESIGN_DASHBOARD_SPA.md
+    INCREMENTAL_ETL.md
+    ROADMAP.md
+    UPSTREAM_COMPATIBILITY.md
+    superpowers/**
 markdown_extensions:
     - toc:
           permalink: "#"
