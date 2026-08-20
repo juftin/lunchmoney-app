@@ -29,6 +29,6 @@ for path in sorted(SOURCE_CODE.rglob("*.py")):
 
     mkdocs_gen_files.set_edit_path(full_doc_path, path)
 
-readme_content = (PROJECT_DIR / "README.md").read_text()
+readme_content = (PROJECT_DIR / "README.md").read_text().replace("](docs/", "](")
 with mkdocs_gen_files.open("index.md", "w") as index_file:
     index_file.write(readme_content)

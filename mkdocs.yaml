@@ -3,6 +3,10 @@
 site_name: lunchmoney-mcp
 nav:
     - Home: index.md
+    - MCP guide: MCP_GUIDE.md
+    - CLI guide: CLI.md
+    - Operations: OPERATIONS.md
+    - Database guide: DATABASE.md
     - API documentation: reference/
     - Contributing: contributing.md
 theme:
