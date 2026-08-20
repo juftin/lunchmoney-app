@@ -5,6 +5,11 @@ Database synchronization services for Lunch Money data.
 import datetime
 
 from lunchmoney.models.transaction_object import TransactionObject
+from lunchmoney.models import (
+    BudgetSettingsResponseObject,
+    SummaryResponseObject,
+    GetAllRecurring200Response,
+)
 from sqlmodel import SQLModel
 
 from lunchmoney_mcp.client import (
@@ -26,6 +31,7 @@ from lunchmoney_mcp.database.models import (
     Tag,
     Transaction,
     User,
+    RecurringItem,
 )
 
 
@@ -104,6 +110,27 @@ async def sync_database(
             cache=False,
         )
 
+    upstream = getattr(client, "client", None)
+    budget_settings: BudgetSettingsResponseObject | None = None
+    summary: SummaryResponseObject | None = None
+    recurring_response: GetAllRecurring200Response | None = None
+    if upstream is not None and hasattr(upstream, "budgets"):
+        budget_settings = await upstream.budgets.get_budget_settings()
+        summary = await upstream.summary.get_budget_summary(
+            start_date=resolved_start_date,
+            end_date=resolved_end_date,
+            include_exclude_from_budgets=True,
+            include_occurrences=True,
+            include_past_budget_dates=True,
+            include_totals=True,
+            include_rollover_pool=True,
+        )
+        recurring_response = await upstream.recurring_items.get_all_recurring(
+            start_date=resolved_start_date,
+            end_date=resolved_end_date,
+            include_suggested=True,
+        )
+
     records: list[SQLModel] = []
     records.append(User.from_api(model=user_obj))
     for plaid in plaid_objs.values():
@@ -118,6 +145,35 @@ async def sync_database(
         records.append(Transaction.from_api(model=txn))
 
     await db.upsert_many(records)
+    if budget_settings is not None:
+        await db.upsert_cached_response(
+            "budget-settings", budget_settings.model_dump(mode="json")
+        )
+    if summary is not None:
+        await db.upsert_cached_response(
+            f"summary:{resolved_start_date}:{resolved_end_date}",
+            summary.model_dump(mode="json"),
+        )
+    if recurring_response is not None:
+        recurring_payload = {
+            "items": [
+                item.model_dump(mode="json")
+                for item in recurring_response.recurring_items or []
+            ]
+        }
+        await db.upsert_cached_response(
+            f"recurring:{resolved_start_date}:{resolved_end_date}", recurring_payload
+        )
+        await db.upsert_cached_response("recurring:latest", recurring_payload)
+        await db.upsert_many(
+            [
+                RecurringItem(
+                    id=item.id,
+                    payload={**item.model_dump(mode="json"), "matches": None},
+                )
+                for item in recurring_response.recurring_items or []
+            ]
+        )
     if incremental:
         await db.upsert_sync_metadata(
             SyncMetadata(

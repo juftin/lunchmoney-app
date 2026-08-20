@@ -47,7 +47,7 @@ graph TD
 - **Sync Strategy**: Background worker or explicit `/api/sync` calls fetch upstream updates and upsert changes into the database. Reads are served instantaneously from local disk/database cache.
 - **Use Cases**: Local CLI usage, long-running MCP servers, home-server deployments (Docker Compose).
 
-### 2. Stateless In-Memory Mode (`LUNCHMONEY_STATELESS=true`)
+### 2. Shared In-Memory Mode (`LUNCHMONEY_STATELESS=true`)
 
 - **Database Engine**: Shared in-memory SQLite (`sqlite+aiosqlite:///file:memdb?mode=memory&cache=shared&uri=true`) configured with `StaticPool`.
 - **Sync Strategy**: **100% refreshed from Lunch Money v2 API on demand**. For every request or operation:
@@ -55,6 +55,12 @@ graph TD
     2. Data is fetched live from the Lunch Money API and loaded into memory.
     3. The request/tool operation is executed against the fresh in-memory data graph.
 - **Use Cases**: Ephemeral containers, serverless environments (AWS Lambda, Google Cloud Run, Vercel), security-restricted environments where storing financial data on disk is forbidden.
+
+### 3. Ephemeral Per-Operation Mode (`LUNCHMONEY_EPHEMERAL=true`)
+
+- **Database Engine**: A private in-memory SQLite database created for each REST or MCP data operation.
+- **Sync Strategy**: Refresh upstream data before the operation, then dispose the database immediately afterward.
+- **Use Cases**: Requests that must not retain financial data in process memory after completion.
 
 ---
 

@@ -11,6 +11,7 @@ from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.utilities.lifespan import combine_lifespans
 
 from lunchmoney_mcp.app.auth import verify_api_key
+from lunchmoney_mcp.app.dependencies import get_lunchmoney_app, get_shared_database
 from lunchmoney_mcp.app.lifespan import lifespan
 from lunchmoney_mcp.app.security import apply_security_middleware
 from lunchmoney_mcp.app.routers import (
@@ -31,10 +32,14 @@ from lunchmoney_mcp.mcp import mcp
 from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.observability import log_event, metrics
 from lunchmoney_mcp.schemas import RootResponse
+from lunchmoney_mcp.services.operations import data_operation
 
 apply_logging_config()
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+_EXPLICIT_SYNC_PATHS: frozenset[str] = frozenset({"/api/sync", "/api/sync/status"})
+"""REST operations that establish storage but perform their own refresh."""
 
 fastapi_app = FastAPI(
     title="Lunch Money MCP",
@@ -45,6 +50,25 @@ api_router = APIRouter(prefix="/api")
 """Router namespace for every public REST API operation."""
 
 fastapi_app.middleware("http")(verify_api_key)
+
+
+async def bind_data_operation(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    """Bind one persistence-mode database lifecycle to a complete request."""
+    operational_paths = {"/api", "/health", "/healthz", "/ready", "/readyz", "/metrics"}
+    if request.url.path in operational_paths or request.url.path.startswith("/mcp"):
+        return await call_next(request)
+    async with data_operation(
+        client=get_lunchmoney_app(),
+        database=None if get_settings().ephemeral else get_shared_database(),
+        refresh=request.url.path not in _EXPLICIT_SYNC_PATHS,
+    ):
+        return await call_next(request)
+
+
+fastapi_app.middleware("http")(bind_data_operation)
 
 
 async def observe_request(
@@ -145,6 +169,7 @@ app = FastAPI(
 )
 
 app.middleware("http")(verify_api_key)
+app.middleware("http")(bind_data_operation)
 app.middleware("http")(observe_request)
 apply_security_middleware(app=app, settings=get_settings())
 

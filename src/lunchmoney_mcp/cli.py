@@ -11,7 +11,8 @@ import uvicorn
 from pydantic import ValidationError
 
 from lunchmoney_mcp.__about__ import __application__, __version__
-from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
+from lunchmoney_mcp.app.dependencies import get_lunchmoney_app, get_shared_database
+from lunchmoney_mcp.config import get_settings
 from lunchmoney_mcp.config import (
     McpCliSettings,
     ScheduleCliSettings,
@@ -29,6 +30,7 @@ from lunchmoney_mcp.logging_config import LOG_CONFIG
 from lunchmoney_mcp.mcp import server as mcp_server
 from lunchmoney_mcp.scheduler import run_schedule_process
 from lunchmoney_mcp.services import execute_sync
+from lunchmoney_mcp.services.operations import data_operation
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -212,13 +214,20 @@ async def _run_sync(
     safety_margin_minutes : int
         Overlap applied to an incremental transaction refresh.
     """
-    response = await execute_sync(
-        db=get_database(),
-        client=get_lunchmoney_app(),
+    client = get_lunchmoney_app()
+    async with data_operation(
+        client=client,
+        database=None if get_settings().ephemeral else get_shared_database(),
         days=days,
-        incremental=incremental,
-        safety_margin_minutes=safety_margin_minutes,
-    )
+        refresh=False,
+    ) as db:
+        response = await execute_sync(
+            db=db,
+            client=client,
+            days=days,
+            incremental=incremental,
+            safety_margin_minutes=safety_margin_minutes,
+        )
     print(response.model_dump_json())
 
 

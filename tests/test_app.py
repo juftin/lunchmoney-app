@@ -1,6 +1,7 @@
 """Tests for the vendored Lunch Money application module."""
 
 from pathlib import Path
+from collections.abc import AsyncIterator
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import ANY, AsyncMock, create_autospec
@@ -304,6 +305,49 @@ def test_fastapi_api_root_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
         assert response.status_code == 200
         data = response.json()
         assert data["message"] == "Hello World"
+
+
+@pytest.mark.asyncio
+async def test_explicit_sync_request_skips_automatic_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reserve the sync endpoint's single refresh for its requested date window."""
+    from contextlib import asynccontextmanager
+
+    from starlette.requests import Request
+    from starlette.responses import Response
+    from lunchmoney_mcp.config import RuntimeSettings
+
+    observed_refresh: list[bool] = []
+
+    @asynccontextmanager
+    async def fake_data_operation(**kwargs: Any) -> AsyncIterator[object]:
+        """Record lifecycle refresh settings without creating application storage."""
+        observed_refresh.append(kwargs["refresh"])
+        yield object()
+
+    async def call_next(_: Request) -> Response:
+        """Return a successful response from the simulated request handler."""
+        return Response(status_code=200)
+
+    monkeypatch.setattr(app_main_module, "data_operation", fake_data_operation)
+    monkeypatch.setattr(app_main_module, "get_lunchmoney_app", object)
+    monkeypatch.setattr(app_main_module, "get_shared_database", object)
+    monkeypatch.setattr(app_main_module, "get_settings", RuntimeSettings)
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/api/sync",
+            "headers": [],
+            "query_string": b"days=14",
+        }
+    )
+
+    response = await app_main_module.bind_data_operation(request, call_next)
+
+    assert response.status_code == 200
+    assert observed_refresh == [False]
 
 
 def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 from lunchmoney.models import RecurringObject
 
-from lunchmoney_mcp.app.dependencies import get_lunchmoney_app
+from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_mcp.mcp.app import mcp
 from lunchmoney_mcp.services import fetch_recurring_item_by_id, fetch_recurring_items
 
 if TYPE_CHECKING:
-    from lunchmoney_mcp.client import LunchMoneyApp
+    pass
 
 
 @mcp.tool()
@@ -35,9 +35,9 @@ async def list_recurring_items(
     list[RecurringObject]
         Recurring items returned by Lunch Money.
     """
-    client: LunchMoneyApp = get_lunchmoney_app()
     return await fetch_recurring_items(
-        client=client,
+        db=get_database(),
+        client=get_lunchmoney_app(),
         start_date=start_date,
         end_date=end_date,
         include_suggested=include_suggested,
@@ -66,9 +66,9 @@ async def get_recurring_item(
     RecurringObject
         Recurring item returned by Lunch Money.
     """
-    client: LunchMoneyApp = get_lunchmoney_app()
     return await fetch_recurring_item_by_id(
-        client=client,
+        db=get_database(),
+        client=get_lunchmoney_app(),
         recurring_item_id=recurring_item_id,
         start_date=start_date,
         end_date=end_date,

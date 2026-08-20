@@ -175,6 +175,13 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operat
 
 ---
 
+### 🧹 Follow-Up Hardening
+
+- [ ] **Plaid Fetch Summary Invalidation**: Invalidate cached summary snapshots after a successful Plaid fetch trigger, so imported transactions cannot leave stale summary data before the next synchronization.
+- [ ] **Upstream HTTP Error Mapping**: Translate generated Lunch Money client errors, especially upstream 404 responses, into the corresponding REST API status instead of returning generic 500 responses.
+
+---
+
 ## 📝 Documentation Auto-Improvement Protocol
 
 Whenever an agent completes a task, refactor code, or modify a signature:
