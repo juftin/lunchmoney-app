@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, create_autospec
 
 import pytest
 from lunchmoney.models import (
+    CategoryObject,
     RecurringObject,
     SummaryResponseObject,
 )
@@ -206,7 +207,8 @@ async def test_summary_service_refreshes_a_missing_requested_window() -> None:
         SimpleNamespace(
             client=SimpleNamespace(
                 summary=SimpleNamespace(get_budget_summary=get_budget_summary)
-            )
+            ),
+            refresh=AsyncMock(return_value={}),
         ),
     )
     database = AsyncMock()
@@ -232,6 +234,57 @@ async def test_summary_service_refreshes_a_missing_requested_window() -> None:
         include_totals=True,
         include_rollover_pool=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_summary_service_refreshes_categories_before_filtering_a_new_snapshot() -> (
+    None
+):
+    """Exclude budget-hidden categories from a newly fetched summary snapshot."""
+    category = category_object()
+    summary = SummaryResponseObject.model_validate(
+        {
+            "aligned": True,
+            "categories": [
+                {
+                    "category_id": category.id,
+                    "totals": {
+                        "other_activity": 0,
+                        "recurring_activity": 0,
+                        "budgeted": 0,
+                        "available": 0,
+                        "recurring_remaining": 0,
+                        "recurring_expected": 0,
+                    },
+                }
+            ],
+        }
+    )
+    get_budget_summary = AsyncMock(return_value=summary)
+    refresh = AsyncMock(return_value={category.id: category})
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                summary=SimpleNamespace(get_budget_summary=get_budget_summary)
+            ),
+            refresh=refresh,
+        ),
+    )
+    database = AsyncMock()
+    database.get_cached_response.return_value = None
+    database.list.return_value = [Category.from_api(category)]
+
+    result = await fetch_account_summary(
+        db=database,
+        client=client,
+        start_date=datetime.date(2025, 1, 1),
+        end_date=datetime.date(2025, 1, 31),
+    )
+
+    assert result.categories == []
+    refresh.assert_awaited_once_with(model=CategoryObject, cache=False)
+    database.upsert_many.assert_awaited_once_with([Category.from_api(category)])
 
 
 @pytest.mark.asyncio

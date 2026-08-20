@@ -2,7 +2,7 @@
 
 import datetime
 
-from lunchmoney.models import SummaryResponseObject
+from lunchmoney.models import CategoryObject, SummaryResponseObject
 
 from lunchmoney_mcp.client import LunchMoneyApp
 from lunchmoney_mcp.database import LunchMoneyDatabase
@@ -56,6 +56,10 @@ async def fetch_account_summary(
             include_past_budget_dates=True,
             include_totals=True,
             include_rollover_pool=True,
+        )
+        category_objects = await client.refresh(model=CategoryObject, cache=False)
+        await db.upsert_many(
+            [Category.from_api(category) for category in category_objects.values()]
         )
         payload = summary.model_dump(mode="json")
         await db.upsert_cached_response(f"summary:{start_date}:{end_date}", payload)
