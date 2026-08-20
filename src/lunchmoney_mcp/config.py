@@ -139,8 +139,8 @@ class ExecutionSettings(BaseModel):
     """Application deployment environment name."""
 
 
-class StatelessSettings(BaseModel):
-    """Non-secret settings controlling database persistence."""
+class PersistenceSettings(BaseModel):
+    """Non-secret settings selecting the lifetime of stored financial data."""
 
     stateless: bool = Field(
         default=False,
@@ -154,19 +154,23 @@ class StatelessSettings(BaseModel):
     )
     """Whether each operation must refresh and discard its in-memory database."""
 
-    sync_safety_margin_minutes: int = Field(
-        default=5,
-        description="Safety overlap margin in minutes for incremental ETL queries",
-    )
-    """Safety overlap margin for incremental ETL queries."""
-
     @model_validator(mode="after")
-    def _validate_memory_modes(self) -> "StatelessSettings":
+    def _validate_memory_modes(self) -> "PersistenceSettings":
         """Reject mutually exclusive shared-memory and ephemeral modes."""
         if self.stateless and self.ephemeral:
             msg = "stateless and ephemeral cannot both be enabled"
             raise ValueError(msg)
         return self
+
+
+class StatelessSettings(PersistenceSettings):
+    """Persistence and synchronization settings for non-MCP runtimes."""
+
+    sync_safety_margin_minutes: int = Field(
+        default=5,
+        description="Safety overlap margin in minutes for incremental ETL queries",
+    )
+    """Safety overlap margin for incremental ETL queries."""
 
 
 class SyncCliSettings(StatelessSettings, RuntimeSettingsBase):
@@ -353,7 +357,12 @@ class RuntimeSettings(
     """All non-secret environment settings used by application components."""
 
 
-class McpCliSettings(OAuthSettings, BindSettings, RuntimeSettingsBase):
+class McpCliSettings(
+    OAuthSettings,
+    BindSettings,
+    PersistenceSettings,
+    RuntimeSettingsBase,
+):
     """CLI-visible settings for the standalone MCP runtime."""
 
 

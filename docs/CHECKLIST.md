@@ -173,6 +173,9 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operat
 
 - [x] **CLI Subcommands**: Provide `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version` with safe configuration validation and meaningful exit codes.
 - [x] **Deployment Docs**: Make Docker Compose the first-class deployment path and document package, scheduler, and upgrade workflows.
+- [x] **Transport & Persistence UX**: Document stdio and Streamable HTTP as
+      distinct MCP workflows and expose shared `--stateless` and `--ephemeral`
+      controls across operational commands, with privacy-preserving stdio defaults.
 
 ---
 

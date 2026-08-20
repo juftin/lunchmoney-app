@@ -27,6 +27,7 @@ def test_cli_runs_standalone_mcp_without_persistent_storage(
     configure_runtime_mode = Mock()
     configure_auth = Mock()
     run_from_args = Mock()
+    apply_transport_defaults = Mock(return_value=settings)
     monkeypatch.setattr(
         cli.mcp_server,
         "create_argument_parser",
@@ -37,6 +38,11 @@ def test_cli_runs_standalone_mcp_without_persistent_storage(
     monkeypatch.setattr(cli, "configure_runtime_settings", configure_runtime_settings)
     monkeypatch.setattr(cli, "configure_runtime_mode", configure_runtime_mode)
     monkeypatch.setattr(cli.mcp_server, "configure_auth", configure_auth)
+    monkeypatch.setattr(
+        cli.mcp_server,
+        "apply_transport_defaults",
+        apply_transport_defaults,
+    )
 
     cli.main(["mcp", "--stdio"])
 
@@ -45,6 +51,7 @@ def test_cli_runs_standalone_mcp_without_persistent_storage(
         McpCliSettings,
         root_parser=mcp_parser,
     )
+    apply_transport_defaults.assert_called_once_with(settings, transport_arguments)
     configure_runtime_settings.assert_called_once_with(settings)
     configure_runtime_mode.assert_called_once_with("mcp")
     configure_auth.assert_called_once_with(settings)

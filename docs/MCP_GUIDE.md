@@ -46,17 +46,27 @@ Expose a clean CLI entrypoint in `pyproject.toml` so users and LLM clients can l
 lunchmoney-mcp = "lunchmoney_mcp.cli:main"
 ```
 
-### 1.2 Multi-Transport Support
+### 1.2 Choose stdio or Streamable HTTP
 
-The executable supports FastMCP's four transports. `stdio` is the default for
-local desktop clients; use the HTTP flags for remote server deployments:
+The executable supports FastMCP's four transports, but there are two primary
+user journeys:
+
+| Use case                             | Transport       | Command                                | Connection                    | Default persistence              |
+| :----------------------------------- | :-------------- | :------------------------------------- | :---------------------------- | :------------------------------- |
+| Desktop app or IDE starts the server | stdio           | `lunchmoney-mcp mcp`                   | Process standard input/output | Ephemeral per tool/resource call |
+| Client connects to a running server  | Streamable HTTP | `lunchmoney-mcp mcp --streamable-http` | `http://HOST:PORT/mcp`        | Persistent database              |
+
+Stdio is the default for local desktop clients: it opens no socket and avoids
+retaining financial data after an operation. Streamable HTTP is the recommended
+transport for new remote deployments. The compatibility transports remain
+available when an existing client requires them:
 
 ```bash
-lunchmoney-mcp mcp                    # stdio
+lunchmoney-mcp mcp                    # local stdio, ephemeral by default
 lunchmoney-mcp mcp --stdio            # stdio (explicit)
-lunchmoney-mcp mcp --sse              # Server-Sent Events
-lunchmoney-mcp mcp --http             # HTTP
-lunchmoney-mcp mcp --streamable-http  # Streamable HTTP
+lunchmoney-mcp mcp --streamable-http  # remote Streamable HTTP at /mcp
+lunchmoney-mcp mcp --sse              # compatibility SSE at /sse
+lunchmoney-mcp mcp --http             # compatibility HTTP at /mcp
 ```
 
 For HTTP transports, the default bind address is `127.0.0.1:8000`. The MCP
@@ -68,7 +78,12 @@ lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 9000
 ```
 
 `--host` and `--port` are invalid with `--stdio`. The four transport flags are
-mutually exclusive.
+mutually exclusive. All operational commands (`mcp`, `serve`, `schedule`, and
+`sync`) accept `--stateless` for a shared, live-refreshed in-memory database
+and `--ephemeral` for a new in-memory database per operation. Persistent
+storage is the normal default; the only transport-specific default is stdio,
+which selects `--ephemeral`. Explicit flags and their `--no-...` counterparts
+override these defaults.
 
 ### 1.3 Shell completion and command discovery
 
@@ -115,7 +130,7 @@ Use `lunchmoney-mcp <subcommand> --help` for the authoritative option list.
     "mcpServers": {
         "lunchmoney": {
             "command": "uvx",
-            "args": ["lunchmoney-mcp"],
+            "args": ["lunchmoney-mcp", "mcp"],
             "env": {
                 "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"
             }
@@ -135,7 +150,8 @@ Use `lunchmoney-mcp <subcommand> --help` for the authoritative option list.
                 "run",
                 "--directory",
                 "/path/to/lunchmoney-mcp",
-                "lunchmoney-mcp"
+                "lunchmoney-mcp",
+                "mcp"
             ],
             "env": {
                 "LUNCHMONEY_ACCESS_TOKEN": "your_api_token_here"

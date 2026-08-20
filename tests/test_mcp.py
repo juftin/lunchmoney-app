@@ -21,6 +21,20 @@ from lunchmoney_mcp.schemas import (
 )
 
 
+@pytest.fixture(autouse=True)
+def reset_runtime_configuration() -> None:
+    """Keep standalone-MCP process settings from leaking into later tests."""
+    import lunchmoney_mcp.config as config_module
+
+    config_module._runtime_settings = None
+    config_module._runtime_mode = None
+    config_module.get_settings.cache_clear()
+    yield
+    config_module._runtime_settings = None
+    config_module._runtime_mode = None
+    config_module.get_settings.cache_clear()
+
+
 @pytest.mark.asyncio
 async def test_mcp_tools_registration() -> None:
     """Verify all expected Lunch Money tools are registered on top-level FastMCP server."""
@@ -66,6 +80,7 @@ async def test_mcp_runtime_lifespan_creates_and_disposes_ephemeral_storage(
     import lunchmoney_mcp.mcp.app as mcp_app_module
 
     database = Mock()
+    database.is_stateless = True
     database.create_tables = AsyncMock()
     database.dispose = AsyncMock()
     get_database = Mock(return_value=database)
@@ -80,6 +95,32 @@ async def test_mcp_runtime_lifespan_creates_and_disposes_ephemeral_storage(
 
     database.dispose.assert_awaited_once_with()
     get_database.cache_clear.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_mcp_runtime_lifespan_migrates_persistent_storage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Apply migrations before serving a persistent standalone MCP endpoint."""
+    import lunchmoney_mcp.mcp.app as mcp_app_module
+
+    database = Mock(is_stateless=False)
+    database.dispose = AsyncMock()
+    lock = Mock()
+    lock.__enter__ = Mock(return_value=lock)
+    lock.__exit__ = Mock(return_value=None)
+    run_migrations = AsyncMock()
+    monkeypatch.setattr(mcp_app_module, "get_database", Mock(return_value=database))
+    monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
+    monkeypatch.setattr(mcp_app_module, "get_settings", RuntimeSettings)
+    monkeypatch.setattr(mcp_app_module, "get_migration_lock", Mock(return_value=lock))
+    monkeypatch.setattr(mcp_app_module, "run_migrations", run_migrations)
+
+    async with mcp_app_module.mcp_lifespan(mcp):
+        pass
+
+    run_migrations.assert_awaited_once_with()
+    database.dispose.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio

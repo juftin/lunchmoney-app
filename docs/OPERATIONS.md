@@ -45,12 +45,12 @@ variables before every command; the default combined mode is the recommended
 production topology. The `app` service exposes the REST API and streamable HTTP
 MCP endpoint together at `/mcp`.
 
-| Mode                | Command                                                                                                                                     | Result                                                                                                             |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Combined (default)  | `docker compose up --build --detach --wait`                                                                                                 | REST API and streamable HTTP MCP in one web process.                                                               |
-| API-only            | `docker compose up --detach postgres redis` then `docker compose run --rm --service-ports app gunicorn lunchmoney_mcp.app.main:fastapi_app` | REST API only, with the same database and lock dependencies.                                                       |
-| MCP-only            | `docker compose run --rm --service-ports app lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 8000`                               | Standalone MCP HTTP server at `/mcp`; it uses the MCP command's ephemeral in-memory store and starts no scheduler. |
-| Dedicated scheduler | `docker compose --profile scheduler up --build --detach scheduler`                                                                          | Adds the opt-in `schedule` process to the combined web deployment.                                                 |
+| Mode                | Command                                                                                                                                     | Result                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Combined (default)  | `docker compose up --build --detach --wait`                                                                                                 | REST API and streamable HTTP MCP in one web process.                                                                 |
+| API-only            | `docker compose up --detach postgres redis` then `docker compose run --rm --service-ports app gunicorn lunchmoney_mcp.app.main:fastapi_app` | REST API only, with the same database and lock dependencies.                                                         |
+| MCP-only            | `docker compose run --rm --service-ports app lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 8000`                               | Standalone Streamable HTTP MCP server at `/mcp`; it uses the configured persistent database and starts no scheduler. |
+| Dedicated scheduler | `docker compose --profile scheduler up --build --detach scheduler`                                                                          | Adds the opt-in `schedule` process to the combined web deployment.                                                   |
 
 The API-only and MCP-only commands are foreground processes; run them under the
 process supervisor appropriate for the deployment if they are not being used

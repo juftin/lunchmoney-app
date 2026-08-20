@@ -19,25 +19,60 @@
 ## Quickstart
 
 `LUNCHMONEY_ACCESS_TOKEN` authorizes this server to call the Lunch Money API.
-For a local MCP client, set it and start the default stdio transport:
+Choose a transport based on where the MCP client runs.
+
+| Use case                    | Command                                | Connect to             | Default storage         |
+| :-------------------------- | :------------------------------------- | :--------------------- | :---------------------- |
+| Local desktop or IDE client | `lunchmoney-mcp mcp`                   | Parent-process stdio   | Ephemeral per operation |
+| Remote or web client        | `lunchmoney-mcp mcp --streamable-http` | `http://HOST:PORT/mcp` | Persistent database     |
+
+For a local MCP client, set the token and use the default stdio transport. It
+opens no port and keeps financial data only for each tool or resource call:
 
 ```bash
 export LUNCHMONEY_ACCESS_TOKEN="your-lunch-money-token"
-task run -- lunchmoney-mcp mcp --stdio
+task run -- lunchmoney-mcp mcp
 ```
 
-For a remote MCP client, choose one HTTP transport. Streamable HTTP and HTTP
-use `/mcp`; SSE uses `/sse`.
+### Connect your MCP client
+
+Most users only need stdio. Add this configuration to your MCP client's server
+settings, replace the token, then restart the client. The client starts and
+manages the server process itself, so do not run a separate server command.
+
+```json
+{
+    "mcpServers": {
+        "lunchmoney": {
+            "command": "uvx",
+            "args": ["lunchmoney-mcp", "mcp"],
+            "env": {
+                "LUNCHMONEY_ACCESS_TOKEN": "your-lunch-money-token"
+            }
+        }
+    }
+}
+```
+
+For a checked-out repository instead of the published package, replace the
+`command` and `args` values with:
+
+```json
+"command": "uv",
+"args": ["run", "--directory", "/absolute/path/to/lunchmoney-mcp", "lunchmoney-mcp", "mcp"]
+```
+
+For a remote MCP client, use Streamable HTTP. It listens on `/mcp` and retains
+data in the configured database across calls:
 
 ```bash
 task run -- lunchmoney-mcp mcp --streamable-http --host 127.0.0.1 --port 8000
 # Connect at http://127.0.0.1:8000/mcp
 ```
 
-The `mcp` command has no scheduler and uses ephemeral in-memory storage only.
-The available transports are mutually exclusive: `--stdio` (also the default),
-`--sse`, `--http`, and `--streamable-http`. `--host` and `--port` apply only to
-the HTTP transports.
+The transport flags are mutually exclusive. `--sse` (`/sse`) and `--http`
+(`/mcp`) remain available for compatible clients; use Streamable HTTP for new
+remote deployments. `--host` and `--port` apply only to HTTP transports.
 
 ## Production deployment
 
@@ -86,6 +121,30 @@ file inside the image.
 without making a Lunch Money API request. Its output redacts secret values.
 `sync` performs one foreground synchronization; `version` prints the installed
 package version.
+
+### Persistence modes
+
+Every operational command (`mcp`, `serve`, `schedule`, and `sync`) accepts the
+same persistence flags. The normal default is persistent SQLite (or
+`LUNCHMONEY_DATABASE_URL`); only stdio MCP changes that default to ephemeral
+storage for privacy.
+
+| Flag          | Behavior                                                    | Best for                                                   |
+| :------------ | :---------------------------------------------------------- | :--------------------------------------------------------- |
+| No flag       | Persistent database, except stdio MCP                       | Long-running services and scheduled sync                   |
+| `--stateless` | Shared in-memory database refreshed for each operation      | Containers that must not write financial data to disk      |
+| `--ephemeral` | New in-memory database for every operation, then discard it | Local stdio clients and strict data-retention requirements |
+
+An explicit `LUNCHMONEY_DATABASE_URL` still takes precedence over
+`--stateless`; use `--ephemeral` when data must never use that shared database.
+
+For example, make a Streamable HTTP server stateless, or retain data for a
+stdio MCP process deliberately:
+
+```bash
+lunchmoney-mcp mcp --streamable-http --stateless
+lunchmoney-mcp mcp --stdio --no-ephemeral
+```
 
 ### Shell completion
 
@@ -204,9 +263,11 @@ client authentication.
 ## Database configuration
 
 With no configuration, `LunchMoneyDatabase` uses the persistent SQLite file
-`sqlite+aiosqlite:///lunchmoney.db` in the current working directory. Pass a URL to the
-constructor or set `LUNCHMONEY_DATABASE_URL`; an explicit constructor URL takes
-precedence. For example:
+`sqlite+aiosqlite:///lunchmoney.db` in the current working directory. The
+`mcp` command instead defaults to per-operation ephemeral storage when using
+stdio; select `--no-ephemeral` to use this persistent default. Pass a URL to
+the constructor or set `LUNCHMONEY_DATABASE_URL`; an explicit constructor URL
+takes precedence. For example:
 
 ```text
 sqlite+aiosqlite:////absolute/path/to/lunchmoney.db
