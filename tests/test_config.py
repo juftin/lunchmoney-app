@@ -243,7 +243,7 @@ def test_cli_help_only_exposes_lowercase_options(
     with pytest.raises(SystemExit):
         parse_cli_settings(["--help"], ServeCliSettings)
 
-    help_output = capsys.readouterr().out
+    help_output = " ".join(capsys.readouterr().out.split())
     assert "--schedule-cron" in help_output
     assert "--sync-safety-margin-minutes" in help_output
     assert "--access-token" not in help_output
@@ -287,6 +287,27 @@ def test_mcp_help_makes_the_stdio_default_explicit(
         create_argument_parser().parse_args(["--help"])
 
     assert "no listening socket" in capsys.readouterr().out
+
+
+def test_mcp_help_explains_data_handling_without_storage_details(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Describe persistence flags in terms of their Lunch Money behavior."""
+    from lunchmoney_mcp.mcp.server import create_argument_parser
+
+    with pytest.raises(SystemExit):
+        parse_cli_settings(
+            ["--help"],
+            McpCliSettings,
+            root_parser=create_argument_parser(),
+        )
+
+    help_output = " ".join(capsys.readouterr().out.split())
+    assert "Keep a live Lunch Money data cache between requests" in help_output
+    assert (
+        "Pass each request through to Lunch Money without retaining data" in help_output
+    )
+    assert "SQLite" not in help_output
 
 
 @pytest.mark.parametrize(

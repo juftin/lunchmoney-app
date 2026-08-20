@@ -144,15 +144,15 @@ class PersistenceSettings(BaseModel):
 
     stateless: bool = Field(
         default=False,
-        description="Run in stateless mode using in-memory SQLite database refreshed from API",
+        description="Keep a live Lunch Money data cache between requests",
     )
-    """Whether to use the shared in-memory database."""
+    """Whether to keep a live Lunch Money data cache between requests."""
 
     ephemeral: bool = Field(
         default=False,
-        description="Use a fresh in-memory database for each operation and discard it afterwards",
+        description="Pass each request through to Lunch Money without retaining data",
     )
-    """Whether each operation must refresh and discard its in-memory database."""
+    """Whether requests should pass through to Lunch Money without retained data."""
 
     @model_validator(mode="after")
     def _validate_memory_modes(self) -> "PersistenceSettings":

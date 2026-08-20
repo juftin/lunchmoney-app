@@ -51,10 +51,10 @@ lunchmoney-mcp = "lunchmoney_mcp.cli:main"
 The executable supports FastMCP's four transports, but there are two primary
 user journeys:
 
-| Use case                             | Transport       | Command                                | Connection                    | Default persistence              |
-| :----------------------------------- | :-------------- | :------------------------------------- | :---------------------------- | :------------------------------- |
-| Desktop app or IDE starts the server | stdio           | `lunchmoney-mcp mcp`                   | Process standard input/output | Ephemeral per tool/resource call |
-| Client connects to a running server  | Streamable HTTP | `lunchmoney-mcp mcp --streamable-http` | `http://HOST:PORT/mcp`        | Persistent database              |
+| Use case                             | Transport       | Command                                | Connection                    | Default persistence                             |
+| :----------------------------------- | :-------------- | :------------------------------------- | :---------------------------- | :---------------------------------------------- |
+| Desktop app or IDE starts the server | stdio           | `lunchmoney-mcp mcp`                   | Process standard input/output | Each call goes to Lunch Money; nothing retained |
+| Client connects to a running server  | Streamable HTTP | `lunchmoney-mcp mcp --streamable-http` | `http://HOST:PORT/mcp`        | Persistent database                             |
 
 Stdio is the default for local desktop clients: it opens no socket and avoids
 retaining financial data after an operation. Streamable HTTP is the recommended
@@ -79,11 +79,11 @@ lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 9000
 
 `--host` and `--port` are invalid with `--stdio`. The four transport flags are
 mutually exclusive. All operational commands (`mcp`, `serve`, `schedule`, and
-`sync`) accept `--stateless` for a shared, live-refreshed in-memory database
-and `--ephemeral` for a new in-memory database per operation. Persistent
-storage is the normal default; the only transport-specific default is stdio,
-which selects `--ephemeral`. Explicit flags and their `--no-...` counterparts
-override these defaults.
+`sync`) accept `--stateless` to keep a live Lunch Money cache between requests
+and `--ephemeral` to pass every request through to Lunch Money without
+retaining data afterward. Retained data is the normal default; the only
+transport-specific default is stdio, which selects `--ephemeral`. Explicit
+flags and their `--no-...` counterparts override these defaults.
 
 ### 1.3 Shell completion and command discovery
 

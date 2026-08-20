@@ -126,7 +126,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
         action="store_const",
         const="stdio",
         dest="transport",
-        help="Local child-process transport; no listening socket (default, ephemeral).",
+        help="Local client transport; no listening socket or retained data (default).",
     )
     transport_group.add_argument(
         "--sse",
@@ -185,10 +185,9 @@ def apply_transport_defaults(
 ) -> RuntimeSettings:
     """Apply MCP storage defaults after the transport has been selected.
 
-    Stdio is normally launched as a child process for one local MCP client, so it
-    keeps financial data only for an individual operation.  Long-lived HTTP
-    transports use persistent storage unless the operator selects an in-memory
-    mode explicitly.
+    Stdio is normally launched as a child process for one local MCP client, so
+    each request passes through to Lunch Money without retained data. Long-lived
+    HTTP transports retain data unless the operator selects another mode.
 
     Parameters
     ----------

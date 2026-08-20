@@ -18,27 +18,14 @@
 
 ## Quickstart
 
-`LUNCHMONEY_ACCESS_TOKEN` authorizes this server to call the Lunch Money API.
-Choose a transport based on where the MCP client runs.
+Use Lunch Money from your favorite MCP-enabled assistant in a few minutes.
 
-| Use case                    | Command                                | Connect to             | Default storage         |
-| :-------------------------- | :------------------------------------- | :--------------------- | :---------------------- |
-| Local desktop or IDE client | `lunchmoney-mcp mcp`                   | Parent-process stdio   | Ephemeral per operation |
-| Remote or web client        | `lunchmoney-mcp mcp --streamable-http` | `http://HOST:PORT/mcp` | Persistent database     |
+1. Create or copy your Lunch Money access token.
+2. Add the configuration below to your MCP client's server settings.
+3. Replace `your-lunch-money-token`, restart the client, and start chatting.
 
-For a local MCP client, set the token and use the default stdio transport. It
-opens no port and keeps financial data only for each tool or resource call:
-
-```bash
-export LUNCHMONEY_ACCESS_TOKEN="your-lunch-money-token"
-task run -- lunchmoney-mcp mcp
-```
-
-### Connect your MCP client
-
-Most users only need stdio. Add this configuration to your MCP client's server
-settings, replace the token, then restart the client. The client starts and
-manages the server process itself, so do not run a separate server command.
+Most users only need this local configuration. Your MCP client starts and
+manages Lunch Money MCP for you; do not run a separate server command.
 
 ```json
 {
@@ -54,25 +41,17 @@ manages the server process itself, so do not run a separate server command.
 }
 ```
 
-For a checked-out repository instead of the published package, replace the
-`command` and `args` values with:
+Try asking:
 
-```json
-"command": "uv",
-"args": ["run", "--directory", "/absolute/path/to/lunchmoney-mcp", "lunchmoney-mcp", "mcp"]
-```
+- “How much did I spend on dining this month?”
+- “Show my largest recent transactions.”
+- “Which transactions still need a category?”
 
-For a remote MCP client, use Streamable HTTP. It listens on `/mcp` and retains
-data in the configured database across calls:
+Need a remote or self-hosted MCP server instead? Follow the
+[remote MCP guide](docs/MCP_GUIDE.md#12-choose-stdio-or-streamable-http).
 
-```bash
-task run -- lunchmoney-mcp mcp --streamable-http --host 127.0.0.1 --port 8000
-# Connect at http://127.0.0.1:8000/mcp
-```
-
-The transport flags are mutually exclusive. `--sse` (`/sse`) and `--http`
-(`/mcp`) remain available for compatible clients; use Streamable HTTP for new
-remote deployments. `--host` and `--port` apply only to HTTP transports.
+For a checked-out repository, self-hosting, advanced settings, or a different
+MCP client, see the [MCP guide](docs/MCP_GUIDE.md).
 
 ## Production deployment
 
@@ -122,28 +101,25 @@ without making a Lunch Money API request. Its output redacts secret values.
 `sync` performs one foreground synchronization; `version` prints the installed
 package version.
 
-### Persistence modes
+### Data handling
 
 Every operational command (`mcp`, `serve`, `schedule`, and `sync`) accepts the
-same persistence flags. The normal default is persistent SQLite (or
-`LUNCHMONEY_DATABASE_URL`); only stdio MCP changes that default to ephemeral
-storage for privacy.
+same data-handling flags. Stdio MCP uses the privacy-focused default: each
+request goes to Lunch Money and nothing is retained when it finishes.
 
-| Flag          | Behavior                                                    | Best for                                                   |
-| :------------ | :---------------------------------------------------------- | :--------------------------------------------------------- |
-| No flag       | Persistent database, except stdio MCP                       | Long-running services and scheduled sync                   |
-| `--stateless` | Shared in-memory database refreshed for each operation      | Containers that must not write financial data to disk      |
-| `--ephemeral` | New in-memory database for every operation, then discard it | Local stdio clients and strict data-retention requirements |
+| Flag          | What it does                                                         |
+| :------------ | :------------------------------------------------------------------- |
+| No flag       | Keeps data available for later requests, except for stdio MCP        |
+| `--stateless` | Keeps a live Lunch Money data cache between requests                 |
+| `--ephemeral` | Sends each request to Lunch Money and keeps nothing when it finishes |
 
-An explicit `LUNCHMONEY_DATABASE_URL` still takes precedence over
-`--stateless`; use `--ephemeral` when data must never use that shared database.
-
-For example, make a Streamable HTTP server stateless, or retain data for a
-stdio MCP process deliberately:
+Use `--stateless` when a running server should reuse its live data between
+requests without retaining it after shutdown. Use `--ephemeral` when every
+request should go straight to Lunch Money:
 
 ```bash
 lunchmoney-mcp mcp --streamable-http --stateless
-lunchmoney-mcp mcp --stdio --no-ephemeral
+lunchmoney-mcp mcp --streamable-http --ephemeral
 ```
 
 ### Shell completion
@@ -195,10 +171,11 @@ task run -- lunchmoney-mcp schedule \
 ```
 
 Pydantic Settings parses safe runtime flags only for the command that uses them:
-`mcp` exposes transport, OAuth, `--host`, and `--port`; `schedule` exposes
-scheduling and `--stateless`; `sync` exposes its foreground sync options and
-`--stateless`; and `serve` exposes its web-server, scheduler, sync, and OAuth
-options. `doctor` and `version` accept no runtime configuration flags.
+`mcp` exposes transport, data handling, OAuth, `--host`, and `--port`;
+`schedule` exposes scheduling and data handling; `sync` exposes its foreground
+sync and data-handling options; and `serve` exposes its web-server, scheduler,
+sync, OAuth, and data-handling options. `doctor` and `version` accept no
+runtime configuration flags.
 Credentials and connection URLs are environment/`.env`-only; all settings use
 documented `LUNCHMONEY_` environment variables.
 
