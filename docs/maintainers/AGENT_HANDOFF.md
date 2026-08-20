@@ -105,7 +105,7 @@ breaking-change policy.
 
 ### Sprint 10: Operational Hardening & Observability
 
-Completed: `/health` exposes liveness and `/ready` reports database and embedded-scheduler readiness without sensitive details. JSON request logs, request IDs, safe error responses, and API-key-protected Prometheus metrics cover HTTP/MCP traffic, upstream failures, sync duration, and cache freshness. The top-level REST/MCP application applies explicit proxy, host, CORS, body-size, timeout, concurrency, and rate-limit policies with safe defaults. Production Compose runs hardened non-root containers with private data services; CI scans filesystem and image artifacts and performs a Compose liveness/readiness smoke test. See [`OPERATIONS.md`](OPERATIONS.md) for TLS, secret rotation, backup/restore, retention, and incident response.
+Completed: `/health` exposes liveness and `/ready` reports database and embedded-scheduler readiness without sensitive details. JSON request logs, request IDs, safe error responses, and API-key-protected Prometheus metrics cover HTTP/MCP traffic, upstream failures, sync duration, and cache freshness. The top-level REST/MCP application applies explicit proxy, host, CORS, body-size, timeout, concurrency, and rate-limit policies with safe defaults. Production Compose runs hardened non-root containers with private data services; CI scans filesystem and image artifacts and performs a Compose liveness/readiness smoke test. See [`OPERATIONS.md`](../OPERATIONS.md) for TLS, secret rotation, backup/restore, retention, and incident response.
 
 ### Sprint 11: Server-Rendered Financial Dashboard
 

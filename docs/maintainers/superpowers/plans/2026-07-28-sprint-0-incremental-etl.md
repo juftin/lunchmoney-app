@@ -240,8 +240,8 @@ git commit -m "✨ Add opt-in incremental transaction sync"
 - Modify: `src/lunchmoney_mcp/mcp/tools/sync.py`
 - Modify: `tests/test_app.py`
 - Modify: `tests/test_mcp.py`
-- Modify: `docs/CHECKLIST.md`
-- Modify: `docs/INCREMENTAL_ETL.md`
+- Modify: `docs/maintainers/CHECKLIST.md`
+- Modify: `docs/maintainers/INCREMENTAL_ETL.md`
 
 **Interfaces:**
 
@@ -296,7 +296,7 @@ ensure it is limited to Sprint 0 files before staging.
 - [ ] **Step 5: Commit Task 4**
 
 ```bash
-git add src/lunchmoney_mcp/app/routers/sync.py src/lunchmoney_mcp/mcp/tools/sync.py tests/test_app.py tests/test_mcp.py docs/CHECKLIST.md docs/INCREMENTAL_ETL.md
+git add src/lunchmoney_mcp/app/routers/sync.py src/lunchmoney_mcp/mcp/tools/sync.py tests/test_app.py tests/test_mcp.py docs/maintainers/CHECKLIST.md docs/maintainers/INCREMENTAL_ETL.md
 git commit -m "✨ Expose incremental synchronization controls"
 ```
 

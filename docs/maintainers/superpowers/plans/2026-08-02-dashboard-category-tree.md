@@ -91,7 +91,7 @@ Expected: PASS.
 
 **Files:**
 
-- Modify: `docs/CHECKLIST.md`
+- Modify: `docs/maintainers/CHECKLIST.md`
 
 **Interfaces:**
 

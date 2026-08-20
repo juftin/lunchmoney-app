@@ -242,13 +242,13 @@ Browser                          FastAPI
 
 ### 7.1 New Files
 
-| File                                      | Lines (est.) | Purpose                                                                                            |
-| :---------------------------------------- | :----------- | :------------------------------------------------------------------------------------------------- |
-| `templates/dashboard.html`                | ~200         | Full-page template with Pico classes, CDN links, Alpine root, structural layout                    |
-| `templates/partials/cockpit_content.html` | ~150         | Content area partial — extracted from old dashboard.html lines 169-508                             |
-| `static/dashboard.css`                    | ~200         | Dashboard-specific layout only (grid, category tree, account groups, flow band)                    |
-| `static/dashboard.js`                     | ~80          | Alpine.js component — tab state, search, collapse-all, keyboard shortcuts, chart init, toast queue |
-| `docs/DESIGN_DASHBOARD_SPA.md`            | this file    | Design document                                                                                    |
+| File                                       | Lines (est.) | Purpose                                                                                            |
+| :----------------------------------------- | :----------- | :------------------------------------------------------------------------------------------------- |
+| `templates/dashboard.html`                 | ~200         | Full-page template with Pico classes, CDN links, Alpine root, structural layout                    |
+| `templates/partials/cockpit_content.html`  | ~150         | Content area partial — extracted from old dashboard.html lines 169-508                             |
+| `static/dashboard.css`                     | ~200         | Dashboard-specific layout only (grid, category tree, account groups, flow band)                    |
+| `static/dashboard.js`                      | ~80          | Alpine.js component — tab state, search, collapse-all, keyboard shortcuts, chart init, toast queue |
+| `docs/maintainers/DESIGN_DASHBOARD_SPA.md` | this file    | Design document                                                                                    |
 
 ### 7.2 Modified Files
 

@@ -108,7 +108,7 @@ Expected: PASS.
 
 **Files:**
 
-- Modify: `docs/superpowers/plans/2026-08-02-dashboard-category-row-polish.md`
+- Modify: `docs/maintainers/superpowers/plans/2026-08-02-dashboard-category-row-polish.md`
 
 **Interfaces:**
 
