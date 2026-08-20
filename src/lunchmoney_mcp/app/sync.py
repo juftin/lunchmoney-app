@@ -174,13 +174,18 @@ async def sync_database(
                 for item in recurring_response.recurring_items or []
             ]
         )
-    if incremental:
-        await db.upsert_sync_metadata(
-            SyncMetadata(
-                domain="transactions",
-                last_synced_at=sync_started_at,
-            )
+    await db.upsert_sync_metadata(
+        SyncMetadata(
+            domain="metadata",
+            last_synced_at=sync_started_at,
         )
+    )
+    await db.upsert_sync_metadata(
+        SyncMetadata(
+            domain="transactions",
+            last_synced_at=sync_started_at,
+        )
+    )
 
     return SyncSummary(
         user=1 if user_obj else 0,
