@@ -226,7 +226,7 @@ def main() -> None:
     """Verify or explicitly refresh the pinned upstream contract snapshot."""
     arguments = parse_arguments()
     current_contract = build_contract()
-    rendered_contract = json.dumps(current_contract, indent=2, sort_keys=True) + "\n"
+    rendered_contract = json.dumps(current_contract, indent=4, sort_keys=True) + "\n"
     if arguments.write:
         SNAPSHOT_PATH.write_text(rendered_contract)
         return
