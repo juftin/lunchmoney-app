@@ -8,7 +8,7 @@ This document serves as the **operational task tracker** for **`lunchmoney-mcp`*
 
 ### 1. How to Claim and Update Checklist Items
 
-- Before starting a task, read the referenced specification in [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md) or [`docs/ROADMAP.md`](ROADMAP.md).
+- Before starting a task, read the referenced specification in [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md) or [`ROADMAP.md`](ROADMAP.md).
 - When a task is fully verified (`task fix && task lint && task check && task test`), update this document by changing `- [ ]` to `- [x]`.
 - If your work discovers new requirements, edge cases, or sub-tasks, immediately add new checklist items under the appropriate sprint section.
 
@@ -29,7 +29,7 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 
 ### 🏁 Sprint 0: Incremental ETL & Stateless Engine
 
-_Reference Spec_: [`docs/INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-0-incremental-etl--stateless-engine)
+_Reference Spec_: [`INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-0-incremental-etl--stateless-engine)
 
 - [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_mcp/mcp/tools/`](../src/lunchmoney_mcp/mcp/tools/).
 - [x] **Config Additions**: Add `stateless: bool` (`LUNCHMONEY_STATELESS`) and `sync_safety_margin_minutes: int` (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`) in [`src/lunchmoney_mcp/config.py`](../src/lunchmoney_mcp/config.py).
@@ -44,7 +44,7 @@ _Reference Spec_: [`docs/INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`docs/AGENT
 
 ### 📖 Sprint 1: Read-Only 100% v2 API Coverage
 
-_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#1-user--account-summary-me-summary) & [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-1-complete-read-only-100-v2-api-coverage)
+_Reference Spec_: [`ROADMAP.md`](ROADMAP.md#1-user--account-summary-me-summary) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-1-complete-read-only-100-v2-api-coverage)
 
 - [x] **Account Summary**: Implement `fetch_account_summary`, `GET /api/summary`, and `get_account_summary` FastMCP tool.
 - [x] **Tags Queries**: Implement `fetch_tags`, `fetch_tag_by_id`, `GET /api/tags`, `GET /api/tags/{id}`, `list_tags`, and `get_tag` tools.
@@ -58,7 +58,7 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#1-user--account-summary-me-summ
 
 ### ✍️ Sprint 2: Category & Manual Account Mutations
 
-_Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-2-category--manual-account-mutations)
+_Reference Spec_: [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-2-category--manual-account-mutations)
 
 - [x] **Category Creation**: Implement Upstream-First `create_category` service, `POST /api/categories`, and FastMCP tool.
 - [x] **Category Update**: Implement Upstream-First `update_category` service, `PUT /api/categories/{id}`, and FastMCP tool.
@@ -73,7 +73,7 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-2-category--
 
 ### 💳 Sprint 3: Transaction Mutations, Grouping, Splitting & Attachments
 
-_Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-3-transaction-mutations-grouping-splitting--attachments)
+_Reference Spec_: [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-3-transaction-mutations-grouping-splitting--attachments)
 
 - [x] **Single Transaction Insert**: Implement `create_transactions` (`POST /api/transactions`).
 - [x] **Bulk Transaction Update**: Implement `bulk_update_transactions` (`PUT /api/transactions`).
@@ -89,7 +89,7 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-3-transactio
 
 ### 📊 Sprint 4: Budgets & Time-Series Spending Trends
 
-_Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-4-budgets--spending-trends)
+_Reference Spec_: [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-4-budgets--spending-trends)
 
 - [x] **Budget Settings**: Implement `fetch_budget_settings`, `GET /api/budgets/settings`, and `get_budget_settings` tool.
 - [x] **Budget Upsert**: Implement `set_budget_value`, `PUT /api/budgets`, and `upsert_budget` tool.
@@ -101,7 +101,7 @@ _Reference Spec_: [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-4-budgets--s
 
 ### 🛡️ Sprint 5: Production Security, MCP Primitives & CI/CD
 
-_Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-5-production-security--cicd)
+_Reference Spec_: [`MCP_GUIDE.md`](../MCP_GUIDE.md) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-5-production-security--cicd)
 
 - [x] **API Key Guard**: Implement `verify_api_key` middleware in [`src/lunchmoney_mcp/app/auth.py`](../src/lunchmoney_mcp/app/auth.py).
 - [x] **MCP Executable Entrypoint**: Add `lunchmoney-mcp = "lunchmoney_mcp.mcp.server:main"` script in `pyproject.toml`.
@@ -116,7 +116,7 @@ _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`
 
 - [x] **OIDC OAuth Proxy**: Add optional OAuth 2.1 protection for remote MCP HTTP transports using an OIDC discovery URL.
 - [x] **OAuth Configuration**: Document the public base URL, identity-provider settings, and local unauthenticated default.
-- [x] **Roadmap Reconciliation**: Mark delivered transaction operations and Sprint 4 production work as complete in `docs/ROADMAP.md`.
+- [x] **Roadmap Reconciliation**: Mark delivered transaction operations and Sprint 4 production work as complete in `ROADMAP.md`.
 
 ---
 
@@ -131,7 +131,7 @@ _Reference Spec_: [`docs/MCP_GUIDE.md`](MCP_GUIDE.md) & [`docs/AGENT_HANDOFF.md`
 
 ### ⏱️ Sprint 8: Production Runtime & Scheduled Sync
 
-_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-8-production-runtime--scheduled-sync)
+_Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-8-production-runtime--scheduled-sync)
 
 - [x] **Gunicorn Runtime**: Replace FastAPI CLI deployment commands with Gunicorn and the maintained Uvicorn worker package; retain direct Uvicorn for local development.
 - [x] **Dedicated Scheduler**: Add an opt-in `lunchmoney-mcp schedule` APScheduler process with configurable cron, timezone, graceful lifecycle, and sync run reporting; each run refreshes full metadata and incrementally refreshes transactions.
@@ -141,7 +141,7 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-8-production-runtime--sc
 
 ### 🔎 Sprint 9: Upstream API Compatibility & Coverage Audit
 
-_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-9-upstream-api-compatibility--coverage-audit)
+_Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-9-upstream-api-compatibility--coverage-audit)
 
 - [x] **Spec Drift Detection**: Pin/regenerate the generated client and fail CI when endpoint, schema, or enum changes are not reconciled.
 - [x] **Coverage Manifest**: Verify every supported upstream operation has a service, REST, and MCP mapping.
@@ -153,7 +153,7 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-9-upstream-api-compatibi
 
 ### 🛡️ Sprint 10: Operational Hardening & Observability
 
-_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-10-operational-hardening--observability)
+_Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-10-operational-hardening--observability)
 
 - [x] **Health and Telemetry**: Add health/readiness checks, safe structured logs, request IDs, and Prometheus-compatible `/metrics` operational metrics protected by network policy or authentication.
 - [x] **Network Hardening**: Apply secure proxy, host, CORS, size, timeout, concurrency, and rate-limit defaults.
@@ -161,7 +161,7 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-10-operational-hardening
 
 ### 📈 Sprint 11: Server-Rendered Financial Dashboard
 
-_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-financial-dashboard)
+_Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-financial-dashboard)
 
 - [x] **HTML Dashboard**: Add authenticated, accessible single-user, single-account server-rendered summary, spending, budget, transaction, and sync-status views without a separate JavaScript application.
 - [x] **Service Reuse**: Keep dashboard routes as thin delegators to existing services and test authorized, empty, and error rendering.
@@ -169,10 +169,17 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-finan
 
 ### 🧰 Sprint 12: CLI, Packaging & Operator Experience
 
-_Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-experience)
+_Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-experience)
 
 - [x] **CLI Subcommands**: Provide `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version` with safe configuration validation and meaningful exit codes.
 - [x] **Deployment Docs**: Make Docker Compose the first-class deployment path and document package, scheduler, and upgrade workflows.
+- [x] **Transport & Persistence UX**: Document stdio and Streamable HTTP as
+      distinct MCP workflows and expose shared `--stateless` and `--ephemeral`
+      controls across operational commands, with privacy-preserving stdio defaults.
+- [x] **Documentation Information Architecture**: Keep the README focused on
+      end-user MCP setup and move CLI and database reference material into
+      dedicated guides; exclude engineering plans and handoff documents from
+      the published documentation site.
 
 ---
 
@@ -188,5 +195,5 @@ _Reference Spec_: [`docs/ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operat
 Whenever an agent completes a task, refactor code, or modify a signature:
 
 1. Update docstrings on touched functions, classes, and modules (NumPy format).
-2. Check off completed items in this document (`docs/CHECKLIST.md`).
-3. If new APIs, parameters, or edge cases are added, update the relevant specification in `docs/ROADMAP.md` or `docs/AGENT_HANDOFF.md`.
+2. Check off completed items in this document (`CHECKLIST.md`).
+3. If new APIs, parameters, or edge cases are added, update the relevant specification in `ROADMAP.md` or `AGENT_HANDOFF.md`.

@@ -95,12 +95,14 @@ def main(argv: list[str] | None = None) -> None:
             McpCliSettings,
             root_parser=mcp_parser,
         )
+        mcp_arguments = mcp_parser.parse_args(runtime_arguments)
+        settings = mcp_server.apply_transport_defaults(settings, mcp_arguments)
         configure_runtime_settings(settings)
         configure_runtime_mode("mcp")
         mcp_server.configure_auth(settings)
         mcp_server.run_from_args(
             mcp_parser,
-            mcp_parser.parse_args(runtime_arguments),
+            mcp_arguments,
             settings,
         )
         return

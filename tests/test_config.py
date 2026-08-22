@@ -243,7 +243,7 @@ def test_cli_help_only_exposes_lowercase_options(
     with pytest.raises(SystemExit):
         parse_cli_settings(["--help"], ServeCliSettings)
 
-    help_output = capsys.readouterr().out
+    help_output = " ".join(capsys.readouterr().out.split())
     assert "--schedule-cron" in help_output
     assert "--sync-safety-margin-minutes" in help_output
     assert "--access-token" not in help_output
@@ -286,7 +286,28 @@ def test_mcp_help_makes_the_stdio_default_explicit(
     with pytest.raises(SystemExit):
         create_argument_parser().parse_args(["--help"])
 
-    assert "standard input/output transport (default)" in capsys.readouterr().out
+    assert "no listening socket" in capsys.readouterr().out
+
+
+def test_mcp_help_explains_data_handling_without_storage_details(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Describe persistence flags in terms of their Lunch Money behavior."""
+    from lunchmoney_mcp.mcp.server import create_argument_parser
+
+    with pytest.raises(SystemExit):
+        parse_cli_settings(
+            ["--help"],
+            McpCliSettings,
+            root_parser=create_argument_parser(),
+        )
+
+    help_output = " ".join(capsys.readouterr().out.split())
+    assert "Keep a live Lunch Money data cache between requests" in help_output
+    assert (
+        "Pass each request through to Lunch Money without retaining data" in help_output
+    )
+    assert "SQLite" not in help_output
 
 
 @pytest.mark.parametrize(
@@ -396,17 +417,94 @@ def test_settings_reject_insecure_network_policy(
         RuntimeSettings(**{field_name: value})
 
 
-def test_mcp_runtime_forces_ephemeral_database(
+def test_mcp_runtime_respects_configured_persistent_database(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Prevent standalone MCP transport processes from opening persistent storage."""
+    """Allow standalone HTTP MCP servers to retain their configured data."""
     import lunchmoney_mcp.config as config_module
 
-    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", "sqlite+aiosqlite:///persistent.db")
+    configured_url = "sqlite+aiosqlite:///persistent.db"
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", configured_url)
     monkeypatch.setattr(config_module, "_runtime_mode", None)
     configure_runtime_mode("mcp")
 
-    assert resolve_database_url() == IN_MEMORY_DATABASE_URL
+    assert resolve_database_url() == configured_url
+
+
+def test_mcp_transport_defaults_use_ephemeral_stdio_and_persistent_http() -> None:
+    """Apply storage defaults appropriate to local and remote MCP transports."""
+    from lunchmoney_mcp.mcp.server import (
+        apply_transport_defaults,
+        create_argument_parser,
+    )
+
+    stdio_parser = create_argument_parser()
+    stdio_settings = parse_cli_settings([], McpCliSettings, root_parser=stdio_parser)
+    stdio_result = apply_transport_defaults(
+        stdio_settings,
+        stdio_parser.parse_args([]),
+    )
+
+    http_parser = create_argument_parser()
+    http_settings = parse_cli_settings(
+        ["--streamable-http"], McpCliSettings, root_parser=http_parser
+    )
+    http_result = apply_transport_defaults(
+        http_settings,
+        http_parser.parse_args(["--streamable-http"]),
+    )
+
+    persistent_stdio_parser = create_argument_parser()
+    persistent_stdio_settings = parse_cli_settings(
+        ["--stdio", "--no-ephemeral"],
+        McpCliSettings,
+        root_parser=persistent_stdio_parser,
+    )
+    persistent_stdio_result = apply_transport_defaults(
+        persistent_stdio_settings,
+        persistent_stdio_parser.parse_args(["--stdio", "--no-ephemeral"]),
+    )
+
+    assert stdio_result.ephemeral is True
+    assert http_result.ephemeral is False
+    assert persistent_stdio_result.ephemeral is False
+
+
+@pytest.mark.parametrize(
+    "settings_type",
+    [McpCliSettings, ScheduleCliSettings, ServeCliSettings, SyncCliSettings],
+)
+def test_operational_commands_share_persistence_flags(
+    settings_type: type[
+        McpCliSettings | ScheduleCliSettings | ServeCliSettings | SyncCliSettings
+    ],
+) -> None:
+    """Expose the same explicit storage selections to every runtime command."""
+    root_parser = None
+    if settings_type is McpCliSettings:
+        from lunchmoney_mcp.mcp.server import create_argument_parser
+
+        root_parser = create_argument_parser()
+
+    stateless = parse_cli_settings(
+        ["--stateless"],
+        settings_type,
+        root_parser=root_parser,
+    )
+
+    if settings_type is McpCliSettings:
+        from lunchmoney_mcp.mcp.server import create_argument_parser
+
+        root_parser = create_argument_parser()
+
+    ephemeral = parse_cli_settings(
+        ["--ephemeral"],
+        settings_type,
+        root_parser=root_parser,
+    )
+
+    assert stateless.stateless is True
+    assert ephemeral.ephemeral is True
 
 
 def test_stateless_settings_select_shared_memory_url(

@@ -26,7 +26,6 @@ from lunchmoney_mcp.config import (
     IN_MEMORY_DATABASE_URL,
     SecretSettings,
     get_settings,
-    get_runtime_mode,
 )
 from lunchmoney_mcp.database.models import (
     CachedApiResponse,
@@ -70,8 +69,6 @@ def resolve_database_url(database_url: str | None = None) -> str:
     """Resolve an explicit, environment-provided, or default database URL."""
     if database_url is not None:
         return database_url
-    if get_runtime_mode() == "mcp":
-        return IN_MEMORY_DATABASE_URL
     env_url = os.getenv("LUNCHMONEY_DATABASE_URL")
     if env_url:
         return env_url

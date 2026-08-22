@@ -139,34 +139,38 @@ class ExecutionSettings(BaseModel):
     """Application deployment environment name."""
 
 
-class StatelessSettings(BaseModel):
-    """Non-secret settings controlling database persistence."""
+class PersistenceSettings(BaseModel):
+    """Non-secret settings selecting the lifetime of stored financial data."""
 
     stateless: bool = Field(
         default=False,
-        description="Run in stateless mode using in-memory SQLite database refreshed from API",
+        description="Keep a live Lunch Money data cache between requests",
     )
-    """Whether to use the shared in-memory database."""
+    """Whether to keep a live Lunch Money data cache between requests."""
 
     ephemeral: bool = Field(
         default=False,
-        description="Use a fresh in-memory database for each operation and discard it afterwards",
+        description="Pass each request through to Lunch Money without retaining data",
     )
-    """Whether each operation must refresh and discard its in-memory database."""
+    """Whether requests should pass through to Lunch Money without retained data."""
+
+    @model_validator(mode="after")
+    def _validate_memory_modes(self) -> "PersistenceSettings":
+        """Reject mutually exclusive shared-memory and ephemeral modes."""
+        if self.stateless and self.ephemeral:
+            msg = "stateless and ephemeral cannot both be enabled"
+            raise ValueError(msg)
+        return self
+
+
+class StatelessSettings(PersistenceSettings):
+    """Persistence and synchronization settings for non-MCP runtimes."""
 
     sync_safety_margin_minutes: int = Field(
         default=5,
         description="Safety overlap margin in minutes for incremental ETL queries",
     )
     """Safety overlap margin for incremental ETL queries."""
-
-    @model_validator(mode="after")
-    def _validate_memory_modes(self) -> "StatelessSettings":
-        """Reject mutually exclusive shared-memory and ephemeral modes."""
-        if self.stateless and self.ephemeral:
-            msg = "stateless and ephemeral cannot both be enabled"
-            raise ValueError(msg)
-        return self
 
 
 class SyncCliSettings(StatelessSettings, RuntimeSettingsBase):
@@ -353,7 +357,12 @@ class RuntimeSettings(
     """All non-secret environment settings used by application components."""
 
 
-class McpCliSettings(OAuthSettings, BindSettings, RuntimeSettingsBase):
+class McpCliSettings(
+    OAuthSettings,
+    BindSettings,
+    PersistenceSettings,
+    RuntimeSettingsBase,
+):
     """CLI-visible settings for the standalone MCP runtime."""
 
 

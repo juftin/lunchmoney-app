@@ -8,13 +8,13 @@ Welcome, AI Coding Assistant! This document provides authoritative instructions,
 
 When starting a task, use this directory map to locate specific documentation:
 
-| Document                  | Path                                                 | Purpose                                                                    |
-| :------------------------ | :--------------------------------------------------- | :------------------------------------------------------------------------- |
-| **Active Checklist**      | [`docs/CHECKLIST.md`](docs/CHECKLIST.md)             | Task execution tracker. Check off items here when completed.               |
-| **API Roadmap**           | [`docs/ROADMAP.md`](docs/ROADMAP.md)                 | 100% Lunch Money v2 API coverage matrix (39 endpoints) & sprint overview.  |
-| **Incremental ETL Spec**  | [`docs/INCREMENTAL_ETL.md`](docs/INCREMENTAL_ETL.md) | Stateful sync, `SyncMetadata` watermark tracking & safety margin design.   |
-| **Technical Handoff**     | [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md)     | Step-by-step code snippets, schema definitions, and sprint hand-off specs. |
-| **MCP Integration Guide** | [`docs/MCP_GUIDE.md`](docs/MCP_GUIDE.md)             | stdio/SSE transports, `uvx` packaging, Resources, Prompts & OAuth.         |
+| Document                  | Path                                                                         | Purpose                                                                    |
+| :------------------------ | :--------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
+| **Active Checklist**      | [`docs/maintainers/CHECKLIST.md`](docs/maintainers/CHECKLIST.md)             | Task execution tracker. Check off items here when completed.               |
+| **API Roadmap**           | [`docs/maintainers/ROADMAP.md`](docs/maintainers/ROADMAP.md)                 | 100% Lunch Money v2 API coverage matrix (39 endpoints) & sprint overview.  |
+| **Incremental ETL Spec**  | [`docs/maintainers/INCREMENTAL_ETL.md`](docs/maintainers/INCREMENTAL_ETL.md) | Stateful sync, `SyncMetadata` watermark tracking & safety margin design.   |
+| **Technical Handoff**     | [`docs/maintainers/AGENT_HANDOFF.md`](docs/maintainers/AGENT_HANDOFF.md)     | Step-by-step code snippets, schema definitions, and sprint hand-off specs. |
+| **MCP Integration Guide** | [`docs/MCP_GUIDE.md`](docs/MCP_GUIDE.md)                                     | End-user setup, remote connections, data handling, and OAuth.              |
 
 ---
 
@@ -106,9 +106,9 @@ When executing tasks that contain independent sub-components (e.g. implementing 
 
 ## 📝 Documentation Auto-Improvement & Checklist Updates
 
-1. **Checkoff Protocol**: When completing a task, immediately edit [`docs/CHECKLIST.md`](docs/CHECKLIST.md) to check off the item (`- [x]`).
-2. **Auto-Improvement Rule**: Whenever you modify code signatures, add configuration options, or resolve subtle bugs, update the relevant specification in `docs/` (`ROADMAP.md`, `INCREMENTAL_ETL.md`, `AGENT_HANDOFF.md`, or `MCP_GUIDE.md`).
-3. **New Tasks**: If a task reveals additional requirements, add new `- [ ]` checklist items to `docs/CHECKLIST.md`.
+1. **Checkoff Protocol**: When completing a task, immediately edit [`docs/maintainers/CHECKLIST.md`](docs/maintainers/CHECKLIST.md) to check off the item (`- [x]`).
+2. **Auto-Improvement Rule**: Whenever you modify code signatures, add configuration options, or resolve subtle bugs, update the relevant specification in `docs/maintainers/` (`ROADMAP.md`, `INCREMENTAL_ETL.md`, or `AGENT_HANDOFF.md`) and the relevant user guide when behavior changes.
+3. **New Tasks**: If a task reveals additional requirements, add new `- [ ]` checklist items to `docs/maintainers/CHECKLIST.md`.
 
 ---
 

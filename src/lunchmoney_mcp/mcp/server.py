@@ -117,26 +117,37 @@ def uncategorized_transactions_audit() -> str:
 
 def create_argument_parser() -> argparse.ArgumentParser:
     """Create the transport parser used by the standalone MCP command."""
-    parser = argparse.ArgumentParser(description="Launch the Lunch Money MCP server.")
+    parser = argparse.ArgumentParser(
+        description="Launch Lunch Money MCP over stdio or a remote HTTP endpoint."
+    )
     transport_group = parser.add_mutually_exclusive_group()
     transport_group.add_argument(
         "--stdio",
         action="store_const",
         const="stdio",
         dest="transport",
-        help="Use standard input/output transport (default).",
+        help="Local client transport; no listening socket or retained data (default).",
     )
     transport_group.add_argument(
-        "--sse", action="store_const", const="sse", dest="transport"
+        "--sse",
+        action="store_const",
+        const="sse",
+        dest="transport",
+        help="Compatibility Server-Sent Events endpoint at /sse (persistent default).",
     )
     transport_group.add_argument(
-        "--http", action="store_const", const="http", dest="transport"
+        "--http",
+        action="store_const",
+        const="http",
+        dest="transport",
+        help="Compatibility HTTP endpoint at /mcp (persistent default).",
     )
     transport_group.add_argument(
         "--streamable-http",
         action="store_const",
         const="streamable-http",
         dest="transport",
+        help="Remote Streamable HTTP endpoint at /mcp (persistent default).",
     )
     return parser
 
@@ -168,20 +179,53 @@ def run_from_args(
     mcp.run(transport=transport, host=settings.host, port=settings.port)
 
 
+def apply_transport_defaults(
+    settings: RuntimeSettings,
+    args: argparse.Namespace,
+) -> RuntimeSettings:
+    """Apply MCP storage defaults after the transport has been selected.
+
+    Stdio is normally launched as a child process for one local MCP client, so
+    each request passes through to Lunch Money without retained data. Long-lived
+    HTTP transports retain data unless the operator selects another mode.
+
+    Parameters
+    ----------
+    settings : RuntimeSettings
+        Configuration resolved from the command line and environment.
+    args : argparse.Namespace
+        Parsed MCP transport arguments.
+
+    Returns
+    -------
+    RuntimeSettings
+        Settings with the stdio-only ephemeral default applied when appropriate.
+    """
+    persistence_fields = {"stateless", "ephemeral"}
+    if (
+        args.transport or "stdio"
+    ) == "stdio" and not persistence_fields & settings.model_fields_set:
+        settings.ephemeral = True
+    return settings
+
+
 def main(argv: list[str] | None = None) -> None:
     """Launch the FastMCP server with the transport selected by a CLI flag."""
     arguments = list(sys.argv[1:] if argv is None else argv)
     parser = create_argument_parser()
     settings = parse_cli_settings(arguments, McpCliSettings, root_parser=parser)
+    parsed_arguments = parser.parse_args(arguments)
+    settings = apply_transport_defaults(settings, parsed_arguments)
     configure_runtime_settings(settings)
     configure_runtime_mode("mcp")
     configure_auth(settings)
-    run_from_args(parser, parser.parse_args(arguments), settings)
+    run_from_args(parser, parsed_arguments, settings)
 
 
 __all__ = [
     "configure_auth",
     "create_argument_parser",
+    "apply_transport_defaults",
     "main",
     "mcp",
     "run_from_args",
