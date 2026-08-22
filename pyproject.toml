@@ -1,5 +1,5 @@
 [project]
-name = "lunchmoney-mcp"
+name = "lunchmoney-app"
 version = "0.7.0"
 description = "Lunch Money Application"
 readme = "README.md"
@@ -38,12 +38,12 @@ classifiers = [
 ]
 
 [project.urls]
-Documentation = "https://juftin.github.io/lunchmoney-mcp"
-Issues = "https://github.com/juftin/lunchmoney-mcp/issues"
-Source = "https://github.com/juftin/lunchmoney-mcp"
+Documentation = "https://juftin.github.io/lunchmoney-app"
+Issues = "https://github.com/juftin/lunchmoney-app/issues"
+Source = "https://github.com/juftin/lunchmoney-app"
 
 [project.scripts]
-lunchmoney-mcp = "lunchmoney_mcp.cli:main"
+lunchmoney-app = "lunchmoney_app.cli:main"
 
 [tool.lunchmoney_contract]
 client_package = "lunchmoney-python-async"
@@ -54,7 +54,7 @@ openapi_spec_version = "2.9.4"
 [tool.pytest.ini_options]
 addopts = [
   "-v",
-  "--cov=src/lunchmoney_mcp",
+  "--cov=src/lunchmoney_app",
   "--cov-report=term-missing",
   "--cov-report=xml:coverage.xml",
   "--junitxml=pytest.xml"
@@ -74,7 +74,7 @@ exclude_lines = [
 [tool.coverage.run]
 branch = true
 omit = [
-  "src/lunchmoney_mcp/__about__.py"
+  "src/lunchmoney_app/__about__.py"
 ]
 parallel = true
 
@@ -96,7 +96,7 @@ no_implicit_reexport = false
 ban-relative-imports = "all"
 
 [tool.ruff.lint.isort]
-known-first-party = ["lunchmoney_mcp"]
+known-first-party = ["lunchmoney_app"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports

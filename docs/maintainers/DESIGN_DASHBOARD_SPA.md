@@ -134,7 +134,7 @@ HTMX + Alpine is the only stack that satisfies all constraints: **no build step,
 ### 5.1 Server Components (unchanged)
 
 ```
-src/lunchmoney_mcp/services/dashboard.py
+src/lunchmoney_app/services/dashboard.py
   └── fetch_dashboard_data(db, client, period_start, transaction_limit)
       └── asyncio.gather(
             sync_metadata   → db.get_sync_metadata("transactions")

@@ -7,7 +7,7 @@ from sqlalchemy.schema import CreateTable
 from sqlalchemy.types import TypeDecorator
 from sqlmodel import SQLModel, Session, create_engine
 
-from lunchmoney_mcp.database.models import Category, CategoryKind
+from lunchmoney_app.database.models import Category, CategoryKind
 from factories import category_object, child_category_object
 
 

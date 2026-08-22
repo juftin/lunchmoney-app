@@ -7,8 +7,8 @@ The command-line interface provides `mcp`, `serve`, `schedule`, `sync`,
 runtime:
 
 ```bash
-lunchmoney-mcp --help
-lunchmoney-mcp mcp --help
+lunchmoney-app --help
+lunchmoney-app mcp --help
 ```
 
 `doctor` validates local configuration and prerequisites without calling Lunch
@@ -43,8 +43,8 @@ requests without retaining it after shutdown. Use `--ephemeral` when every
 request should go straight to Lunch Money:
 
 ```bash
-lunchmoney-mcp mcp --streamable-http --stateless
-lunchmoney-mcp mcp --streamable-http --ephemeral
+lunchmoney-app mcp --streamable-http --stateless
+lunchmoney-app mcp --streamable-http --ephemeral
 ```
 
 ## Shell completion
@@ -54,10 +54,10 @@ the current shell:
 
 ```bash
 # Bash
-source <(lunchmoney-mcp --print-completion bash)
+source <(lunchmoney-app --print-completion bash)
 
 # Zsh
-source <(lunchmoney-mcp --print-completion zsh)
+source <(lunchmoney-app --print-completion zsh)
 ```
 
 To install Bash completion for future shells, write the generated script to the
@@ -65,8 +65,8 @@ standard user completion directory:
 
 ```bash
 mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
-lunchmoney-mcp --print-completion bash \
-  > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/lunchmoney-mcp"
+lunchmoney-app --print-completion bash \
+  > "${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/lunchmoney-app"
 ```
 
 For Zsh, add `fpath=(~/.zfunc $fpath)` and `autoload -Uz compinit && compinit`
@@ -74,7 +74,7 @@ to `~/.zshrc`, then install the generated function:
 
 ```bash
 mkdir -p ~/.zfunc
-lunchmoney-mcp --print-completion zsh > ~/.zfunc/_lunchmoney-mcp
+lunchmoney-app --print-completion zsh > ~/.zfunc/_lunchmoney-app
 ```
 
 ## Scheduled synchronization
@@ -84,7 +84,7 @@ on every run and incrementally refreshes transactions; its first run uses the
 configured 30-day rolling transaction window until a watermark exists.
 
 ```bash
-lunchmoney-mcp schedule \
+lunchmoney-app schedule \
   --schedule-cron "0 * * * *" \
   --schedule-timezone "America/Denver" \
   --schedule-days 30

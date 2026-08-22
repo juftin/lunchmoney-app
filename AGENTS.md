@@ -1,6 +1,6 @@
 # 🤖 AGENTS.md — AI Agent Guidance & Coding Standards
 
-Welcome, AI Coding Assistant! This document provides authoritative instructions, architectural guidelines, and workflow standards for working within the **`lunchmoney-mcp`** repository.
+Welcome, AI Coding Assistant! This document provides authoritative instructions, architectural guidelines, and workflow standards for working within the **`lunchmoney-app`** repository.
 
 ---
 
@@ -20,7 +20,7 @@ When starting a task, use this directory map to locate specific documentation:
 
 ## 🏛️ Project Overview & Architecture
 
-**`lunchmoney-mcp`** is a high-performance Model Context Protocol (MCP) server and REST API for personal financial management with [Lunch Money](https://lunchmoney.app).
+**`lunchmoney-app`** is a high-performance Model Context Protocol (MCP) server and REST API for personal financial management with [Lunch Money](https://lunchmoney.app).
 
 ### System Topology
 
@@ -37,7 +37,7 @@ When starting a task, use this directory map to locate specific documentation:
                    │
 ┌──────────────────┴──────────────────┐
 │            Service Layer            │
-│  src/lunchmoney_mcp/services/       │
+│  src/lunchmoney_app/services/       │
 └──────────────────┬──────────────────┘
                    │
 ┌──────────────────┴──────────────────┐
@@ -65,12 +65,12 @@ For every Lunch Money domain (e.g. `categories`, `transactions`, `accounts`, `us
 ### Architectural Principles
 
 1. **Service Layer Isolation**:
-    - All business logic, DB queries, API calls, and domain rollups MUST reside in `src/lunchmoney_mcp/services/`.
-    - FastAPI routers (`src/lunchmoney_mcp/app/routers/`) and FastMCP tools (`src/lunchmoney_mcp/mcp/tools/`) MUST be clean 1-to-2 line delegators calling service functions.
+    - All business logic, DB queries, API calls, and domain rollups MUST reside in `src/lunchmoney_app/services/`.
+    - FastAPI routers (`src/lunchmoney_app/app/routers/`) and FastMCP tools (`src/lunchmoney_app/mcp/tools/`) MUST be clean 1-to-2 line delegators calling service functions.
 
 2. **Modular MCP Tool Organization**:
-    - FastMCP tools MUST be defined in dedicated domain files under `src/lunchmoney_mcp/mcp/tools/` and imported into `src/lunchmoney_mcp/mcp/server.py`.
-    - FastMCP tools and FastAPI routers delegate directly to clean service functions in `src/lunchmoney_mcp/services/`.
+    - FastMCP tools MUST be defined in dedicated domain files under `src/lunchmoney_app/mcp/tools/` and imported into `src/lunchmoney_app/mcp/server.py`.
+    - FastMCP tools and FastAPI routers delegate directly to clean service functions in `src/lunchmoney_app/services/`.
 
 3. **Upstream-First Write-Back Strategy**:
     - All write operations (create/update/delete) MUST call the Lunch Money v2 API first.
@@ -125,7 +125,7 @@ Most workflows are orchestrated via [`go-task`](https://taskfile.dev). ALWAYS us
 | `task lint`     | Check formatting and linting rules (`ruff`)                                         |
 | `task check`    | Perform static type checking (`ty check`)                                           |
 | `task test`     | Execute Pytest test suite (`pytest`)                                                |
-| `task dev`      | Run local FastAPI dev server (`uv run fastapi dev src/lunchmoney_mcp/app/main.py`)  |
+| `task dev`      | Run local FastAPI dev server (`uv run fastapi dev src/lunchmoney_app/app/main.py`)  |
 | `task notebook` | Launch interactive marimo usage notebook (`marimo edit notebooks/example_usage.py`) |
 
 ---

@@ -49,9 +49,9 @@ Expected: FAIL because the fixture and dashboard do not yet expose the asserted 
 
 **Files:**
 
-- Create: `src/lunchmoney_mcp/app/static/mascot.png`
-- Modify: `src/lunchmoney_mcp/app/templates/dashboard.html`
-- Modify: `src/lunchmoney_mcp/app/static/dashboard.css`
+- Create: `src/lunchmoney_app/app/static/mascot.png`
+- Modify: `src/lunchmoney_app/app/templates/dashboard.html`
+- Modify: `src/lunchmoney_app/app/static/dashboard.css`
 - Test: `tests/test_dashboard.py::test_dashboard_renders_parent_categories_and_mascot`
 
 **Interfaces:**
@@ -61,7 +61,7 @@ Expected: FAIL because the fixture and dashboard do not yet expose the asserted 
 
 - [x] **Step 1: Download the supplied mascot asset**
 
-Run: `curl --fail --location --output src/lunchmoney_mcp/app/static/mascot.png https://lunchmoney.app/assets/images/logos/mascot.png`
+Run: `curl --fail --location --output src/lunchmoney_app/app/static/mascot.png https://lunchmoney.app/assets/images/logos/mascot.png`
 
 - [x] **Step 2: Render the mascot and nested child rows**
 

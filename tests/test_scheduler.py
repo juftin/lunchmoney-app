@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from lunchmoney_mcp.config import RuntimeSettings
-from lunchmoney_mcp.schemas import ScheduledSyncStatus, SyncDetails, SyncResponse
+from lunchmoney_app.config import RuntimeSettings
+from lunchmoney_app.schemas import ScheduledSyncStatus, SyncDetails, SyncResponse
 
 
 class _SchedulerDouble:
@@ -54,7 +54,7 @@ class _AcquiredLock:
 
 def test_scheduler_uses_stable_single_process_runtime() -> None:
     """Use APScheduler 3's asyncio runtime with coalesced single-instance jobs."""
-    from lunchmoney_mcp.scheduler import build_scheduler
+    from lunchmoney_app.scheduler import build_scheduler
 
     scheduler = build_scheduler(RuntimeSettings())
 
@@ -70,7 +70,7 @@ def test_embedded_scheduler_starts_inside_local_fastapi_process(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Start the same scheduler from an explicit local FastAPI lifespan mode."""
-    import lunchmoney_mcp.scheduler as scheduler_module
+    import lunchmoney_app.scheduler as scheduler_module
 
     scheduler = _SchedulerDouble()
     monkeypatch.setattr(
@@ -102,7 +102,7 @@ def test_embedded_scheduler_rejects_nonlocal_or_multiworker_runtime(
     message: str,
 ) -> None:
     """Reject embedded scheduling in deployment modes that could duplicate jobs."""
-    import lunchmoney_mcp.scheduler as scheduler_module
+    import lunchmoney_app.scheduler as scheduler_module
 
     monkeypatch.setattr(scheduler_module.sys, "argv", arguments)
     if web_concurrency is None:
@@ -124,7 +124,7 @@ async def test_schedule_process_coalesces_and_replaces_its_job(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Register coalesced jobs for transactions and metadata workloads and close gracefully."""
-    import lunchmoney_mcp.scheduler as scheduler_module
+    import lunchmoney_app.scheduler as scheduler_module
 
     scheduler = _SchedulerDouble()
     monkeypatch.setattr(
@@ -157,7 +157,7 @@ async def test_scheduled_sync_skips_when_another_run_holds_lock(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Persist a skipped result instead of starting duplicate concurrent work."""
-    import lunchmoney_mcp.services.sync as sync_service
+    import lunchmoney_app.services.sync as sync_service
 
     database = MagicMock()
     database.record_scheduled_sync_run = AsyncMock()
@@ -180,7 +180,7 @@ async def test_scheduled_sync_records_incremental_result(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Use incremental sync and persist its successful record-count summary."""
-    import lunchmoney_mcp.services.sync as sync_service
+    import lunchmoney_app.services.sync as sync_service
 
     lock = _AcquiredLock()
     database = MagicMock()
@@ -226,8 +226,8 @@ async def test_scheduled_sync_records_incremental_result(
 @pytest.mark.asyncio
 async def test_scheduled_sync_status_maps_persisted_record() -> None:
     """Expose the last persisted scheduler result in the public response schema."""
-    from lunchmoney_mcp.database import ScheduledSyncRun
-    from lunchmoney_mcp.services.sync import get_scheduled_sync_status
+    from lunchmoney_app.database import ScheduledSyncRun
+    from lunchmoney_app.services.sync import get_scheduled_sync_status
 
     timestamp = datetime.datetime(2026, 7, 30, tzinfo=datetime.timezone.utc)
     database = MagicMock()

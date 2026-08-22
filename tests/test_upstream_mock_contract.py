@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from lunchmoney_mcp.client import LunchableClient
+from lunchmoney_app.client import LunchableClient
 
 MOCK_SERVICE_URL = "https://mock.lunchmoney.dev/v2"
 """Lunch Money's official static mock service, which has no financial data."""

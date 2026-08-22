@@ -17,7 +17,7 @@ output.
    merely to make an application write to its image filesystem.
 3. Inject values from a secret manager or the deployment environment; never bake
    them into an image, commit them, or pass them on a command line. Before
-   starting Compose, set `LUNCHMONEY_ACCESS_TOKEN`, `LUNCHMONEY_MCP_API_KEY`,
+   starting Compose, set `LUNCHMONEY_ACCESS_TOKEN`, `LUNCHMONEY_APP_API_KEY`,
    `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `LUNCHMONEY_DATABASE_URL`.
    The database URL must use the same database credentials and hostname
    `postgres`; percent-encode reserved characters in its username and password.
@@ -26,8 +26,8 @@ output.
 
 ```bash
 docker compose up --build --detach --wait
-curl --fail --header "X-API-Key: $LUNCHMONEY_MCP_API_KEY" http://127.0.0.1:8000/health
-curl --fail --header "X-API-Key: $LUNCHMONEY_MCP_API_KEY" http://127.0.0.1:8000/ready
+curl --fail --header "X-API-Key: $LUNCHMONEY_APP_API_KEY" http://127.0.0.1:8000/health
+curl --fail --header "X-API-Key: $LUNCHMONEY_APP_API_KEY" http://127.0.0.1:8000/ready
 docker compose --profile scheduler up --detach scheduler
 ```
 
@@ -35,7 +35,7 @@ docker compose --profile scheduler up --detach scheduler
 that dependencies required to serve traffic are ready. These endpoints
 intentionally bypass API-key authentication so an orchestrator can detect a
 failed service; keep them on the loopback deployment binding or limit them at
-the reverse proxy. `/metrics` requires `LUNCHMONEY_MCP_API_KEY` and must remain
+the reverse proxy. `/metrics` requires `LUNCHMONEY_APP_API_KEY` and must remain
 available only to the operations network or an authenticated monitoring client.
 
 ## Compose deployment modes
@@ -48,8 +48,8 @@ MCP endpoint together at `/mcp`.
 | Mode                | Command                                                                                                                                     | Result                                                                                                               |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Combined (default)  | `docker compose up --build --detach --wait`                                                                                                 | REST API and streamable HTTP MCP in one web process.                                                                 |
-| API-only            | `docker compose up --detach postgres redis` then `docker compose run --rm --service-ports app gunicorn lunchmoney_mcp.app.main:fastapi_app` | REST API only, with the same database and lock dependencies.                                                         |
-| MCP-only            | `docker compose run --rm --service-ports app lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 8000`                               | Standalone Streamable HTTP MCP server at `/mcp`; it uses the configured persistent database and starts no scheduler. |
+| API-only            | `docker compose up --detach postgres redis` then `docker compose run --rm --service-ports app gunicorn lunchmoney_app.app.main:fastapi_app` | REST API only, with the same database and lock dependencies.                                                         |
+| MCP-only            | `docker compose run --rm --service-ports app lunchmoney-app mcp --streamable-http --host 0.0.0.0 --port 8000`                               | Standalone Streamable HTTP MCP server at `/mcp`; it uses the configured persistent database and starts no scheduler. |
 | Dedicated scheduler | `docker compose --profile scheduler up --build --detach scheduler`                                                                          | Adds the opt-in `schedule` process to the combined web deployment.                                                   |
 
 The API-only and MCP-only commands are foreground processes; run them under the
@@ -59,7 +59,7 @@ at the same time because both publish the configured port. The scheduler is
 not a high-availability service: run exactly one `scheduler` container, even
 when the web application has multiple workers or replicas.
 
-For local, non-container MCP clients, `lunchmoney-mcp mcp` defaults to stdio.
+For local, non-container MCP clients, `lunchmoney-app mcp` defaults to stdio.
 Use a standalone HTTP MCP process only when the MCP client is remote.
 
 ## Configuration precedence and diagnostics
@@ -71,12 +71,12 @@ them in the process environment or `.env` instead. Compose's project `.env`
 file is used for variable interpolation, and the values injected into a
 container become process-environment values for this precedence rule.
 
-Run `lunchmoney-mcp doctor` before a new deployment or after a configuration
+Run `lunchmoney-app doctor` before a new deployment or after a configuration
 change. It checks local configuration and dependencies only—it never calls the
 Lunch Money API—and redacts secret values in its output. A non-zero exit status
 means the process should not be considered ready for its requested command.
 
-Use `lunchmoney-mcp version` to report the installed package version. The
+Use `lunchmoney-app version` to report the installed package version. The
 release process is automated; do not manually change the version in a deployed
 environment to represent an upgrade.
 
@@ -111,7 +111,7 @@ Upgrade a Compose deployment in a maintenance window:
 4. If scheduling is enabled, recreate the single scheduler too:
    `docker compose --profile scheduler up --build --detach scheduler`.
    Do not start a second scheduler while the old one is still running.
-5. Run `lunchmoney-mcp doctor` in the deployment environment and verify
+5. Run `lunchmoney-app doctor` in the deployment environment and verify
    `/ready`, an authenticated read-only request, and the next scheduled run.
 
 Application startup serializes Alembic migrations with the shared migration
@@ -186,7 +186,7 @@ docker compose exec -T postgres pg_restore \
   --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
   --clean --if-exists --no-owner --single-transaction < "$backup_file"
 docker compose up --detach app
-curl --fail --header "X-API-Key: $LUNCHMONEY_MCP_API_KEY" http://127.0.0.1:8000/ready
+curl --fail --header "X-API-Key: $LUNCHMONEY_APP_API_KEY" http://127.0.0.1:8000/ready
 ```
 
 Keep the original backup immutable until the restored system is validated. Do

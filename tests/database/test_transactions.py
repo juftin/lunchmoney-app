@@ -17,7 +17,7 @@ from sqlalchemy.schema import CreateTable
 from sqlalchemy.types import TypeDecorator
 from sqlmodel import SQLModel, Session, create_engine, select
 
-from lunchmoney_mcp.database.models import (
+from lunchmoney_app.database.models import (
     Tag,
     Transaction,
     TransactionAttachment,

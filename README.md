@@ -1,15 +1,20 @@
-<h1 align="center">lunchmoney-mcp</h1>
+<h1 align="center">lunchmoney-app</h1>
 
 <p align="center">
-    Lunch Money Application
+    MCP-first access to your Lunch Money data
 </p>
 
 <p align="center">
-  <a href="https://github.com/juftin/lunchmoney-mcp"><img src="https://img.shields.io/github/v/release/juftin/lunchmoney-mcp?color=blue&label=lunchmoney-mcp&logo=github" alt="GitHub"></a>
-  <a href="https://github.com/juftin/lunchmoney-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/juftin/lunchmoney-mcp?color=blue&label=License" alt="GitHub License"></a>
-  <a href="https://github.com/juftin/lunchmoney-mcp/actions/workflows/ci.yaml?query=branch%3Amain"><img src="https://github.com/juftin/lunchmoney-mcp/actions/workflows/ci.yaml/badge.svg?branch=main" alt="CI Status"></a>
-  <a href="https://juftin.github.io/lunchmoney-mcp/"><img src="https://img.shields.io/static/v1?message=docs&color=526CFE&logo=Material+for+MkDocs&logoColor=FFFFFF&label=" alt="docs"></a>
+  <a href="https://github.com/juftin/lunchmoney-app"><img src="https://img.shields.io/github/v/release/juftin/lunchmoney-app?color=blue&label=lunchmoney-app&logo=github" alt="GitHub"></a>
+  <a href="https://github.com/juftin/lunchmoney-app/blob/main/LICENSE"><img src="https://img.shields.io/github/license/juftin/lunchmoney-app?color=blue&label=License" alt="GitHub License"></a>
+  <a href="https://github.com/juftin/lunchmoney-app/actions/workflows/ci.yaml?query=branch%3Amain"><img src="https://github.com/juftin/lunchmoney-app/actions/workflows/ci.yaml/badge.svg?branch=main" alt="CI Status"></a>
+  <a href="https://juftin.github.io/lunchmoney-app/"><img src="https://img.shields.io/static/v1?message=docs&color=526CFE&logo=Material+for+MkDocs&logoColor=FFFFFF&label=" alt="docs"></a>
 </p>
+
+`lunchmoney-app` is first and foremost an [MCP](https://modelcontextprotocol.io/)
+server for using your Lunch Money data from an MCP-enabled assistant. It also runs
+as a standalone application with a RESTful API and database backend that keeps
+itself in sync with all of your Lunch Money data.
 
 ## Quickstart
 
@@ -27,7 +32,7 @@ separate server command.
     "mcpServers": {
         "lunchmoney": {
             "command": "uvx",
-            "args": ["lunchmoney-mcp", "mcp"],
+            "args": ["lunchmoney-app", "mcp"],
             "env": {
                 "LUNCHMONEY_ACCESS_TOKEN": "your-lunch-money-token"
             }

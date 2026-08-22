@@ -262,9 +262,9 @@ features.
 - [x] Replace the FastAPI development CLI in deployment assets with Gunicorn
       serving the ASGI application through the maintained `uvicorn-worker` worker
       package. Keep direct Uvicorn for local development.
-- [x] Add a dedicated `lunchmoney-mcp schedule` process using APScheduler's
+- [x] Add a dedicated `lunchmoney-app schedule` process using APScheduler's
       async scheduler and an explicit cron expression/timezone configuration for
-      scheduled sync. Scheduling remains opt-in; `uvx lunchmoney-mcp mcp` and
+      scheduled sync. Scheduling remains opt-in; `uvx lunchmoney-app mcp` and
       `serve` without embedded scheduling never start background work.
 - [x] Define the initial schedule policy as full metadata refresh plus
       incremental transaction refresh, using the persisted transaction watermark

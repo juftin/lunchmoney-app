@@ -30,7 +30,7 @@ migrations, run `uv run alembic downgrade base`.
 All database interfaces and records are available from one package:
 
 ```python
-from lunchmoney_mcp.database import (
+from lunchmoney_app.database import (
     DEFAULT_DATABASE_URL,
     Category,
     CategoryKind,
@@ -51,7 +51,7 @@ After applying migrations, use the convenience API for detached records and
 their supported relationship graphs:
 
 ```python
-from lunchmoney_mcp.database import LunchMoneyDatabase, User
+from lunchmoney_app.database import LunchMoneyDatabase, User
 
 database_url = "sqlite+aiosqlite:///lunchmoney.db"
 user = User(
@@ -86,7 +86,7 @@ writes.
 ```python
 from sqlmodel import select
 
-from lunchmoney_mcp.database import LunchMoneyDatabase, User
+from lunchmoney_app.database import LunchMoneyDatabase, User
 
 async with LunchMoneyDatabase() as database:
     async with database.session() as session:

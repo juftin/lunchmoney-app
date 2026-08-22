@@ -1,6 +1,6 @@
 # 📋 Master Development Checklist & Agent Execution Guide
 
-This document serves as the **operational task tracker** for **`lunchmoney-mcp`**. Every task across all implementation sprints is tracked here. AI agents and developers working on this project MUST follow the execution rules below.
+This document serves as the **operational task tracker** for **`lunchmoney-app`**. Every task across all implementation sprints is tracked here. AI agents and developers working on this project MUST follow the execution rules below.
 
 ---
 
@@ -31,12 +31,12 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 
 _Reference Spec_: [`INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-0-incremental-etl--stateless-engine)
 
-- [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_mcp/mcp/tools/`](../src/lunchmoney_mcp/mcp/tools/).
-- [x] **Config Additions**: Add `stateless: bool` (`LUNCHMONEY_STATELESS`) and `sync_safety_margin_minutes: int` (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`) in [`src/lunchmoney_mcp/config.py`](../src/lunchmoney_mcp/config.py).
-- [x] **SyncMetadata Model**: Create `SyncMetadata` table in [`src/lunchmoney_mcp/database/models/sync.py`](../src/lunchmoney_mcp/database/models/sync.py).
+- [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_app/mcp/tools/`](../src/lunchmoney_app/mcp/tools/).
+- [x] **Config Additions**: Add `stateless: bool` (`LUNCHMONEY_STATELESS`) and `sync_safety_margin_minutes: int` (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`) in [`src/lunchmoney_app/config.py`](../src/lunchmoney_app/config.py).
+- [x] **SyncMetadata Model**: Create `SyncMetadata` table in [`src/lunchmoney_app/database/models/sync.py`](../src/lunchmoney_app/database/models/sync.py).
 - [x] **Alembic Migration**: Add migration `0002_add_sync_metadata_table.py` for `sync_metadata`.
-- [x] **Stateless In-Memory Database**: Update [`src/lunchmoney_mcp/database/backend.py`](../src/lunchmoney_mcp/database/backend.py) to support `StaticPool` in-memory SQLite and `create_tables()` helper.
-- [x] **Opt-In Incremental Sync Logic**: Update [`src/lunchmoney_mcp/app/sync.py`](../src/lunchmoney_mcp/app/sync.py) & [`src/lunchmoney_mcp/services/sync.py`](../src/lunchmoney_mcp/services/sync.py) to handle transaction-only `incremental: bool = False` and `updated_since` timestamp filtering.
+- [x] **Stateless In-Memory Database**: Update [`src/lunchmoney_app/database/backend.py`](../src/lunchmoney_app/database/backend.py) to support `StaticPool` in-memory SQLite and `create_tables()` helper.
+- [x] **Opt-In Incremental Sync Logic**: Update [`src/lunchmoney_app/app/sync.py`](../src/lunchmoney_app/app/sync.py) & [`src/lunchmoney_app/services/sync.py`](../src/lunchmoney_app/services/sync.py) to handle transaction-only `incremental: bool = False` and `updated_since` timestamp filtering.
 - [x] **Router & Tool Integration**: Expose `incremental` and `safety_margin_minutes` parameters on `POST /api/sync` and `sync_data` FastMCP tool.
 - [x] **Test Suite**: Cover stateless configuration, database initialization, migrations, incremental transaction policy, and transport delegation in `tests/test_config.py`, `tests/database/test_backend.py`, `tests/database/test_migrations.py`, `tests/test_incremental_sync.py`, `tests/test_app.py`, and `tests/test_mcp.py`.
 
@@ -103,10 +103,10 @@ _Reference Spec_: [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-4-budgets--spendi
 
 _Reference Spec_: [`MCP_GUIDE.md`](../MCP_GUIDE.md) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-5-production-security--cicd)
 
-- [x] **API Key Guard**: Implement `verify_api_key` middleware in [`src/lunchmoney_mcp/app/auth.py`](../src/lunchmoney_mcp/app/auth.py).
-- [x] **MCP Executable Entrypoint**: Add `lunchmoney-mcp = "lunchmoney_mcp.mcp.server:main"` script in `pyproject.toml`.
+- [x] **API Key Guard**: Implement `verify_api_key` middleware in [`src/lunchmoney_app/app/auth.py`](../src/lunchmoney_app/app/auth.py).
+- [x] **MCP Executable Entrypoint**: Add `lunchmoney-app = "lunchmoney_app.mcp.server:main"` script in `pyproject.toml`.
 - [x] **MCP Multi-Transport**: Support `--sse` transport flag in `mcp.run()`.
-- [x] **MCP Resources**: Register `lunchmoney://summary` and `lunchmoney://categories` resources in [`src/lunchmoney_mcp/mcp/server.py`](../src/lunchmoney_mcp/mcp/server.py).
+- [x] **MCP Resources**: Register `lunchmoney://summary` and `lunchmoney://categories` resources in [`src/lunchmoney_app/mcp/server.py`](../src/lunchmoney_app/mcp/server.py).
 - [x] **MCP Prompts**: Register `budget_health_check` and `uncategorized_transactions_audit` prompts.
 - [x] **GitHub Actions CI**: Add `.github/workflows/ci.yaml` running `task lint`, `task check`, `task test`, and `docker build`.
 
@@ -134,7 +134,7 @@ _Reference Spec_: [`MCP_GUIDE.md`](../MCP_GUIDE.md) & [`AGENT_HANDOFF.md`](AGENT
 _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-8-production-runtime--scheduled-sync)
 
 - [x] **Gunicorn Runtime**: Replace FastAPI CLI deployment commands with Gunicorn and the maintained Uvicorn worker package; retain direct Uvicorn for local development.
-- [x] **Dedicated Scheduler**: Add an opt-in `lunchmoney-mcp schedule` APScheduler process with configurable cron, timezone, graceful lifecycle, and sync run reporting; each run refreshes full metadata and incrementally refreshes transactions.
+- [x] **Dedicated Scheduler**: Add an opt-in `lunchmoney-app schedule` APScheduler process with configurable cron, timezone, graceful lifecycle, and sync run reporting; each run refreshes full metadata and incrementally refreshes transactions.
 - [x] **Multi-Worker Safety**: Ensure Gunicorn workers never start schedulers; serialize scheduled syncs with the distributed lock and test duplicate-prevention behavior.
 - [x] **Stable Scheduler Constraint**: Use one dedicated APScheduler 3.11 process; HA/multi-scheduler operation is explicitly unsupported because APScheduler 3 job stores cannot be shared.
 - [x] **Local Embedded Scheduler**: Allow an explicitly configured, single-worker development FastAPI process to run the scheduler through its lifespan; reject Gunicorn and multi-worker modes.

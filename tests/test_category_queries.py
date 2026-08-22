@@ -8,11 +8,11 @@ import pytest
 from lunchmoney.models import GetAllCategories200Response
 
 from database.factories import category_object, child_category_object
-from lunchmoney_mcp.client import LunchMoneyApp
-from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.database.models import Category
-from lunchmoney_mcp.schemas import CategoryQuery
-from lunchmoney_mcp.services import fetch_categories
+from lunchmoney_app.client import LunchMoneyApp
+from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.database.models import Category
+from lunchmoney_app.schemas import CategoryQuery
+from lunchmoney_app.services import fetch_categories
 
 
 @pytest.mark.asyncio

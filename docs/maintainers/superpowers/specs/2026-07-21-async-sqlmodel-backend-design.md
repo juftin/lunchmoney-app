@@ -24,7 +24,7 @@ Each database stores data for one Lunch Money account.
 `LunchMoneyApp` and `LunchableData` remain unchanged. The persistence backend lives in a separate package:
 
 ```text
-src/lunchmoney_mcp/
+src/lunchmoney_app/
 ├── app.py
 └── database/
     ├── __init__.py

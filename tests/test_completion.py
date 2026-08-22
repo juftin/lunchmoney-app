@@ -2,14 +2,14 @@
 
 import pytest
 
-from lunchmoney_mcp.completion import CompletionShell, render_completion
+from lunchmoney_app.completion import CompletionShell, render_completion
 
 
 @pytest.mark.parametrize(
     ("shell", "expected_registration"),
     [
-        ("bash", "complete -F _lunchmoney_mcp lunchmoney-mcp"),
-        ("zsh", "compdef _lunchmoney_mcp lunchmoney-mcp"),
+        ("bash", "complete -F _lunchmoney_app lunchmoney-app"),
+        ("zsh", "compdef _lunchmoney_app lunchmoney-app"),
     ],
 )
 def test_completion_scripts_cover_every_runtime_command(

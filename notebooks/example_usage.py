@@ -23,9 +23,9 @@ def _(mo):
 
 @app.cell
 def _():
-    from lunchmoney_mcp.client import LunchMoneyApp
-    from lunchmoney_mcp.database import LunchMoneyDatabase
-    from lunchmoney_mcp.services import (
+    from lunchmoney_app.client import LunchMoneyApp
+    from lunchmoney_app.database import LunchMoneyDatabase
+    from lunchmoney_app.services import (
         execute_sync,
         fetch_plaid_accounts,
         fetch_recent_transactions,

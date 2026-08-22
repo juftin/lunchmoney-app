@@ -7,15 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-import lunchmoney_mcp.database as database_package
-from lunchmoney_mcp.database import (
+import lunchmoney_app.database as database_package
+from lunchmoney_app.database import (
     DEFAULT_DATABASE_URL,
     IN_MEMORY_DATABASE_URL,
     LunchMoneyDatabase,
     RecurringItem,
     User,
 )
-from lunchmoney_mcp.database.backend import resolve_database_url
+from lunchmoney_app.database.backend import resolve_database_url
 
 
 def test_database_package_exports_documented_public_api() -> None:

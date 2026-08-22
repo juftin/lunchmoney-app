@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Copy `clients/python-async/lunchmoney/app.py` from the supplied `app` branch into `src/lunchmoney_mcp/app.py`.
+- Copy `clients/python-async/lunchmoney/app.py` from the supplied `app` branch into `src/lunchmoney_app/app.py`.
 - Preserve existing default behavior with `cache=True`.
 - `cache=False` must not mutate `LunchMoneyApp.data`.
 - Retain the existing `lunchmoney-python-async` dependency.
@@ -21,18 +21,18 @@
 
 **Files:**
 
-- Create: `src/lunchmoney_mcp/app.py`
+- Create: `src/lunchmoney_app/app.py`
 - Test: `tests/test_app.py`
 
 **Interfaces:**
 
-- Produces: `LunchMoneyApp`, `LunchableData`, and `LunchableClient` exported from `lunchmoney_mcp.app`.
+- Produces: `LunchMoneyApp`, `LunchableData`, and `LunchableClient` exported from `lunchmoney_app.app`.
 
 - [ ] **Step 1: Write the failing import test**
 
 ```python
 def test_vendored_app_exports_lunch_money_app() -> None:
-    from lunchmoney_mcp.app import LunchMoneyApp
+    from lunchmoney_app.app import LunchMoneyApp
 
     assert LunchMoneyApp.__name__ == "LunchMoneyApp"
 ```
@@ -40,11 +40,11 @@ def test_vendored_app_exports_lunch_money_app() -> None:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `uv run pytest tests/test_app.py::test_vendored_app_exports_lunch_money_app -v`
-Expected: FAIL because `lunchmoney_mcp.app` does not exist.
+Expected: FAIL because `lunchmoney_app.app` does not exist.
 
 - [ ] **Step 3: Add the upstream module**
 
-Copy the supplied upstream `app.py` to `src/lunchmoney_mcp/app.py`, preserving imports, type annotations, and exports.
+Copy the supplied upstream `app.py` to `src/lunchmoney_app/app.py`, preserving imports, type annotations, and exports.
 
 - [ ] **Step 4: Run the import test to verify it passes**
 
@@ -55,7 +55,7 @@ Expected: PASS.
 
 **Files:**
 
-- Modify: `src/lunchmoney_mcp/app.py`
+- Modify: `src/lunchmoney_app/app.py`
 - Modify: `tests/test_app.py`
 
 **Interfaces:**

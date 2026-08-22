@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from lunchmoney_mcp.config import RuntimeSettings, SecretSettings
-from lunchmoney_mcp.doctor import build_doctor_report
+from lunchmoney_app.config import RuntimeSettings, SecretSettings
+from lunchmoney_app.doctor import build_doctor_report
 
 
 def test_doctor_reports_missing_access_token_without_leaking_database_secret(

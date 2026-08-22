@@ -15,12 +15,12 @@ from lunchmoney.models import (
 )
 
 from database.factories import transaction_attachment_object, transaction_object
-from lunchmoney_mcp.app.main import fastapi_app
-from lunchmoney_mcp.client import LunchMoneyApp
-from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.database.models import Transaction
-from lunchmoney_mcp.mcp import mcp
-from lunchmoney_mcp.services import (
+from lunchmoney_app.app.main import fastapi_app
+from lunchmoney_app.client import LunchMoneyApp
+from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.database.models import Transaction
+from lunchmoney_app.mcp import mcp
+from lunchmoney_app.services import (
     bulk_delete_transactions,
     bulk_update_transactions,
     create_transactions,

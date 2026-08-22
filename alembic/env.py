@@ -10,8 +10,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
-from lunchmoney_mcp.database.backend import resolve_database_url
-from lunchmoney_mcp.database.models import (  # noqa: F401
+from lunchmoney_app.database.backend import resolve_database_url
+from lunchmoney_app.database.models import (  # noqa: F401
     CachedApiResponse,
     RecurringItem,
     Category,

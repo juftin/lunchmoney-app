@@ -23,28 +23,28 @@ from database.factories import (
     tag_object,
     transaction_object,
 )
-from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_mcp.app.main import fastapi_app
-from lunchmoney_mcp.schemas import AccountsSummary
-from lunchmoney_mcp.mcp.tools.accounts import (
+from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
+from lunchmoney_app.app.main import fastapi_app
+from lunchmoney_app.schemas import AccountsSummary
+from lunchmoney_app.mcp.tools.accounts import (
     list_accounts,
     list_manual_accounts,
     list_plaid_accounts,
 )
-from lunchmoney_mcp.mcp.tools.categories import list_categories
-from lunchmoney_mcp.mcp.tools.recurring import list_recurring_items
-from lunchmoney_mcp.mcp.tools.tags import list_tags
-from lunchmoney_mcp.mcp.tools.transactions import list_transactions
+from lunchmoney_app.mcp.tools.categories import list_categories
+from lunchmoney_app.mcp.tools.recurring import list_recurring_items
+from lunchmoney_app.mcp.tools.tags import list_tags
+from lunchmoney_app.mcp.tools.transactions import list_transactions
 
-accounts_router_module = import_module("lunchmoney_mcp.app.routers.accounts")
+accounts_router_module = import_module("lunchmoney_app.app.routers.accounts")
 """Accounts router module used for service delegation overrides."""
-categories_router_module = import_module("lunchmoney_mcp.app.routers.categories")
+categories_router_module = import_module("lunchmoney_app.app.routers.categories")
 """Categories router module used for service delegation overrides."""
-recurring_router_module = import_module("lunchmoney_mcp.app.routers.recurring")
+recurring_router_module = import_module("lunchmoney_app.app.routers.recurring")
 """Recurring-items router module used for service delegation overrides."""
-tags_router_module = import_module("lunchmoney_mcp.app.routers.tags")
+tags_router_module = import_module("lunchmoney_app.app.routers.tags")
 """Tags router module used for service delegation overrides."""
-transactions_router_module = import_module("lunchmoney_mcp.app.routers.transactions")
+transactions_router_module = import_module("lunchmoney_app.app.routers.transactions")
 """Transactions router module used for service delegation overrides."""
 
 

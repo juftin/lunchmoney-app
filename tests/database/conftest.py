@@ -9,7 +9,7 @@ import pytest_asyncio
 from alembic import command
 from alembic.config import Config
 
-from lunchmoney_mcp.database import LunchMoneyDatabase
+from lunchmoney_app.database import LunchMoneyDatabase
 
 PROJECT_ROOT = Path(__file__).parents[2]
 """Repository root containing the Alembic migration environment."""

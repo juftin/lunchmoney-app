@@ -9,9 +9,9 @@ from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 
-from lunchmoney_mcp.config import RuntimeSettings
-from lunchmoney_mcp.mcp import mcp
-from lunchmoney_mcp.schemas import (
+from lunchmoney_app.config import RuntimeSettings
+from lunchmoney_app.mcp import mcp
+from lunchmoney_app.schemas import (
     CategoryInfo,
     RootResponse,
     SyncDetails,
@@ -24,7 +24,7 @@ from lunchmoney_mcp.schemas import (
 @pytest.fixture(autouse=True)
 def reset_runtime_configuration() -> None:
     """Keep standalone-MCP process settings from leaking into later tests."""
-    import lunchmoney_mcp.config as config_module
+    import lunchmoney_app.config as config_module
 
     config_module._runtime_settings = None
     config_module._runtime_mode = None
@@ -77,7 +77,7 @@ async def test_mcp_runtime_lifespan_creates_and_disposes_ephemeral_storage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Initialize in-memory tool storage only while standalone MCP is running."""
-    import lunchmoney_mcp.mcp.app as mcp_app_module
+    import lunchmoney_app.mcp.app as mcp_app_module
 
     database = Mock()
     database.is_stateless = True
@@ -102,7 +102,7 @@ async def test_mcp_runtime_lifespan_migrates_persistent_storage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Apply migrations before serving a persistent standalone MCP endpoint."""
-    import lunchmoney_mcp.mcp.app as mcp_app_module
+    import lunchmoney_app.mcp.app as mcp_app_module
 
     database = Mock(is_stateless=False)
     database.dispose = AsyncMock()
@@ -128,7 +128,7 @@ async def test_mcp_runtime_lifespan_skips_storage_in_ephemeral_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Leave private per-operation storage to the MCP operation middleware."""
-    import lunchmoney_mcp.mcp.app as mcp_app_module
+    import lunchmoney_app.mcp.app as mcp_app_module
 
     get_database = Mock()
     monkeypatch.setattr(mcp_app_module, "get_database", get_database)
@@ -148,7 +148,7 @@ async def test_explicit_mcp_sync_skips_automatic_refresh(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Let the sync tool run only its caller-requested upstream synchronization."""
-    import lunchmoney_mcp.mcp.operations as operations_module
+    import lunchmoney_app.mcp.operations as operations_module
 
     observed_refresh: list[bool] = []
 
@@ -205,11 +205,11 @@ def test_mcp_main_selects_requested_transport(
     run_arguments: dict[str, str | int | None],
 ) -> None:
     """Launch the MCP server using each supported CLI transport selection."""
-    from lunchmoney_mcp.mcp import server
+    from lunchmoney_app.mcp import server
 
     mock_run = Mock()
     monkeypatch.setattr(server.mcp, "run", mock_run)
-    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", *arguments])
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-app", *arguments])
 
     server.main()
 
@@ -223,14 +223,14 @@ def test_mcp_main_forwards_http_host_and_port(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Forward HTTP bind options only to HTTP-based MCP transports."""
-    from lunchmoney_mcp.mcp import server
+    from lunchmoney_app.mcp import server
 
     mock_run = Mock()
     monkeypatch.setattr(server.mcp, "run", mock_run)
     monkeypatch.setattr(
         sys,
         "argv",
-        ["lunchmoney-mcp", "--streamable-http", "--host", "0.0.0.0", "--port", "9000"],
+        ["lunchmoney-app", "--streamable-http", "--host", "0.0.0.0", "--port", "9000"],
     )
 
     server.main()
@@ -244,11 +244,11 @@ def test_mcp_main_rejects_multiple_transport_flags(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Reject ambiguous CLI invocations with more than one transport flag."""
-    from lunchmoney_mcp.mcp import server
+    from lunchmoney_app.mcp import server
 
     mock_run = Mock()
     monkeypatch.setattr(server.mcp, "run", mock_run)
-    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--stdio", "--sse"])
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-app", "--stdio", "--sse"])
 
     with pytest.raises(SystemExit):
         server.main()
@@ -260,11 +260,11 @@ def test_mcp_main_rejects_http_bind_options_for_stdio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Reject HTTP bind options when the process-pipe transport is selected."""
-    from lunchmoney_mcp.mcp import server
+    from lunchmoney_app.mcp import server
 
     mock_run = Mock()
     monkeypatch.setattr(server.mcp, "run", mock_run)
-    monkeypatch.setattr(sys, "argv", ["lunchmoney-mcp", "--stdio", "--port", "9000"])
+    monkeypatch.setattr(sys, "argv", ["lunchmoney-app", "--stdio", "--port", "9000"])
 
     with pytest.raises(SystemExit):
         server.main()
@@ -277,7 +277,7 @@ async def test_mcp_sync_tool_forwards_incremental_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Forward incremental tool arguments unchanged to the sync service."""
-    sync_tool_module = sys.modules["lunchmoney_mcp.mcp.tools.sync"]
+    sync_tool_module = sys.modules["lunchmoney_app.mcp.tools.sync"]
     mock_execute_mcp_sync = AsyncMock(
         return_value=SyncResult(
             synced_records=SyncDetails(
