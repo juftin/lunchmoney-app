@@ -14,7 +14,7 @@ MCP server settings, replace the access token, then restart the client:
     "mcpServers": {
         "lunchmoney": {
             "command": "uvx",
-            "args": ["lunchmoney-mcp", "mcp"],
+            "args": ["lunchmoney-app", "mcp"],
             "env": {
                 "LUNCHMONEY_ACCESS_TOKEN": "your-lunch-money-token"
             }
@@ -31,7 +31,7 @@ If you run the project from a checkout instead, replace `uvx` and its arguments
 with the command your client uses to run:
 
 ```bash
-lunchmoney-mcp mcp
+lunchmoney-app mcp
 ```
 
 ## Connect a remote client
@@ -40,7 +40,7 @@ Run a Streamable HTTP server when the MCP client cannot start a local process:
 
 ```bash
 export LUNCHMONEY_ACCESS_TOKEN="your-lunch-money-token"
-lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 8000
+lunchmoney-app mcp --streamable-http --host 0.0.0.0 --port 8000
 ```
 
 Connect the client to `http://your-server:8000/mcp`. For a public deployment,
@@ -63,7 +63,7 @@ by default. You can choose a different behavior with either command:
 For example, use a remote server without retaining data:
 
 ```bash
-lunchmoney-mcp mcp --streamable-http --ephemeral
+lunchmoney-app mcp --streamable-http --ephemeral
 ```
 
 ## Secure a remote server
@@ -76,14 +76,14 @@ If your MCP client supports OAuth, configure your OIDC provider before starting
 the server:
 
 ```bash
-export LUNCHMONEY_MCP_OAUTH_CONFIG_URL="https://id.example.com/.well-known/openid-configuration"
-export LUNCHMONEY_MCP_OAUTH_CLIENT_ID="lunchmoney-mcp"
-export LUNCHMONEY_MCP_OAUTH_BASE_URL="https://mcp.example.com"
+export LUNCHMONEY_APP_OAUTH_CONFIG_URL="https://id.example.com/.well-known/openid-configuration"
+export LUNCHMONEY_APP_OAUTH_CLIENT_ID="lunchmoney-app"
+export LUNCHMONEY_APP_OAUTH_BASE_URL="https://mcp.example.com"
 
-lunchmoney-mcp mcp --streamable-http --host 0.0.0.0 --port 8000
+lunchmoney-app mcp --streamable-http --host 0.0.0.0 --port 8000
 ```
 
-Set `LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET` too when your identity provider
+Set `LUNCHMONEY_APP_OAUTH_CLIENT_SECRET` too when your identity provider
 requires it. Register `https://mcp.example.com/auth/callback` with the provider.
 
 For a complete deployment checklist, backups, and security guidance, see the

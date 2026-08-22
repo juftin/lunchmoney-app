@@ -25,9 +25,9 @@
 
 **Files:**
 
-- Modify: `src/lunchmoney_mcp/config.py`
-- Modify: `src/lunchmoney_mcp/database/backend.py`
-- Modify: `src/lunchmoney_mcp/database/__init__.py`
+- Modify: `src/lunchmoney_app/config.py`
+- Modify: `src/lunchmoney_app/database/backend.py`
+- Modify: `src/lunchmoney_app/database/__init__.py`
 - Modify: `tests/test_config.py`
 - Modify: `tests/database/test_backend.py`
 
@@ -87,7 +87,7 @@ existing database tests.
 - [ ] **Step 5: Commit Task 1**
 
 ```bash
-git add src/lunchmoney_mcp/config.py src/lunchmoney_mcp/database tests/test_config.py tests/database/test_backend.py
+git add src/lunchmoney_app/config.py src/lunchmoney_app/database tests/test_config.py tests/database/test_backend.py
 git commit -m "✨ Add stateless database configuration"
 ```
 
@@ -95,10 +95,10 @@ git commit -m "✨ Add stateless database configuration"
 
 **Files:**
 
-- Create: `src/lunchmoney_mcp/database/models/sync.py`
-- Modify: `src/lunchmoney_mcp/database/models/__init__.py`
-- Modify: `src/lunchmoney_mcp/database/__init__.py`
-- Modify: `src/lunchmoney_mcp/database/backend.py`
+- Create: `src/lunchmoney_app/database/models/sync.py`
+- Modify: `src/lunchmoney_app/database/models/__init__.py`
+- Modify: `src/lunchmoney_app/database/__init__.py`
+- Modify: `src/lunchmoney_app/database/backend.py`
 - Modify: `alembic/env.py`
 - Create: `alembic/versions/0002_add_sync_metadata_table.py`
 - Modify: `tests/database/test_migrations.py`
@@ -154,7 +154,7 @@ passes.
 - [ ] **Step 5: Commit Task 2**
 
 ```bash
-git add alembic src/lunchmoney_mcp/database tests/database/test_migrations.py tests/test_incremental_sync.py
+git add alembic src/lunchmoney_app/database tests/database/test_migrations.py tests/test_incremental_sync.py
 git commit -m "✨ Add incremental sync metadata"
 ```
 
@@ -162,8 +162,8 @@ git commit -m "✨ Add incremental sync metadata"
 
 **Files:**
 
-- Modify: `src/lunchmoney_mcp/app/sync.py`
-- Modify: `src/lunchmoney_mcp/services/sync.py`
+- Modify: `src/lunchmoney_app/app/sync.py`
+- Modify: `src/lunchmoney_app/services/sync.py`
 - Modify: `tests/test_incremental_sync.py`
 - Modify: `tests/test_app.py`
 
@@ -228,7 +228,7 @@ sync tests all pass.
 - [ ] **Step 5: Commit Task 3**
 
 ```bash
-git add src/lunchmoney_mcp/app/sync.py src/lunchmoney_mcp/services/sync.py tests/test_incremental_sync.py tests/test_app.py
+git add src/lunchmoney_app/app/sync.py src/lunchmoney_app/services/sync.py tests/test_incremental_sync.py tests/test_app.py
 git commit -m "✨ Add opt-in incremental transaction sync"
 ```
 
@@ -236,8 +236,8 @@ git commit -m "✨ Add opt-in incremental transaction sync"
 
 **Files:**
 
-- Modify: `src/lunchmoney_mcp/app/routers/sync.py`
-- Modify: `src/lunchmoney_mcp/mcp/tools/sync.py`
+- Modify: `src/lunchmoney_app/app/routers/sync.py`
+- Modify: `src/lunchmoney_app/mcp/tools/sync.py`
 - Modify: `tests/test_app.py`
 - Modify: `tests/test_mcp.py`
 - Modify: `docs/maintainers/CHECKLIST.md`
@@ -296,7 +296,7 @@ ensure it is limited to Sprint 0 files before staging.
 - [ ] **Step 5: Commit Task 4**
 
 ```bash
-git add src/lunchmoney_mcp/app/routers/sync.py src/lunchmoney_mcp/mcp/tools/sync.py tests/test_app.py tests/test_mcp.py docs/maintainers/CHECKLIST.md docs/maintainers/INCREMENTAL_ETL.md
+git add src/lunchmoney_app/app/routers/sync.py src/lunchmoney_app/mcp/tools/sync.py tests/test_app.py tests/test_mcp.py docs/maintainers/CHECKLIST.md docs/maintainers/INCREMENTAL_ETL.md
 git commit -m "✨ Expose incremental synchronization controls"
 ```
 

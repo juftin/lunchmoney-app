@@ -1939,7 +1939,7 @@ wheels = [
 ]
 
 [[package]]
-name = "lunchmoney-mcp"
+name = "lunchmoney-app"
 version = "0.7.0"
 source = { editable = "." }
 dependencies = [

@@ -12,7 +12,7 @@ def test_container_uses_gunicorn_with_maintained_uvicorn_worker() -> None:
     dockerfile = (PROJECT_ROOT / "Dockerfile").read_text()
     gunicorn_config = (PROJECT_ROOT / "gunicorn.conf.py").read_text()
 
-    assert 'CMD ["gunicorn", "lunchmoney_mcp.app:app"]' in dockerfile
+    assert 'CMD ["gunicorn", "lunchmoney_app.app:app"]' in dockerfile
     assert '"uvicorn_worker.UvicornWorker"' in gunicorn_config
     assert "USER lunchmoney:lunchmoney" in dockerfile
     assert "apt-get update" in dockerfile
@@ -31,7 +31,7 @@ def test_compose_keeps_data_services_private_and_hardens_app_processes() -> None
     assert "no-new-privileges:true" in compose
     assert "cap_drop:" in compose
     assert "http://127.0.0.1:8000/health" in compose
-    assert '"X-API-Key": os.environ["LUNCHMONEY_MCP_API_KEY"]' in compose
+    assert '"X-API-Key": os.environ["LUNCHMONEY_APP_API_KEY"]' in compose
     assert "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" in compose
     assert "LUNCHMONEY_REDIS_URL: redis://redis:6379/0" in compose
     assert "LUNCHMONEY_ALLOWED_HOSTS" in compose
@@ -47,7 +47,7 @@ def test_ci_scans_release_artifacts_and_smoke_tests_compose() -> None:
     assert "aquasecurity/trivy-action@v0.36.0" in workflow
     assert "scanners: secret,misconfig" in workflow
     assert "docker compose up --build --detach --wait" in workflow
-    assert "X-API-Key: ${LUNCHMONEY_MCP_API_KEY}" in workflow
+    assert "X-API-Key: ${LUNCHMONEY_APP_API_KEY}" in workflow
     assert "http://127.0.0.1:8000/health" in workflow
     assert "http://127.0.0.1:8000/ready" in workflow
 

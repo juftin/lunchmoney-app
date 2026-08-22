@@ -38,4 +38,4 @@ EXPOSE 8000
 
 USER lunchmoney:lunchmoney
 
-CMD ["gunicorn", "lunchmoney_mcp.app:app"]
+CMD ["gunicorn", "lunchmoney_app.app:app"]

@@ -52,8 +52,8 @@ negative income total and does not expose the label hook.
 
 **Files:**
 
-- Modify: `src/lunchmoney_mcp/app/templates/dashboard.html`
-- Modify: `src/lunchmoney_mcp/app/static/dashboard.css`
+- Modify: `src/lunchmoney_app/app/templates/dashboard.html`
+- Modify: `src/lunchmoney_app/app/static/dashboard.css`
 - Test: `tests/test_dashboard.py::test_dashboard_renders_parent_categories_and_mascot`
 
 **Interfaces:**

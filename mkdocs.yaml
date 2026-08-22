@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
 
-site_name: lunchmoney-mcp
+site_name: lunchmoney-app
 nav:
     - Get started: index.md
     - Use with an MCP client: MCP_GUIDE.md
@@ -26,8 +26,8 @@ theme:
           toggle:
               icon: material/weather-night
               name: Switch to light mode
-repo_url: https://github.com/juftin/lunchmoney-mcp
-repo_name: lunchmoney-mcp
+repo_url: https://github.com/juftin/lunchmoney-app
+repo_name: lunchmoney-app
 edit_uri: blob/main/docs/
 site_author: Justin Flannery
 remote_branch: gh-pages

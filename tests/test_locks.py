@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from lunchmoney_mcp.locks import (
+from lunchmoney_app.locks import (
     FileLock,
     Lock,
     LockFile,

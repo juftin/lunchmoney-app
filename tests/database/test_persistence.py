@@ -11,8 +11,8 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import SQLModel, col, delete, select
 
-from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.database.models import (
+from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.database.models import (
     Category,
     ManualAccount,
     PlaidAccount,

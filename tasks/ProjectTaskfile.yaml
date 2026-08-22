@@ -64,7 +64,7 @@ tasks:
     dev:
         desc: Run local FastAPI development server
         cmds:
-            - uv run lunchmoney-mcp serve {{.CLI_ARGS}}
+            - uv run lunchmoney-app serve {{.CLI_ARGS}}
     #######################################
     notebook:
         desc: Run interactive Marimo notebook

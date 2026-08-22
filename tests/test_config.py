@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from lunchmoney_mcp.config import (
+from lunchmoney_app.config import (
     DEFAULT_DATABASE_URL,
     IN_MEMORY_DATABASE_URL,
     McpCliSettings,
@@ -20,7 +20,7 @@ from lunchmoney_mcp.config import (
     get_settings,
     parse_cli_settings,
 )
-from lunchmoney_mcp.database import resolve_database_url
+from lunchmoney_app.database import resolve_database_url
 
 
 def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -34,12 +34,12 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     monkeypatch.delenv("LUNCHMONEY_REDIS_URL", raising=False)
     monkeypatch.delenv("LUNCHMONEY_ACCESS_TOKEN", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_MCP_API_KEY", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_CONFIG_URL", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_CLIENT_ID", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_BASE_URL", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_MCP_OAUTH_AUDIENCE", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_APP_API_KEY", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_APP_OAUTH_CONFIG_URL", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_APP_OAUTH_CLIENT_ID", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_APP_OAUTH_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_APP_OAUTH_BASE_URL", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_APP_OAUTH_AUDIENCE", raising=False)
     monkeypatch.delenv("LUNCHMONEY_ENVIRONMENT", raising=False)
     monkeypatch.delenv("LUNCHMONEY_STATELESS", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", raising=False)
@@ -105,15 +105,15 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setenv("LUNCHMONEY_REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "test-token")
-    monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "rest-api-key")
+    monkeypatch.setenv("LUNCHMONEY_APP_API_KEY", "rest-api-key")
     monkeypatch.setenv(
-        "LUNCHMONEY_MCP_OAUTH_CONFIG_URL",
+        "LUNCHMONEY_APP_OAUTH_CONFIG_URL",
         "https://id.example.com/.well-known/openid-configuration",
     )
-    monkeypatch.setenv("LUNCHMONEY_MCP_OAUTH_CLIENT_ID", "lunchmoney-mcp")
-    monkeypatch.setenv("LUNCHMONEY_MCP_OAUTH_CLIENT_SECRET", "synthetic-secret")
-    monkeypatch.setenv("LUNCHMONEY_MCP_OAUTH_BASE_URL", "https://mcp.example.com")
-    monkeypatch.setenv("LUNCHMONEY_MCP_OAUTH_AUDIENCE", "https://mcp.example.com")
+    monkeypatch.setenv("LUNCHMONEY_APP_OAUTH_CLIENT_ID", "lunchmoney-app")
+    monkeypatch.setenv("LUNCHMONEY_APP_OAUTH_CLIENT_SECRET", "synthetic-secret")
+    monkeypatch.setenv("LUNCHMONEY_APP_OAUTH_BASE_URL", "https://mcp.example.com")
+    monkeypatch.setenv("LUNCHMONEY_APP_OAUTH_AUDIENCE", "https://mcp.example.com")
     monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
     monkeypatch.setenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", "10")
     monkeypatch.setenv("LUNCHMONEY_SCHEDULE_CRON", "15 4 * * 1-5")
@@ -144,7 +144,7 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
         settings.mcp_oauth_config_url
         == "https://id.example.com/.well-known/openid-configuration"
     )
-    assert settings.mcp_oauth_client_id == "lunchmoney-mcp"
+    assert settings.mcp_oauth_client_id == "lunchmoney-app"
     assert secret_settings.mcp_oauth_client_secret == "synthetic-secret"
     assert settings.mcp_oauth_base_url == "https://mcp.example.com"
     assert settings.mcp_oauth_audience == "https://mcp.example.com"
@@ -265,7 +265,7 @@ def test_cli_rejects_secret_options() -> None:
 
 def test_runtime_cli_options_share_mcp_transport_host_and_port() -> None:
     """Use the runtime host and port flags with an HTTP MCP transport."""
-    from lunchmoney_mcp.mcp.server import create_argument_parser
+    from lunchmoney_app.mcp.server import create_argument_parser
 
     settings = parse_cli_settings(
         ["--streamable-http", "--host", "0.0.0.0", "--port", "9000"],
@@ -281,7 +281,7 @@ def test_mcp_help_makes_the_stdio_default_explicit(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Describe the default MCP transport in the command's generated help."""
-    from lunchmoney_mcp.mcp.server import create_argument_parser
+    from lunchmoney_app.mcp.server import create_argument_parser
 
     with pytest.raises(SystemExit):
         create_argument_parser().parse_args(["--help"])
@@ -293,7 +293,7 @@ def test_mcp_help_explains_data_handling_without_storage_details(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Describe persistence flags in terms of their Lunch Money behavior."""
-    from lunchmoney_mcp.mcp.server import create_argument_parser
+    from lunchmoney_app.mcp.server import create_argument_parser
 
     with pytest.raises(SystemExit):
         parse_cli_settings(
@@ -421,7 +421,7 @@ def test_mcp_runtime_respects_configured_persistent_database(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Allow standalone HTTP MCP servers to retain their configured data."""
-    import lunchmoney_mcp.config as config_module
+    import lunchmoney_app.config as config_module
 
     configured_url = "sqlite+aiosqlite:///persistent.db"
     monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", configured_url)
@@ -433,7 +433,7 @@ def test_mcp_runtime_respects_configured_persistent_database(
 
 def test_mcp_transport_defaults_use_ephemeral_stdio_and_persistent_http() -> None:
     """Apply storage defaults appropriate to local and remote MCP transports."""
-    from lunchmoney_mcp.mcp.server import (
+    from lunchmoney_app.mcp.server import (
         apply_transport_defaults,
         create_argument_parser,
     )
@@ -482,7 +482,7 @@ def test_operational_commands_share_persistence_flags(
     """Expose the same explicit storage selections to every runtime command."""
     root_parser = None
     if settings_type is McpCliSettings:
-        from lunchmoney_mcp.mcp.server import create_argument_parser
+        from lunchmoney_app.mcp.server import create_argument_parser
 
         root_parser = create_argument_parser()
 
@@ -493,7 +493,7 @@ def test_operational_commands_share_persistence_flags(
     )
 
     if settings_type is McpCliSettings:
-        from lunchmoney_mcp.mcp.server import create_argument_parser
+        from lunchmoney_app.mcp.server import create_argument_parser
 
         root_parser = create_argument_parser()
 

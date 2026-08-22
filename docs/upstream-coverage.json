@@ -13,7 +13,7 @@
                 "path": "/me",
                 "client": "me.get_me"
             },
-            "service": "lunchmoney_mcp.services.user:fetch_user_info",
+            "service": "lunchmoney_app.services.user:fetch_user_info",
             "rest": {
                 "method": "GET",
                 "path": "/api/user",
@@ -28,7 +28,7 @@
                 "path": "/summary",
                 "client": "summary.get_budget_summary"
             },
-            "service": "lunchmoney_mcp.services.summary:fetch_account_summary",
+            "service": "lunchmoney_app.services.summary:fetch_account_summary",
             "rest": {
                 "method": "GET",
                 "path": "/api/summary",
@@ -43,7 +43,7 @@
                 "path": "/categories",
                 "client": "categories.get_all_categories"
             },
-            "service": "lunchmoney_mcp.services.categories:fetch_categories",
+            "service": "lunchmoney_app.services.categories:fetch_categories",
             "rest": {
                 "method": "GET",
                 "path": "/api/categories",
@@ -58,7 +58,7 @@
                 "path": "/categories",
                 "client": "categories.create_category"
             },
-            "service": "lunchmoney_mcp.services.categories:create_category",
+            "service": "lunchmoney_app.services.categories:create_category",
             "rest": {
                 "method": "POST",
                 "path": "/api/categories",
@@ -73,7 +73,7 @@
                 "path": "/categories/{id}",
                 "client": "categories.get_category_by_id"
             },
-            "service": "lunchmoney_mcp.services.categories:fetch_category_by_id",
+            "service": "lunchmoney_app.services.categories:fetch_category_by_id",
             "rest": {
                 "method": "GET",
                 "path": "/api/categories/{category_id}",
@@ -88,7 +88,7 @@
                 "path": "/categories/{id}",
                 "client": "categories.update_category"
             },
-            "service": "lunchmoney_mcp.services.categories:update_category",
+            "service": "lunchmoney_app.services.categories:update_category",
             "rest": {
                 "method": "PUT",
                 "path": "/api/categories/{category_id}",
@@ -103,7 +103,7 @@
                 "path": "/categories/{id}",
                 "client": "categories.delete_category"
             },
-            "service": "lunchmoney_mcp.services.categories:delete_category",
+            "service": "lunchmoney_app.services.categories:delete_category",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/categories/{category_id}",
@@ -118,7 +118,7 @@
                 "path": "/manual_accounts",
                 "client": "manual_accounts.get_all_manual_accounts"
             },
-            "service": "lunchmoney_mcp.services.accounts:fetch_manual_accounts",
+            "service": "lunchmoney_app.services.accounts:fetch_manual_accounts",
             "rest": {
                 "method": "GET",
                 "path": "/api/manual_accounts",
@@ -133,7 +133,7 @@
                 "path": "/manual_accounts",
                 "client": "manual_accounts.create_manual_account"
             },
-            "service": "lunchmoney_mcp.services.accounts:create_manual_account",
+            "service": "lunchmoney_app.services.accounts:create_manual_account",
             "rest": {
                 "method": "POST",
                 "path": "/api/manual_accounts",
@@ -148,7 +148,7 @@
                 "path": "/manual_accounts/{id}",
                 "client": "manual_accounts.get_manual_account_by_id"
             },
-            "service": "lunchmoney_mcp.services.accounts:fetch_manual_account_by_id",
+            "service": "lunchmoney_app.services.accounts:fetch_manual_account_by_id",
             "rest": {
                 "method": "GET",
                 "path": "/api/manual_accounts/{id}",
@@ -163,7 +163,7 @@
                 "path": "/manual_accounts/{id}",
                 "client": "manual_accounts.update_manual_account"
             },
-            "service": "lunchmoney_mcp.services.accounts:update_manual_account",
+            "service": "lunchmoney_app.services.accounts:update_manual_account",
             "rest": {
                 "method": "PUT",
                 "path": "/api/manual_accounts/{id}",
@@ -178,7 +178,7 @@
                 "path": "/manual_accounts/{id}",
                 "client": "manual_accounts.delete_manual_account"
             },
-            "service": "lunchmoney_mcp.services.accounts:delete_manual_account",
+            "service": "lunchmoney_app.services.accounts:delete_manual_account",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/manual_accounts/{id}",
@@ -193,7 +193,7 @@
                 "path": "/plaid_accounts",
                 "client": "plaid.get_all_plaid_accounts"
             },
-            "service": "lunchmoney_mcp.services.accounts:fetch_plaid_accounts",
+            "service": "lunchmoney_app.services.accounts:fetch_plaid_accounts",
             "rest": {
                 "method": "GET",
                 "path": "/api/plaid_accounts",
@@ -208,7 +208,7 @@
                 "path": "/plaid_accounts/{id}",
                 "client": "plaid.get_plaid_account_by_id"
             },
-            "service": "lunchmoney_mcp.services.accounts:fetch_plaid_account_by_id",
+            "service": "lunchmoney_app.services.accounts:fetch_plaid_account_by_id",
             "rest": {
                 "method": "GET",
                 "path": "/api/plaid_accounts/{id}",
@@ -223,7 +223,7 @@
                 "path": "/plaid_accounts/fetch",
                 "client": "plaid.trigger_plaid_account_fetch"
             },
-            "service": "lunchmoney_mcp.services.accounts:trigger_plaid_fetch",
+            "service": "lunchmoney_app.services.accounts:trigger_plaid_fetch",
             "rest": {
                 "method": "POST",
                 "path": "/api/plaid_accounts/fetch",
@@ -238,7 +238,7 @@
                 "path": "/transactions",
                 "client": "transactions_bulk.get_all_transactions"
             },
-            "service": "lunchmoney_mcp.services.transactions:fetch_transactions",
+            "service": "lunchmoney_app.services.transactions:fetch_transactions",
             "rest": {
                 "method": "GET",
                 "path": "/api/transactions",
@@ -253,7 +253,7 @@
                 "path": "/transactions",
                 "client": "transactions_bulk.create_new_transactions"
             },
-            "service": "lunchmoney_mcp.services.transactions:create_transactions",
+            "service": "lunchmoney_app.services.transactions:create_transactions",
             "rest": {
                 "method": "POST",
                 "path": "/api/transactions",
@@ -268,7 +268,7 @@
                 "path": "/transactions",
                 "client": "transactions_bulk.update_transactions"
             },
-            "service": "lunchmoney_mcp.services.transactions:bulk_update_transactions",
+            "service": "lunchmoney_app.services.transactions:bulk_update_transactions",
             "rest": {
                 "method": "PUT",
                 "path": "/api/transactions",
@@ -283,7 +283,7 @@
                 "path": "/transactions",
                 "client": "transactions_bulk.delete_transactions"
             },
-            "service": "lunchmoney_mcp.services.transactions:bulk_delete_transactions",
+            "service": "lunchmoney_app.services.transactions:bulk_delete_transactions",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/transactions",
@@ -298,7 +298,7 @@
                 "path": "/transactions/{id}",
                 "client": "transactions.get_transaction_by_id"
             },
-            "service": "lunchmoney_mcp.services.transactions:fetch_transaction_by_id",
+            "service": "lunchmoney_app.services.transactions:fetch_transaction_by_id",
             "rest": {
                 "method": "GET",
                 "path": "/api/transactions/{transaction_id}",
@@ -313,7 +313,7 @@
                 "path": "/transactions/{id}",
                 "client": "transactions.update_transaction"
             },
-            "service": "lunchmoney_mcp.services.transactions:update_transaction",
+            "service": "lunchmoney_app.services.transactions:update_transaction",
             "rest": {
                 "method": "PUT",
                 "path": "/api/transactions/{transaction_id}",
@@ -328,7 +328,7 @@
                 "path": "/transactions/{id}",
                 "client": "transactions.delete_transaction_by_id"
             },
-            "service": "lunchmoney_mcp.services.transactions:delete_transaction",
+            "service": "lunchmoney_app.services.transactions:delete_transaction",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/transactions/{transaction_id}",
@@ -343,7 +343,7 @@
                 "path": "/transactions/group",
                 "client": "transactions_group.group_transactions"
             },
-            "service": "lunchmoney_mcp.services.transactions:group_transactions",
+            "service": "lunchmoney_app.services.transactions:group_transactions",
             "rest": {
                 "method": "POST",
                 "path": "/api/transactions/group",
@@ -358,7 +358,7 @@
                 "path": "/transactions/group/{id}",
                 "client": "transactions_group.ungroup_transactions"
             },
-            "service": "lunchmoney_mcp.services.transactions:ungroup_transactions",
+            "service": "lunchmoney_app.services.transactions:ungroup_transactions",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/transactions/group/{transaction_id}",
@@ -373,7 +373,7 @@
                 "path": "/transactions/split/{id}",
                 "client": "transactions_split.split_transaction"
             },
-            "service": "lunchmoney_mcp.services.transactions:split_transaction",
+            "service": "lunchmoney_app.services.transactions:split_transaction",
             "rest": {
                 "method": "POST",
                 "path": "/api/transactions/split/{transaction_id}",
@@ -388,7 +388,7 @@
                 "path": "/transactions/split/{id}",
                 "client": "transactions_split.unsplit_transaction"
             },
-            "service": "lunchmoney_mcp.services.transactions:unsplit_transaction",
+            "service": "lunchmoney_app.services.transactions:unsplit_transaction",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/transactions/split/{transaction_id}",
@@ -403,7 +403,7 @@
                 "path": "/transactions/{transaction_id}/attachments",
                 "client": "transactions_files.attach_file_to_transaction"
             },
-            "service": "lunchmoney_mcp.services.transactions:upload_transaction_attachment",
+            "service": "lunchmoney_app.services.transactions:upload_transaction_attachment",
             "rest": {
                 "method": "POST",
                 "path": "/api/transactions/{transaction_id}/attachments",
@@ -418,7 +418,7 @@
                 "path": "/transactions/attachments/{file_id}",
                 "client": "transactions_files.get_transaction_attachment_url"
             },
-            "service": "lunchmoney_mcp.services.transactions:fetch_attachment_by_id",
+            "service": "lunchmoney_app.services.transactions:fetch_attachment_by_id",
             "rest": {
                 "method": "GET",
                 "path": "/api/transactions/attachments/{file_id}",
@@ -433,7 +433,7 @@
                 "path": "/transactions/attachments/{file_id}",
                 "client": "transactions_files.delete_transaction_attachment"
             },
-            "service": "lunchmoney_mcp.services.transactions:delete_transaction_attachment",
+            "service": "lunchmoney_app.services.transactions:delete_transaction_attachment",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/transactions/attachments/{file_id}",
@@ -448,7 +448,7 @@
                 "path": "/tags",
                 "client": "tags.get_all_tags"
             },
-            "service": "lunchmoney_mcp.services.tags:fetch_tags",
+            "service": "lunchmoney_app.services.tags:fetch_tags",
             "rest": {
                 "method": "GET",
                 "path": "/api/tags",
@@ -463,7 +463,7 @@
                 "path": "/tags",
                 "client": "tags.create_tag"
             },
-            "service": "lunchmoney_mcp.services.tags:create_tag",
+            "service": "lunchmoney_app.services.tags:create_tag",
             "rest": {
                 "method": "POST",
                 "path": "/api/tags",
@@ -478,7 +478,7 @@
                 "path": "/tags/{id}",
                 "client": "tags.get_tag_by_id"
             },
-            "service": "lunchmoney_mcp.services.tags:fetch_tag_by_id",
+            "service": "lunchmoney_app.services.tags:fetch_tag_by_id",
             "rest": {
                 "method": "GET",
                 "path": "/api/tags/{tag_id}",
@@ -493,7 +493,7 @@
                 "path": "/tags/{id}",
                 "client": "tags.update_tag"
             },
-            "service": "lunchmoney_mcp.services.tags:update_tag",
+            "service": "lunchmoney_app.services.tags:update_tag",
             "rest": {
                 "method": "PUT",
                 "path": "/api/tags/{tag_id}",
@@ -508,7 +508,7 @@
                 "path": "/tags/{id}",
                 "client": "tags.delete_tag"
             },
-            "service": "lunchmoney_mcp.services.tags:delete_tag",
+            "service": "lunchmoney_app.services.tags:delete_tag",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/tags/{tag_id}",
@@ -523,7 +523,7 @@
                 "path": "/recurring_items",
                 "client": "recurring_items.get_all_recurring"
             },
-            "service": "lunchmoney_mcp.services.recurring:fetch_recurring_items",
+            "service": "lunchmoney_app.services.recurring:fetch_recurring_items",
             "rest": {
                 "method": "GET",
                 "path": "/api/recurring_items",
@@ -538,7 +538,7 @@
                 "path": "/recurring_items/{id}",
                 "client": "recurring_items.get_recurring_by_id"
             },
-            "service": "lunchmoney_mcp.services.recurring:fetch_recurring_item_by_id",
+            "service": "lunchmoney_app.services.recurring:fetch_recurring_item_by_id",
             "rest": {
                 "method": "GET",
                 "path": "/api/recurring_items/{recurring_item_id}",
@@ -553,7 +553,7 @@
                 "path": "/budgets/settings",
                 "client": "budgets.get_budget_settings"
             },
-            "service": "lunchmoney_mcp.services.budgets:fetch_budget_settings",
+            "service": "lunchmoney_app.services.budgets:fetch_budget_settings",
             "rest": {
                 "method": "GET",
                 "path": "/api/budgets/settings",
@@ -568,7 +568,7 @@
                 "path": "/budgets",
                 "client": "budgets.upsert_budget"
             },
-            "service": "lunchmoney_mcp.services.budgets:set_budget_value",
+            "service": "lunchmoney_app.services.budgets:set_budget_value",
             "rest": {
                 "method": "PUT",
                 "path": "/api/budgets",
@@ -583,7 +583,7 @@
                 "path": "/budgets",
                 "client": "budgets.delete_budget"
             },
-            "service": "lunchmoney_mcp.services.budgets:clear_budget_value",
+            "service": "lunchmoney_app.services.budgets:clear_budget_value",
             "rest": {
                 "method": "DELETE",
                 "path": "/api/budgets",

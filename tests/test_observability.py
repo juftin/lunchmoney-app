@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock
 import pytest
 from starlette.testclient import TestClient
 
-from lunchmoney_mcp.app.main import fastapi_app
-from lunchmoney_mcp.observability import MetricsRegistry, log_event
+from lunchmoney_app.app.main import fastapi_app
+from lunchmoney_app.observability import MetricsRegistry, log_event
 
 
 class RateLimitedError(Exception):
@@ -21,9 +21,9 @@ class RateLimitedError(Exception):
 
 def test_health_liveness_bypasses_rest_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep a process liveness probe available when the REST API is protected."""
-    from lunchmoney_mcp.config import get_secret_settings, get_settings
+    from lunchmoney_app.config import get_secret_settings, get_settings
 
-    monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "synthetic-api-key")
+    monkeypatch.setenv("LUNCHMONEY_APP_API_KEY", "synthetic-api-key")
     get_settings.cache_clear()
     get_secret_settings.cache_clear()
     try:
@@ -41,10 +41,10 @@ def test_readiness_reports_database_and_scheduler_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Expose database readiness while identifying a disabled embedded scheduler."""
-    from lunchmoney_mcp.config import RuntimeSettings, get_settings
+    from lunchmoney_app.config import RuntimeSettings, get_settings
 
-    health_module = import_module("lunchmoney_mcp.app.routers.health")
-    lifespan_module = import_module("lunchmoney_mcp.app.lifespan")
+    health_module = import_module("lunchmoney_app.app.routers.health")
+    lifespan_module = import_module("lunchmoney_app.app.lifespan")
     settings = RuntimeSettings(embed_scheduler=False)
     monkeypatch.setattr(health_module, "get_settings", lambda: settings)
     monkeypatch.setattr(lifespan_module, "get_settings", lambda: settings)
@@ -70,10 +70,10 @@ def test_readiness_hides_database_error_details(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Return only a bounded unavailable status when a dependency is unhealthy."""
-    from lunchmoney_mcp.config import RuntimeSettings, get_settings
+    from lunchmoney_app.config import RuntimeSettings, get_settings
 
-    health_module = import_module("lunchmoney_mcp.app.routers.health")
-    lifespan_module = import_module("lunchmoney_mcp.app.lifespan")
+    health_module = import_module("lunchmoney_app.app.routers.health")
+    lifespan_module = import_module("lunchmoney_app.app.lifespan")
     settings = RuntimeSettings(embed_scheduler=False)
     monkeypatch.setattr(health_module, "get_settings", lambda: settings)
     monkeypatch.setattr(lifespan_module, "get_settings", lambda: settings)
@@ -97,9 +97,9 @@ def test_readiness_hides_database_error_details(
 
 def test_metrics_require_configured_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reject metric scrapes unless the operator configured REST authentication."""
-    from lunchmoney_mcp.config import get_secret_settings, get_settings
+    from lunchmoney_app.config import get_secret_settings, get_settings
 
-    monkeypatch.delenv("LUNCHMONEY_MCP_API_KEY", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_APP_API_KEY", raising=False)
     get_settings.cache_clear()
     get_secret_settings.cache_clear()
     try:
@@ -119,9 +119,9 @@ def test_metrics_include_safe_http_and_mcp_counters(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Expose bounded route labels and require the configured API key."""
-    from lunchmoney_mcp.config import get_secret_settings, get_settings
+    from lunchmoney_app.config import get_secret_settings, get_settings
 
-    monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "synthetic-api-key")
+    monkeypatch.setenv("LUNCHMONEY_APP_API_KEY", "synthetic-api-key")
     get_settings.cache_clear()
     get_secret_settings.cache_clear()
     try:
@@ -135,10 +135,10 @@ def test_metrics_include_safe_http_and_mcp_counters(
         assert metrics_response.status_code == 200
         assert metrics_response.headers["content-type"].startswith("text/plain")
         assert (
-            'lunchmoney_mcp_http_requests_total{method="GET",path="/api",status="200"}'
+            'lunchmoney_app_http_requests_total{method="GET",path="/api",status="200"}'
             in metrics_response.text
         )
-        assert "lunchmoney_mcp_mcp_requests_total" in metrics_response.text
+        assert "lunchmoney_app_mcp_requests_total" in metrics_response.text
         assert "synthetic-api-key" not in metrics_response.text
     finally:
         get_settings.cache_clear()
@@ -156,12 +156,12 @@ def test_metrics_registry_tracks_sync_and_rate_limit_without_error_text() -> Non
     rendered = registry.render()
 
     assert (
-        'lunchmoney_mcp_upstream_failures_total{kind="rate_limited",status="429"} 1'
+        'lunchmoney_app_upstream_failures_total{kind="rate_limited",status="429"} 1'
         in rendered
     )
-    assert 'lunchmoney_mcp_sync_runs_total{status="success"} 1' in rendered
+    assert 'lunchmoney_app_sync_runs_total{status="success"} 1' in rendered
     assert (
-        "lunchmoney_mcp_cache_last_successful_sync_timestamp_seconds 123.0" in rendered
+        "lunchmoney_app_cache_last_successful_sync_timestamp_seconds 123.0" in rendered
     )
     assert "sensitive upstream response" not in rendered
 

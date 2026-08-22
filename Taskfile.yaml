@@ -5,7 +5,7 @@ version: "3"
 env:
     UV_LOCKED: 1
 vars:
-    DOCKER_REPO: juftin/lunchmoney-mcp
+    DOCKER_REPO: juftin/lunchmoney-app
 
 includes:
     project:

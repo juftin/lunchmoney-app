@@ -11,9 +11,9 @@ from unittest.mock import AsyncMock
 import pytest
 import pytest_asyncio
 
-from lunchmoney_mcp.app.sync import sync_database
-from lunchmoney_mcp.client import LunchMoneyApp, UserObject
-from lunchmoney_mcp.database import LunchMoneyDatabase, SyncMetadata, run_migrations
+from lunchmoney_app.app.sync import sync_database
+from lunchmoney_app.client import LunchMoneyApp, UserObject
+from lunchmoney_app.database import LunchMoneyDatabase, SyncMetadata, run_migrations
 
 
 @pytest_asyncio.fixture
@@ -29,7 +29,7 @@ async def database(tmp_path: Path) -> AsyncIterator[LunchMoneyDatabase]:
 def client() -> AsyncMock:
     """Provide a client double with successful empty domain refreshes."""
     from database.factories import user_object
-    from lunchmoney_mcp.client import LunchableData
+    from lunchmoney_app.client import LunchableData
 
     test_client = AsyncMock(spec=LunchMoneyApp)
     test_client.data = LunchableData()
@@ -149,7 +149,7 @@ async def test_incremental_sync_uses_configured_safety_margin(
     client: AsyncMock,
 ) -> None:
     """Use the configured overlap when the request omits an override."""
-    sync_module = importlib.import_module("lunchmoney_mcp.app.sync")
+    sync_module = importlib.import_module("lunchmoney_app.app.sync")
 
     watermark = datetime.datetime(2026, 7, 28, 12, 0, tzinfo=datetime.timezone.utc)
     await database.upsert_sync_metadata(

@@ -18,12 +18,12 @@ from lunchmoney.models import (
     UpsertBudgetRequestObjectAmount,
 )
 
-from lunchmoney_mcp.app.main import fastapi_app
-from lunchmoney_mcp.client import LunchMoneyApp
-from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
-from lunchmoney_mcp.database.models import Category, Transaction
-from lunchmoney_mcp.mcp import mcp
-from lunchmoney_mcp.services import (
+from lunchmoney_app.app.main import fastapi_app
+from lunchmoney_app.client import LunchMoneyApp
+from lunchmoney_app.database import LunchMoneyDatabase, run_migrations
+from lunchmoney_app.database.models import Category, Transaction
+from lunchmoney_app.mcp import mcp
+from lunchmoney_app.services import (
     clear_budget_value,
     fetch_budget_settings,
     fetch_spending_trends,
@@ -250,7 +250,7 @@ async def test_budget_settings_mcp_tool_delegates_to_service(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Delegate the MCP budget-settings tool to the budget service."""
-    budget_tools = sys.modules["lunchmoney_mcp.mcp.tools.budgets"]
+    budget_tools = sys.modules["lunchmoney_app.mcp.tools.budgets"]
     fetch_settings = AsyncMock(return_value=_budget_settings())
     monkeypatch.setattr(budget_tools, "fetch_budget_settings", fetch_settings)
     database = object()

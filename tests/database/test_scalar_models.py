@@ -12,7 +12,7 @@ from sqlalchemy.schema import CreateTable
 from sqlalchemy.types import TypeDecorator
 from sqlmodel import SQLModel
 
-from lunchmoney_mcp.database.models import ManualAccount, PlaidAccount, Tag, User
+from lunchmoney_app.database.models import ManualAccount, PlaidAccount, Tag, User
 from factories import (
     manual_account_object,
     plaid_account_object,

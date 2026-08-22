@@ -4,7 +4,7 @@ from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 
-from lunchmoney_mcp.config import (
+from lunchmoney_app.config import (
     McpCliSettings,
     ScheduleCliSettings,
     ServeCliSettings,
@@ -16,7 +16,7 @@ def test_cli_runs_standalone_mcp_without_persistent_storage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Dispatch explicit MCP transport arguments through its ephemeral runtime."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     mcp_parser = Mock()
     transport_arguments = Mock()
@@ -63,7 +63,7 @@ def test_cli_runs_scheduler_with_pydantic_runtime_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Dispatch the scheduler while Pydantic Settings owns its runtime flags."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     run_schedule_process = AsyncMock()
     monkeypatch.setattr(cli, "run_schedule_process", run_schedule_process)
@@ -100,7 +100,7 @@ def test_cli_runs_fastapi_with_pydantic_runtime_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Pass Pydantic Settings CLI flags to the local FastAPI runtime."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     settings = Mock(host="0.0.0.0", port=9000)
     parse_cli_settings = Mock(return_value=settings)
@@ -121,7 +121,7 @@ def test_cli_runs_fastapi_with_pydantic_runtime_options(
     configure_runtime_settings.assert_called_once_with(settings)
     export_runtime_settings.assert_called_once_with(settings)
     run.assert_called_once_with(
-        "lunchmoney_mcp.app.main:app",
+        "lunchmoney_app.app.main:app",
         host="0.0.0.0",
         port=9000,
         reload=True,
@@ -133,7 +133,7 @@ def test_cli_runs_one_foreground_sync(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Dispatch one-off sync arguments without exposing secret CLI flags."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     settings = Mock(sync_safety_margin_minutes=7)
     parse_cli_settings = Mock(return_value=settings)
@@ -166,7 +166,7 @@ def test_cli_reports_local_doctor_failure_with_exit_code_one(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Return a meaningful failure when local doctor checks are unhealthy."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     report = Mock(is_healthy=False)
     report.render.return_value = "redacted diagnostic"
@@ -185,7 +185,7 @@ def test_cli_reports_invalid_doctor_configuration_with_exit_code_two(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Reject invalid local configuration without rendering its source values."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     monkeypatch.setenv("LUNCHMONEY_ALLOWED_HOSTS", "*")
 
@@ -200,7 +200,7 @@ def test_cli_prints_installed_version(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Print the distribution name and installed version without configuration."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     cli.main(["version"])
 
@@ -211,18 +211,18 @@ def test_cli_prints_requested_shell_completion(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Generate the requested completion script without selecting a runtime."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     cli.main(["--print-completion", "bash"])
 
     completion_script = capsys.readouterr().out
-    assert "complete -F _lunchmoney_mcp lunchmoney-mcp" in completion_script
+    assert "complete -F _lunchmoney_app lunchmoney-app" in completion_script
     assert "mcp serve schedule sync doctor version" in completion_script
 
 
 def test_cli_rejects_shell_completion_with_a_runtime_command() -> None:
     """Keep completion generation separate from command execution."""
-    import lunchmoney_mcp.cli as cli
+    import lunchmoney_app.cli as cli
 
     with pytest.raises(SystemExit) as error:
         cli.main(["--print-completion", "zsh", "mcp"])

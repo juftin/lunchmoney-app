@@ -15,7 +15,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
-from lunchmoney_mcp.database.models import (  # noqa: F401
+from lunchmoney_app.database.models import (  # noqa: F401
     Category,
     ManualAccount,
     PlaidAccount,

@@ -85,7 +85,7 @@ sequenceDiagram
 
 ## 🛠️ Code Specifications
 
-### Configuration (`src/lunchmoney_mcp/config.py`)
+### Configuration (`src/lunchmoney_app/config.py`)
 
 ```python
     model_config = SettingsConfigDict(env_prefix="LUNCHMONEY_")
@@ -112,7 +112,7 @@ sync_data(
 
 The FastAPI router and FastMCP tool are pure delegators: both forward all three controls unchanged to the shared synchronization services.
 
-### Database Model (`src/lunchmoney_mcp/database/models/sync.py`)
+### Database Model (`src/lunchmoney_app/database/models/sync.py`)
 
 ```python
 class SyncMetadata(SQLModel, table=True):

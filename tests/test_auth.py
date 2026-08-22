@@ -4,8 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from lunchmoney_mcp.app import auth
-from lunchmoney_mcp.config import RuntimeSettings, SecretSettings
+from lunchmoney_app.app import auth
+from lunchmoney_app.config import RuntimeSettings, SecretSettings
 
 
 def test_mcp_oauth_is_disabled_without_configuration() -> None:
@@ -19,7 +19,7 @@ def test_mcp_oauth_requires_complete_configuration() -> None:
         mcp_oauth_config_url="https://id.example.com/.well-known/openid-configuration"
     )
 
-    with pytest.raises(ValueError, match="LUNCHMONEY_MCP_OAUTH_CLIENT_ID"):
+    with pytest.raises(ValueError, match="LUNCHMONEY_APP_OAUTH_CLIENT_ID"):
         auth.get_mcp_oauth_provider(settings=settings)
 
 
@@ -29,7 +29,7 @@ def test_mcp_oauth_configures_oidc_proxy(monkeypatch: pytest.MonkeyPatch) -> Non
     oidc_proxy = Mock(return_value=proxy)
     settings = RuntimeSettings.model_construct(
         mcp_oauth_config_url="https://id.example.com/.well-known/openid-configuration",
-        mcp_oauth_client_id="lunchmoney-mcp",
+        mcp_oauth_client_id="lunchmoney-app",
         mcp_oauth_base_url="https://mcp.example.com",
         mcp_oauth_audience="https://mcp.example.com",
     )
@@ -47,7 +47,7 @@ def test_mcp_oauth_configures_oidc_proxy(monkeypatch: pytest.MonkeyPatch) -> Non
     )
     oidc_proxy.assert_called_once_with(
         config_url="https://id.example.com/.well-known/openid-configuration",
-        client_id="lunchmoney-mcp",
+        client_id="lunchmoney-app",
         client_secret="synthetic-secret",
         audience="https://mcp.example.com",
         base_url="https://mcp.example.com",

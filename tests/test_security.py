@@ -5,8 +5,8 @@ import asyncio
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from lunchmoney_mcp.app.security import apply_security_middleware
-from lunchmoney_mcp.config import RuntimeSettings
+from lunchmoney_app.app.security import apply_security_middleware
+from lunchmoney_app.config import RuntimeSettings
 
 
 def build_test_app(settings: RuntimeSettings) -> FastAPI:

@@ -11,18 +11,18 @@ import pytest
 from lunchmoney.models import BudgetSettingsResponseObject, SummaryResponseObject
 from starlette.testclient import TestClient
 
-from lunchmoney_mcp.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_mcp.app.main import fastapi_app
-from lunchmoney_mcp.client import LunchMoneyApp
-from lunchmoney_mcp.database import LunchMoneyDatabase
-from lunchmoney_mcp.database.models import SyncMetadata
-from lunchmoney_mcp.schemas import (
+from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
+from lunchmoney_app.app.main import fastapi_app
+from lunchmoney_app.client import LunchMoneyApp
+from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.database.models import SyncMetadata
+from lunchmoney_app.schemas import (
     AccountsSummary,
     GroupedSpendingResponse,
     ScheduledSyncStatus,
     SyncStatusSummary,
 )
-from lunchmoney_mcp.services.dashboard import DashboardData
+from lunchmoney_app.services.dashboard import DashboardData
 from database.factories import (
     manual_account_object,
     plaid_account_object,
@@ -30,9 +30,9 @@ from database.factories import (
 )
 
 
-auth_module = importlib.import_module("lunchmoney_mcp.app.auth")
-dashboard_router = importlib.import_module("lunchmoney_mcp.app.routers.dashboard")
-dashboard_service = importlib.import_module("lunchmoney_mcp.services.dashboard")
+auth_module = importlib.import_module("lunchmoney_app.app.auth")
+dashboard_router = importlib.import_module("lunchmoney_app.app.routers.dashboard")
+dashboard_service = importlib.import_module("lunchmoney_app.services.dashboard")
 
 
 def _budget_settings() -> BudgetSettingsResponseObject:
@@ -664,7 +664,7 @@ def test_dashboard_renders_syncing_component(
 
 def test_humanize_time_ago() -> None:
     """Format timestamps into human-readable relative phrases."""
-    from lunchmoney_mcp.services.dashboard import humanize_time_ago
+    from lunchmoney_app.services.dashboard import humanize_time_ago
 
     now = datetime.datetime.now(datetime.timezone.utc)
     assert humanize_time_ago(None) == "Not yet synced"
@@ -713,7 +713,7 @@ def test_dashboard_renders_disabled_cron_workloads(
 
 def test_dashboard_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     """Trigger an instant sync via POST /dashboard/sync and re-render cockpit content."""
-    from lunchmoney_mcp.services import sync as sync_service
+    from lunchmoney_app.services import sync as sync_service
 
     monkeypatch.setattr(
         sync_service,

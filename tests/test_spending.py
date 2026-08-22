@@ -14,11 +14,11 @@ from database.factories import (
     child_category_object,
     transaction_object,
 )
-from lunchmoney_mcp.app import app as fastapi_app
-from lunchmoney_mcp.database import LunchMoneyDatabase, run_migrations
-from lunchmoney_mcp.database.models import Category, Transaction
-from lunchmoney_mcp.mcp import mcp
-from lunchmoney_mcp.services import fetch_category_spending
+from lunchmoney_app.app import app as fastapi_app
+from lunchmoney_app.database import LunchMoneyDatabase, run_migrations
+from lunchmoney_app.database.models import Category, Transaction
+from lunchmoney_app.mcp import mcp
+from lunchmoney_app.services import fetch_category_spending
 
 
 @pytest_asyncio.fixture

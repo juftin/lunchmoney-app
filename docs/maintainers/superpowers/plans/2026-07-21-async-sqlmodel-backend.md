@@ -32,8 +32,8 @@
 
 - Modify: `pyproject.toml`
 - Modify: `uv.lock`
-- Create: `src/lunchmoney_mcp/database/__init__.py`
-- Create: `src/lunchmoney_mcp/database/backend.py`
+- Create: `src/lunchmoney_app/database/__init__.py`
+- Create: `src/lunchmoney_app/database/backend.py`
 - Create: `tests/database/test_backend.py`
 
 **Interfaces:**
@@ -63,8 +63,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from lunchmoney_mcp.database import DEFAULT_DATABASE_URL, LunchMoneyDatabase
-from lunchmoney_mcp.database.backend import resolve_database_url
+from lunchmoney_app.database import DEFAULT_DATABASE_URL, LunchMoneyDatabase
+from lunchmoney_app.database.backend import resolve_database_url
 
 
 def test_default_database_url_is_persistent_sqlite(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -94,7 +94,7 @@ async def test_database_exposes_native_async_session(tmp_path: Path) -> None:
 
 Run: `uv run pytest tests/database/test_backend.py -v`
 
-Expected: collection fails because `lunchmoney_mcp.database` does not exist.
+Expected: collection fails because `lunchmoney_app.database` does not exist.
 
 - [ ] **Step 4: Implement the minimal backend lifecycle**
 
@@ -109,7 +109,7 @@ Expected: all Task 1 tests pass.
 - [ ] **Step 6: Commit Task 1**
 
 ```bash
-git add pyproject.toml uv.lock src/lunchmoney_mcp/database tests/database/test_backend.py
+git add pyproject.toml uv.lock src/lunchmoney_app/database tests/database/test_backend.py
 git commit -m "✨ Add async SQLModel database lifecycle"
 ```
 
@@ -117,10 +117,10 @@ git commit -m "✨ Add async SQLModel database lifecycle"
 
 **Files:**
 
-- Create: `src/lunchmoney_mcp/database/models/__init__.py`
-- Create: `src/lunchmoney_mcp/database/models/users.py`
-- Create: `src/lunchmoney_mcp/database/models/accounts.py`
-- Create: `src/lunchmoney_mcp/database/models/tags.py`
+- Create: `src/lunchmoney_app/database/models/__init__.py`
+- Create: `src/lunchmoney_app/database/models/users.py`
+- Create: `src/lunchmoney_app/database/models/accounts.py`
+- Create: `src/lunchmoney_app/database/models/tags.py`
 - Create: `tests/database/factories.py`
 - Create: `tests/database/test_scalar_models.py`
 
@@ -165,7 +165,7 @@ Expected: all round trips pass, and `SQLModel.metadata.tables` contains `users`,
 - [ ] **Step 6: Commit Task 2**
 
 ```bash
-git add src/lunchmoney_mcp/database/models tests/database/factories.py tests/database/test_scalar_models.py
+git add src/lunchmoney_app/database/models tests/database/factories.py tests/database/test_scalar_models.py
 git commit -m "✨ Add scalar Lunch Money SQLModel records"
 ```
 
@@ -173,8 +173,8 @@ git commit -m "✨ Add scalar Lunch Money SQLModel records"
 
 **Files:**
 
-- Create: `src/lunchmoney_mcp/database/models/categories.py`
-- Modify: `src/lunchmoney_mcp/database/models/__init__.py`
+- Create: `src/lunchmoney_app/database/models/categories.py`
+- Modify: `src/lunchmoney_app/database/models/__init__.py`
 - Modify: `tests/database/factories.py`
 - Create: `tests/database/test_categories.py`
 
@@ -209,7 +209,7 @@ Expected: category graph and conversion tests pass.
 - [ ] **Step 6: Commit Task 3**
 
 ```bash
-git add src/lunchmoney_mcp/database/models tests/database
+git add src/lunchmoney_app/database/models tests/database
 git commit -m "✨ Add normalized category records"
 ```
 
@@ -217,8 +217,8 @@ git commit -m "✨ Add normalized category records"
 
 **Files:**
 
-- Create: `src/lunchmoney_mcp/database/models/transactions.py`
-- Modify: `src/lunchmoney_mcp/database/models/__init__.py`
+- Create: `src/lunchmoney_app/database/models/transactions.py`
+- Modify: `src/lunchmoney_app/database/models/__init__.py`
 - Modify: `tests/database/factories.py`
 - Create: `tests/database/test_transactions.py`
 
@@ -264,7 +264,7 @@ Expected: all transaction graph and conversion tests pass.
 - [ ] **Step 6: Commit Task 4**
 
 ```bash
-git add src/lunchmoney_mcp/database/models tests/database
+git add src/lunchmoney_app/database/models tests/database
 git commit -m "✨ Add normalized transaction records"
 ```
 
@@ -272,8 +272,8 @@ git commit -m "✨ Add normalized transaction records"
 
 **Files:**
 
-- Modify: `src/lunchmoney_mcp/database/backend.py`
-- Modify: `src/lunchmoney_mcp/database/__init__.py`
+- Modify: `src/lunchmoney_app/database/backend.py`
+- Modify: `src/lunchmoney_app/database/__init__.py`
 - Create: `tests/database/conftest.py`
 - Create: `tests/database/test_persistence.py`
 
@@ -316,7 +316,7 @@ Expected: all persistence contract tests pass with foreign keys enabled.
 - [ ] **Step 6: Commit Task 5**
 
 ```bash
-git add src/lunchmoney_mcp/database tests/database
+git add src/lunchmoney_app/database tests/database
 git commit -m "✨ Add async SQLModel persistence operations"
 ```
 
@@ -374,7 +374,7 @@ git commit -m "✨ Add async SQLite and Postgres migrations"
 
 **Files:**
 
-- Modify: `src/lunchmoney_mcp/database/__init__.py`
+- Modify: `src/lunchmoney_app/database/__init__.py`
 - Modify: `README.md`
 - Modify: `tests/database/test_backend.py`
 
@@ -384,7 +384,7 @@ git commit -m "✨ Add async SQLite and Postgres migrations"
 
 - [ ] **Step 1: Write a failing public-export test**
 
-Assert every documented symbol imports from `lunchmoney_mcp.database`, and exercise the README's SQLite example against a temporary URL without contacting Lunch Money or Postgres.
+Assert every documented symbol imports from `lunchmoney_app.database`, and exercise the README's SQLite example against a temporary URL without contacting Lunch Money or Postgres.
 
 - [ ] **Step 2: Run RED**
 
@@ -418,6 +418,6 @@ Confirm `LunchMoneyApp` has no SQL imports or behavioral changes, no automatic `
 - [ ] **Step 6: Commit Task 7**
 
 ```bash
-git add README.md src/lunchmoney_mcp/database tests/database alembic alembic.ini pyproject.toml uv.lock
+git add README.md src/lunchmoney_app/database tests/database alembic alembic.ini pyproject.toml uv.lock
 git commit -m "📝 Document async SQLModel persistence"
 ```

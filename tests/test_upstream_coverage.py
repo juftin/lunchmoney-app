@@ -10,8 +10,8 @@ from typing import Any
 
 import lunchmoney
 
-from lunchmoney_mcp.app.main import fastapi_app
-from lunchmoney_mcp.mcp import mcp
+from lunchmoney_app.app.main import fastapi_app
+from lunchmoney_app.mcp import mcp
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 """Repository root used to load reviewed compatibility artifacts."""

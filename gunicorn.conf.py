@@ -7,7 +7,7 @@ import logging.config
 
 import gunicorn.glogging
 
-from lunchmoney_mcp.logging_config import LOG_CONFIG
+from lunchmoney_app.logging_config import LOG_CONFIG
 
 bind = "0.0.0.0:8000"
 worker_class = "uvicorn_worker.UvicornWorker"

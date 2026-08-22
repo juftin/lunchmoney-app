@@ -4,8 +4,8 @@ from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 
-from lunchmoney_mcp.config import RuntimeSettings
-from lunchmoney_mcp.services.operations import data_operation, get_operation_database
+from lunchmoney_app.config import RuntimeSettings
+from lunchmoney_app.services.operations import data_operation, get_operation_database
 
 
 @pytest.mark.asyncio
@@ -13,7 +13,7 @@ async def test_ephemeral_operation_refreshes_and_disposes_private_database(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Use one private, refreshed database and clear it after the operation."""
-    import lunchmoney_mcp.services.operations as operations
+    import lunchmoney_app.services.operations as operations
 
     database = Mock()
     database.create_tables = AsyncMock()
@@ -40,7 +40,7 @@ async def test_shared_operation_does_not_dispose_database(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Keep durable database lifecycle outside individual operations."""
-    import lunchmoney_mcp.services.operations as operations
+    import lunchmoney_app.services.operations as operations
 
     database = Mock()
     monkeypatch.setattr(operations, "get_settings", lambda: RuntimeSettings())
@@ -57,7 +57,7 @@ async def test_ephemeral_operation_can_skip_automatic_refresh(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Let explicit synchronization own the only upstream refresh it performs."""
-    import lunchmoney_mcp.services.operations as operations
+    import lunchmoney_app.services.operations as operations
 
     database = Mock()
     database.create_tables = AsyncMock()

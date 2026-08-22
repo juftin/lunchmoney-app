@@ -8,11 +8,11 @@ from unittest.mock import ANY, AsyncMock, create_autospec
 
 import sys
 import pytest
-from lunchmoney_mcp.app import app as fastapi_app
-from lunchmoney_mcp import client as app_module
+from lunchmoney_app.app import app as fastapi_app
+from lunchmoney_app import client as app_module
 
-app_main_module = sys.modules["lunchmoney_mcp.app.main"]
-lifespan_module = sys.modules["lunchmoney_mcp.app.lifespan"]
+app_main_module = sys.modules["lunchmoney_app.app.main"]
+lifespan_module = sys.modules["lunchmoney_app.app.lifespan"]
 
 
 def create_app(
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 def test_vendored_app_exports_lunch_money_app() -> None:
     """Expose the upstream application class from the package module."""
-    from lunchmoney_mcp.client import LunchMoneyApp
+    from lunchmoney_app.client import LunchMoneyApp
 
     assert LunchMoneyApp.__name__ == "LunchMoneyApp"
 
@@ -59,7 +59,7 @@ async def test_refresh_without_cache_does_not_replace_data(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Return refreshed categories without replacing the cached categories."""
-    from lunchmoney_mcp.client import (
+    from lunchmoney_app.client import (
         CategoryObject,
         _ObjectMapper,
     )
@@ -92,7 +92,7 @@ async def test_refresh_data_forwards_cache_to_each_refresh(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Forward the cache control to every requested model refresh."""
-    from lunchmoney_mcp.client import CategoryObject
+    from lunchmoney_app.client import CategoryObject
 
     app = create_app(monkeypatch)
     app.refresh = AsyncMock()
@@ -107,7 +107,7 @@ async def test_refresh_data_inherits_cache_from_app_instance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Resolve an omitted bulk-refresh cache setting from the instance."""
-    from lunchmoney_mcp.client import CategoryObject
+    from lunchmoney_app.client import CategoryObject
 
     app = create_app(monkeypatch, cache=False)
     app.refresh = AsyncMock()
@@ -149,7 +149,7 @@ async def test_refresh_inherits_cache_from_app_instance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Use an instance cache default when refresh cache is omitted."""
-    from lunchmoney_mcp.client import (
+    from lunchmoney_app.client import (
         CategoryObject,
         _ObjectMapper,
     )
@@ -223,8 +223,8 @@ async def test_sync_database_populates_last_30_days(
 ) -> None:
     """Fetch 30-day window objects and persist them into database."""
     import datetime
-    from lunchmoney_mcp.database import LunchMoneyDatabase
-    from lunchmoney_mcp.database.models import Transaction, User
+    from lunchmoney_app.database import LunchMoneyDatabase
+    from lunchmoney_app.database.models import Transaction, User
     from database.factories import (
         category_object,
         plaid_account_object,
@@ -274,7 +274,7 @@ async def test_sync_database_populates_last_30_days(
 
             await conn.run_sync(SQLModel.metadata.create_all)
 
-        from lunchmoney_mcp.app import sync_database
+        from lunchmoney_app.app import sync_database
 
         summary = await sync_database(db=db, client=app, days=30)
 
@@ -316,7 +316,7 @@ async def test_explicit_sync_request_skips_automatic_refresh(
 
     from starlette.requests import Request
     from starlette.responses import Response
-    from lunchmoney_mcp.config import RuntimeSettings
+    from lunchmoney_app.config import RuntimeSettings
 
     observed_refresh: list[bool] = []
 
@@ -354,11 +354,11 @@ def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reject REST requests without the configured API key."""
     from starlette.testclient import TestClient
 
-    from lunchmoney_mcp.config import get_secret_settings, get_settings
+    from lunchmoney_app.config import get_secret_settings, get_settings
 
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
-    monkeypatch.setenv("LUNCHMONEY_MCP_API_KEY", "rest-api-key")
+    monkeypatch.setenv("LUNCHMONEY_APP_API_KEY", "rest-api-key")
     get_secret_settings.cache_clear()
     get_settings.cache_clear()
 
@@ -393,7 +393,7 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
         assert safety_margin_minutes is None
         return app_module.SyncSummary(user=1, transactions=5)
 
-    import lunchmoney_mcp.services.sync as sync_service_module
+    import lunchmoney_app.services.sync as sync_service_module
 
     monkeypatch.setattr(sync_service_module, "run_migrations", mock_migrations)
     monkeypatch.setattr(sync_service_module, "sync_database", mock_sync)
@@ -414,10 +414,10 @@ def test_fastapi_sync_endpoint_forwards_incremental_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Forward incremental query controls unchanged to the sync service."""
-    from lunchmoney_mcp.schemas import SyncDetails, SyncResponse
+    from lunchmoney_app.schemas import SyncDetails, SyncResponse
     from starlette.testclient import TestClient
 
-    sync_router_module = sys.modules["lunchmoney_mcp.app.routers.sync"]
+    sync_router_module = sys.modules["lunchmoney_app.app.routers.sync"]
     mock_execute_sync = AsyncMock(
         return_value=SyncResponse(
             synced=SyncDetails(
@@ -455,9 +455,9 @@ async def test_execute_sync_forwards_incremental_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Forward incremental controls from the shared service to sync policy."""
-    from lunchmoney_mcp.client import LunchMoneyApp, SyncSummary
-    from lunchmoney_mcp.database import LunchMoneyDatabase
-    import lunchmoney_mcp.services.sync as sync_service_module
+    from lunchmoney_app.client import LunchMoneyApp, SyncSummary
+    from lunchmoney_app.database import LunchMoneyDatabase
+    import lunchmoney_app.services.sync as sync_service_module
 
     database = create_autospec(LunchMoneyDatabase, instance=True)
     database.is_stateless = False
@@ -490,7 +490,7 @@ async def test_explicit_sync_initializes_and_persists_to_stateless_database(
 ) -> None:
     """Create the in-memory schema during sync when startup has not run."""
     from database.factories import user_object
-    from lunchmoney_mcp.client import (
+    from lunchmoney_app.client import (
         CategoryObject,
         LunchMoneyApp,
         ManualAccountObject,
@@ -498,9 +498,9 @@ async def test_explicit_sync_initializes_and_persists_to_stateless_database(
         TagObject,
         UserObject,
     )
-    from lunchmoney_mcp.config import get_settings
-    from lunchmoney_mcp.database import LunchMoneyDatabase, User
-    from lunchmoney_mcp.services.sync import execute_sync
+    from lunchmoney_app.config import get_settings
+    from lunchmoney_app.database import LunchMoneyDatabase, User
+    from lunchmoney_app.services.sync import execute_sync
 
     async def refresh(model: type[Any]) -> Any:
         """Return a synthetic user and empty collections for other domains."""
@@ -519,7 +519,7 @@ async def test_explicit_sync_initializes_and_persists_to_stateless_database(
     monkeypatch.setenv("STATELESS", "true")
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     get_settings.cache_clear()
-    from lunchmoney_mcp.client import LunchableData
+    from lunchmoney_app.client import LunchableData
 
     client = AsyncMock(spec=LunchMoneyApp)
     client.data = LunchableData()
@@ -543,10 +543,10 @@ async def test_execute_mcp_sync_forwards_incremental_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Forward incremental controls through the MCP-facing shared service."""
-    from lunchmoney_mcp.client import LunchMoneyApp
-    from lunchmoney_mcp.database import LunchMoneyDatabase
-    from lunchmoney_mcp.schemas import SyncDetails, SyncResponse
-    import lunchmoney_mcp.services.sync as sync_service_module
+    from lunchmoney_app.client import LunchMoneyApp
+    from lunchmoney_app.database import LunchMoneyDatabase
+    from lunchmoney_app.schemas import SyncDetails, SyncResponse
+    import lunchmoney_app.services.sync as sync_service_module
 
     database = create_autospec(LunchMoneyDatabase, instance=True)
     client = create_autospec(LunchMoneyApp, instance=True)
@@ -586,8 +586,8 @@ async def test_execute_mcp_sync_forwards_incremental_options(
 @pytest.mark.asyncio
 async def test_fastapi_database_dependencies(tmp_path: Path) -> None:
     """Verify get_database and get_db_session dependencies yield expected instances."""
-    from lunchmoney_mcp.app import get_database, get_db_session
-    from lunchmoney_mcp.database import LunchMoneyDatabase
+    from lunchmoney_app.app import get_database, get_db_session
+    from lunchmoney_app.database import LunchMoneyDatabase
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     db_instance = get_database()
@@ -630,15 +630,15 @@ def test_stateless_startup_syncs_and_persists_without_manual_schema_setup(
     tmp_path: Path,
 ) -> None:
     """Initialize the cached stateless schema before real sync persistence."""
-    from lunchmoney_mcp.app.dependencies import get_database
-    from lunchmoney_mcp.client import (
+    from lunchmoney_app.app.dependencies import get_database
+    from lunchmoney_app.client import (
         CategoryObject,
         ManualAccountObject,
         PlaidAccountObject,
         TagObject,
         UserObject,
     )
-    from lunchmoney_mcp.config import get_settings
+    from lunchmoney_app.config import get_settings
     from starlette.testclient import TestClient
     from database.factories import user_object
 
@@ -699,7 +699,7 @@ def test_stateless_startup_syncs_and_persists_without_manual_schema_setup(
 def test_openapi_docs_served_at_api_docs(monkeypatch: pytest.MonkeyPatch) -> None:
     """Expose OpenAPI documentation at /api/docs, /api/redoc, and /api/openapi.json without auth."""
     from starlette.testclient import TestClient
-    from lunchmoney_mcp.app import auth as auth_module
+    from lunchmoney_app.app import auth as auth_module
 
     monkeypatch.setattr(
         auth_module,
