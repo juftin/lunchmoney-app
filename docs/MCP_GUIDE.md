@@ -51,20 +51,24 @@ remain available only for clients that require those older connection types.
 
 ## Choose how data is handled
 
-The local setup is private by default: requests go to Lunch Money and nothing
-is retained afterward. A remote server keeps data available for later requests
-by default. You can choose a different behavior with either command:
+The local stdio setup is ephemeral by default: each operation reads Lunch
+Money live and no database or cross-operation financial-data cache is created.
+Remote transports default to stateful mode.
 
-| Option        | What it does                                          |
-| :------------ | :---------------------------------------------------- |
-| `--stateless` | Keeps a live Lunch Money data cache while running     |
-| `--ephemeral` | Sends each request to Lunch Money and retains nothing |
+| Option                         | What it does                                                                |
+| :----------------------------- | :-------------------------------------------------------------------------- |
+| `--persistence-mode stateful`  | Uses the configured SQLite or PostgreSQL database                           |
+| `--persistence-mode ephemeral` | Uses live upstream readers and retains no financial data between operations |
 
 For example, use a remote server without retaining data:
 
 ```bash
-lunchmoney-app mcp --streamable-http --ephemeral
+lunchmoney-app mcp --streamable-http --persistence-mode ephemeral
 ```
+
+Dashboard and synchronization operations return `stateful_mode_required` in
+ephemeral mode. Supplying database settings with ephemeral mode is rejected at
+startup.
 
 ## Secure a remote server
 

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 from starlette.testclient import TestClient
+from unittest.mock import create_autospec
 
 from database.factories import (
     category_object,
@@ -17,8 +18,10 @@ from database.factories import (
 from lunchmoney_app.app import app as fastapi_app
 from lunchmoney_app.database import LunchMoneyDatabase, run_migrations
 from lunchmoney_app.database.models import Category, Transaction
+from lunchmoney_app.client import LunchMoneyApp
 from lunchmoney_app.mcp import mcp
 from lunchmoney_app.services import fetch_category_spending
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 
 
 @pytest_asyncio.fixture
@@ -34,6 +37,7 @@ async def database(tmp_path: Path) -> AsyncIterator[LunchMoneyDatabase]:
 @pytest.mark.asyncio
 async def test_fetch_category_spending(
     database: LunchMoneyDatabase,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Verify category spending aggregation and parent/child rollups."""
     today = datetime.date.today()
@@ -87,7 +91,20 @@ async def test_fetch_category_spending(
     await database.upsert(txn1)
     await database.upsert(txn2)
 
-    response = await fetch_category_spending(db=database, days=30)
+    database_list = database.list
+
+    async def bounded_list(model: type[Category] | type[Transaction]) -> list[object]:
+        """Require analytics transactions to use their date-bounded SQL path."""
+        if model is Transaction:
+            raise AssertionError("analytics loaded every transaction")
+        return await database_list(model)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(database, "list", bounded_list)
+
+    async with StatefulOperationContextFactory(
+        create_autospec(LunchMoneyApp, instance=True), database
+    ).operation() as context:
+        response = await fetch_category_spending(context, days=30)
     assert response.total_spending == 60.50
     assert len(response.categories) == 1
 
@@ -103,6 +120,43 @@ async def test_fetch_category_spending(
     assert child_spending.category_name == "Restaurants"
     assert child_spending.total_amount == 45.50
     assert child_spending.transaction_count == 1
+
+
+@pytest.mark.asyncio
+async def test_stateful_recent_transactions_applies_sql_limit(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Load only the requested dashboard transaction count from SQL."""
+    today = datetime.date.today()
+    for transaction_id in range(100, 106):
+        await database.upsert(
+            Transaction.from_api(
+                transaction_object(
+                    transaction_id=transaction_id,
+                    is_split_parent=False,
+                ).model_copy(
+                    update={
+                        "var_date": today,
+                        "category_id": None,
+                        "plaid_account_id": None,
+                        "manual_account_id": None,
+                        "tags": [],
+                        "tag_ids": [],
+                    }
+                )
+            )
+        )
+
+    async with StatefulOperationContextFactory(
+        create_autospec(LunchMoneyApp, instance=True), database
+    ).operation() as context:
+        transactions = await context.transactions.recent(
+            start_date=today,
+            end_date=today,
+            limit=3,
+        )
+
+    assert [transaction.id for transaction in transactions] == [105, 104, 103]
 
 
 def test_fastapi_spending_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:

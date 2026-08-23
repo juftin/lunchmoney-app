@@ -29,16 +29,12 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > - An upstream or record-persistence failure leaves an absent watermark absent and preserves an existing watermark at its exact prior timestamp.
 
 > [!NOTE]
-> **4. Stateless Storage is Explicit and Override-Safe**:
+> **4. Synchronization Requires Stateful Mode**:
 >
-> - `LUNCHMONEY_STATELESS=true` selects a shared in-memory SQLite URL backed by `StaticPool` only when no explicit, environment, or dotenv database URL is configured.
-> - Startup and explicit synchronization call `LunchMoneyDatabase.create_tables()` on the cached database instance in stateless mode; persistent databases continue to use Alembic migrations.
-
-> **5. Ephemeral Storage Is Per Operation**:
->
-> - `LUNCHMONEY_EPHEMERAL=true` is mutually exclusive with `LUNCHMONEY_STATELESS=true`.
-> - REST requests and MCP tool/resource calls create a private in-memory SQLite database, refresh upstream data into it, execute the operation, and dispose it in a `finally` block.
-> - Ephemeral mode does not initialize, migrate, or reuse the shared persistent or in-memory database.
+> - `LUNCHMONEY_PERSISTENCE_MODE=stateful` enables synchronization, watermarks,
+>   migrations, and scheduling.
+> - Ephemeral mode has no database and rejects sync and scheduler operations with
+>   `stateful_mode_required`.
 
 > **6. Recurring Matches Are Period Snapshots**:
 >
@@ -59,11 +55,7 @@ sequenceDiagram
     participant API as Lunch Money v2 API
 
     Client->>Service: POST /api/sync or sync_data(incremental=True)
-    alt Stateless in-memory storage
-        Service->>DB: Create tables on cached database instance
-    else Persistent storage
-        Service->>Service: Run migrations
-    end
+    Service->>Service: Run stateful database migrations
     Service->>API: Fully refresh user, accounts, categories, and tags
     Service->>DB: Read SyncMetadata(domain="transactions")
     alt Transaction watermark exists
@@ -90,11 +82,12 @@ sequenceDiagram
 ```python
     model_config = SettingsConfigDict(env_prefix="LUNCHMONEY_")
 
-    stateless: bool = False
+    persistence_mode: Literal["stateful", "ephemeral"] = "stateful"
     sync_safety_margin_minutes: int = 5
 ```
 
-An explicit constructor URL, `LUNCHMONEY_DATABASE_URL`, or a dotenv-provided database URL takes precedence over `LUNCHMONEY_STATELESS=true`.
+Database configuration is valid only in stateful mode. The HTTP default is
+stateful; MCP stdio defaults to ephemeral when the mode is omitted.
 
 ### Transport Interfaces
 

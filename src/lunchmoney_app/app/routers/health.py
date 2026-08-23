@@ -9,9 +9,14 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 
-from lunchmoney_app.app.dependencies import get_database
-from lunchmoney_app.config import get_settings
+from lunchmoney_app.app.dependencies import get_shared_database
+from lunchmoney_app.config import get_secret_settings, get_settings
 from lunchmoney_app.observability import log_event, metrics
+from lunchmoney_app.services.operations import (
+    PROJECTION_DOMAINS,
+    get_unpersisted_stale_domains,
+    persist_unpersisted_stale_domains,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +27,22 @@ router = APIRouter(tags=["Health"])
 async def database_is_ready() -> bool:
     """Return whether the configured database can accept a minimal query."""
     try:
-        database = get_database()
+        database = get_shared_database()
         async with database.engine.connect() as connection:
             await connection.execute(text("SELECT 1"))
+        await persist_unpersisted_stale_domains(database)
+        stale_domains = set(get_unpersisted_stale_domains())
+        for domain in PROJECTION_DOMAINS:
+            marker = await database.get_cached_response(f"health:stale:{domain}")
+            if marker is not None:
+                stale_domains.add(domain)
+        if stale_domains:
+            log_event(
+                logger,
+                "cache_projection_stale",
+                domains=",".join(sorted(stale_domains)),
+            )
+            return False
     except Exception:
         log_event(logger, "database_readiness_failed")
         return False
@@ -52,6 +70,19 @@ async def healthz() -> dict[str, str]:
 @router.get(path="/readyz", include_in_schema=False)
 async def readyz(request: Request) -> JSONResponse:
     """Report whether database and configured embedded scheduler are ready."""
+    if get_settings().persistence_mode == "ephemeral":
+        upstream_configured = bool(get_secret_settings().access_token)
+        return JSONResponse(
+            status_code=200 if upstream_configured else 503,
+            content={
+                "status": "ready" if upstream_configured else "not_ready",
+                "database": "not_applicable",
+                "scheduler": "not_configured",
+                "upstream_configuration": (
+                    "configured" if upstream_configured else "not_configured"
+                ),
+            },
+        )
     database_status = "ready" if await database_is_ready() else "unavailable"
     current_scheduler_status = scheduler_status(request)
     scheduler_ready = current_scheduler_status != "unavailable"

@@ -15,6 +15,7 @@ from alembic import command
 from alembic.config import Config
 
 from sqlalchemy import delete, event, update
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlalchemy.pool import StaticPool
@@ -23,9 +24,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from lunchmoney_app.config import (
     DEFAULT_DATABASE_URL,
-    IN_MEMORY_DATABASE_URL,
     SecretSettings,
-    get_settings,
 )
 from lunchmoney_app.database.models import (
     CachedApiResponse,
@@ -56,9 +55,17 @@ _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
 PROJECT_ROOT: Path = Path(__file__).parents[3]
 """Repository root containing the Alembic configuration."""
 
+
+def _is_memory_sqlite_url(database_url: str) -> bool:
+    """Return whether a database URL explicitly selects SQLite memory storage."""
+    parsed_url = make_url(database_url)
+    return parsed_url.get_backend_name() == "sqlite" and (
+        parsed_url.database == ":memory:" or parsed_url.query.get("mode") == "memory"
+    )
+
+
 __all__ = [
     "DEFAULT_DATABASE_URL",
-    "IN_MEMORY_DATABASE_URL",
     "LunchMoneyDatabase",
     "resolve_database_url",
     "run_migrations",
@@ -75,8 +82,6 @@ def resolve_database_url(database_url: str | None = None) -> str:
     secret_settings = SecretSettings()
     if "database_url" in secret_settings.model_fields_set:
         return secret_settings.database_url
-    if get_settings().stateless:
-        return IN_MEMORY_DATABASE_URL
     return DEFAULT_DATABASE_URL
 
 
@@ -615,9 +620,10 @@ class LunchMoneyDatabase:
     def __init__(self, database_url: str | None = None) -> None:
         """Create database resources for the resolved connection URL."""
         resolved_url = resolve_database_url(database_url)
-        self._is_stateless = "mode=memory" in resolved_url
+        self.database_url = resolved_url
+        """Resolved backend URL used to construct the engine."""
         engine_kwargs: dict[str, Any] = {}
-        if self._is_stateless:
+        if _is_memory_sqlite_url(resolved_url):
             engine_kwargs["poolclass"] = StaticPool
         self.engine = create_async_engine(resolved_url, **engine_kwargs)
         if self.engine.dialect.name == "sqlite":
@@ -631,11 +637,6 @@ class LunchMoneyDatabase:
             class_=AsyncSession,
             expire_on_commit=False,
         )
-
-    @property
-    def is_stateless(self) -> bool:
-        """Return whether this instance owns the shared in-memory database."""
-        return self._is_stateless
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:

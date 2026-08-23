@@ -16,13 +16,7 @@ from lunchmoney.models import (
 
 from sqlalchemy.engine import make_url
 
-from lunchmoney_app.client import LunchMoneyApp
-from lunchmoney_app.config import (
-    IN_MEMORY_DATABASE_URL,
-    get_secret_settings,
-    get_settings,
-)
-from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.config import RuntimeSettings
 from lunchmoney_app.database.models import SyncMetadata
 from lunchmoney_app.schemas import (
     AccountsSummary,
@@ -35,7 +29,7 @@ from lunchmoney_app.services.budgets import fetch_budget_settings
 from lunchmoney_app.services.spending import fetch_category_spending
 from lunchmoney_app.services.summary import fetch_account_summary
 from lunchmoney_app.services.sync import get_scheduled_sync_status
-from lunchmoney_app.services.transactions import fetch_recent_transactions
+from lunchmoney_app.services.operations import StatefulOperationContext
 
 logger = logging.getLogger(__name__)
 
@@ -164,8 +158,8 @@ def _available(
 
 
 async def fetch_dashboard_data(
-    db: LunchMoneyDatabase,
-    client: LunchMoneyApp,
+    context: StatefulOperationContext,
+    settings: RuntimeSettings,
     period_start: datetime.date | None = None,
     transaction_limit: int = 10,
 ) -> DashboardData:
@@ -173,10 +167,10 @@ async def fetch_dashboard_data(
 
     Parameters
     ----------
-    db : LunchMoneyDatabase
-        Database used by cached account, spending, transaction, and sync queries.
-    client : LunchMoneyApp
-        Lunch Money client used by live summary and budget-setting queries.
+    context : StatefulOperationContext
+        Stateful operation collaborators used by every dashboard section.
+    settings : RuntimeSettings
+        Runtime schedule settings displayed in dashboard status.
     period_start : datetime.date | None
         Any date in the calendar month to render. Defaults to the current month.
     transaction_limit : int
@@ -187,6 +181,7 @@ async def fetch_dashboard_data(
     DashboardData
         Data for every successfully loaded section plus safe unavailable-section labels.
     """
+    db = context.database
     today = datetime.date.today()
     resolved_period_start = min(period_start or today, today).replace(day=1)
     next_month_start = (
@@ -210,31 +205,29 @@ async def fetch_dashboard_data(
     ) = await asyncio.gather(
         _capture(db.get_sync_metadata("transactions")),
         _capture(db.get_sync_metadata("metadata")),
-        _capture(fetch_accounts(db=db)),
+        _capture(fetch_accounts(context)),
         _capture(
             fetch_account_summary(
-                db=db,
-                client=client,
+                context=context,
                 start_date=resolved_period_start,
                 end_date=period_end,
                 include_totals=True,
             )
         ),
-        _capture(fetch_budget_settings(db=db, client=client)),
+        _capture(fetch_budget_settings(context)),
         _capture(
             fetch_category_spending(
-                db=db,
+                context=context,
                 start_date=resolved_period_start,
                 end_date=period_end,
                 days=None,
             )
         ),
         _capture(
-            fetch_recent_transactions(
-                db=db,
-                limit=transaction_limit,
+            context.transactions.recent(
                 start_date=resolved_period_start,
                 end_date=period_end,
+                limit=transaction_limit,
             )
         ),
         _capture(get_scheduled_sync_status(db=db)),
@@ -263,20 +256,13 @@ async def fetch_dashboard_data(
     )
     db_stats = db_stats_raw if isinstance(db_stats_raw, dict) else {}
 
-    settings = get_settings()
-    secret_settings = get_secret_settings()
-
-    if settings.stateless:
-        persistence_mode = "Stateless (In-Memory)"
-        raw_db_url = IN_MEMORY_DATABASE_URL
+    raw_db_url = db.database_url
+    if raw_db_url.startswith("postgresql"):
+        persistence_mode = "Stateful (PostgreSQL)"
+    elif raw_db_url.startswith("sqlite"):
+        persistence_mode = "Stateful (SQLite)"
     else:
-        raw_db_url = secret_settings.database_url
-        if secret_settings.database_url.startswith("postgresql"):
-            persistence_mode = "Persistent (PostgreSQL)"
-        elif secret_settings.database_url.startswith("sqlite"):
-            persistence_mode = "Persistent (SQLite)"
-        else:
-            persistence_mode = "Persistent"
+        persistence_mode = "Stateful"
 
     try:
         db_url = make_url(raw_db_url).render_as_string(hide_password=True)
@@ -340,6 +326,11 @@ async def fetch_dashboard_data(
         embed_scheduler=settings.embed_scheduler,
         scheduled_sync=scheduled_sync,
     )
+    available_transactions = _available(
+        result=cast(list[TransactionObject] | Exception, transactions_result),
+        section_name="Recent transactions",
+        unavailable_sections=unavailable_sections,
+    )
 
     return DashboardData(
         period_start=resolved_period_start,
@@ -373,11 +364,7 @@ async def fetch_dashboard_data(
             section_name="Category spending",
             unavailable_sections=unavailable_sections,
         ),
-        transactions=_available(
-            result=cast(list[TransactionObject] | Exception, transactions_result),
-            section_name="Recent transactions",
-            unavailable_sections=unavailable_sections,
-        ),
+        transactions=available_transactions,
         scheduled_sync=scheduled_sync,
         sync_status=sync_status,
         unavailable_sections=tuple(unavailable_sections),

@@ -22,6 +22,6 @@ def test_completion_scripts_cover_every_runtime_command(
     assert expected_registration in completion_script
     for command in ("mcp", "serve", "schedule", "sync", "doctor", "version"):
         assert command in completion_script
-    assert "--ephemeral" in completion_script
+    assert "--persistence-mode" in completion_script
     assert "--access-token" not in completion_script
     assert "--print-completion" in completion_script

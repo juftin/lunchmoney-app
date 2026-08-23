@@ -1,28 +1,16 @@
-"""FastMCP tools for user profile and budget information operations."""
-
-from typing import TYPE_CHECKING
+"""FastMCP user tools."""
 
 from lunchmoney.models import UserObject
 
-from lunchmoney_app.app.dependencies import get_database
 from lunchmoney_app.mcp.app import mcp
 from lunchmoney_app.services import fetch_user_info
-
-if TYPE_CHECKING:
-    from lunchmoney_app import LunchMoneyDatabase
+from lunchmoney_app.services.operations import get_operation_context
 
 
 @mcp.tool()
 async def get_user_info() -> UserObject | None:
-    """Fetch the authenticated user profile and budget details.
-
-    Returns
-    -------
-    UserObject | None
-        User profile details or None if no user profile exists in database.
-    """
-    db: LunchMoneyDatabase = get_database()
-    return await fetch_user_info(db=db)
+    """Return the authenticated Lunch Money user."""
+    return await fetch_user_info(get_operation_context())
 
 
 __all__ = ["get_user_info"]

@@ -2,7 +2,6 @@
 
 from lunchmoney_app.database.backend import (
     DEFAULT_DATABASE_URL,
-    IN_MEMORY_DATABASE_URL,
     LunchMoneyDatabase,
     eager_options,
     resolve_database_url,
@@ -31,7 +30,6 @@ __all__ = [
     "RecurringItem",
     "CategoryKind",
     "DEFAULT_DATABASE_URL",
-    "IN_MEMORY_DATABASE_URL",
     "LunchMoneyDatabase",
     "ManualAccount",
     "PlaidAccount",
