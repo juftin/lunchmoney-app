@@ -8,6 +8,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import lunchmoney_app.database as database_package
+from lunchmoney_app.database import backend
 from lunchmoney_app.database import (
     DEFAULT_DATABASE_URL,
     LunchMoneyDatabase,
@@ -72,6 +73,11 @@ def test_default_database_url_is_persistent_sqlite(
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     assert resolve_database_url() == DEFAULT_DATABASE_URL
     assert DEFAULT_DATABASE_URL == "sqlite+aiosqlite:///lunchmoney.db"
+
+
+def test_migration_scripts_are_packaged_with_database_backend() -> None:
+    """Keep Alembic scripts alongside the database code in distributions."""
+    assert (backend.MIGRATIONS_DIRECTORY / "env.py").is_file()
 
 
 def test_explicit_database_url_precedes_environment(

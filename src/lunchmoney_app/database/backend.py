@@ -52,8 +52,8 @@ _SUPPORTED_MODELS: frozenset[type[SQLModel]] = frozenset(
 """Explicit record classes accepted by the convenience persistence API."""
 
 
-PROJECT_ROOT: Path = Path(__file__).parents[3]
-"""Repository root containing the Alembic configuration."""
+MIGRATIONS_DIRECTORY: Path = Path(__file__).with_name("migrations")
+"""Alembic scripts bundled with installed distributions."""
 
 
 def _is_memory_sqlite_url(database_url: str) -> bool:
@@ -92,8 +92,8 @@ async def run_migrations(
 
     def _sync_upgrade() -> None:
         resolved_url = resolve_database_url(database_url)
-        config = Config(str(PROJECT_ROOT / "alembic.ini"))
-        config.set_main_option("script_location", str(PROJECT_ROOT / "alembic"))
+        config = Config()
+        config.set_main_option("script_location", str(MIGRATIONS_DIRECTORY))
         config.set_main_option("sqlalchemy.url", resolved_url.replace("%", "%%"))
         command.upgrade(config, revision)
 
