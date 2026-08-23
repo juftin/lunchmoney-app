@@ -34,6 +34,7 @@ from lunchmoney_app.services import (
     update_transaction,
     upload_transaction_attachment,
 )
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 
 
 def _create_request() -> CreateNewTransactionsRequest:
@@ -105,30 +106,14 @@ async def test_transaction_writes_cache_canonical_upstream_responses() -> None:
     group_request = _group_request()
     split_request = _split_request()
 
-    created = await create_transactions(
-        client=client, db=database, request=create_request
-    )
-    updated = await bulk_update_transactions(
-        client=client,
-        db=database,
-        request=bulk_request,
-    )
-    selected = await update_transaction(
-        client=client,
-        db=database,
-        transaction_id=transaction.id,
-        request=update_request,
-        update_balance=False,
-    )
-    grouped = await group_transactions(
-        client=client, db=database, request=group_request
-    )
-    split_result = await split_transaction(
-        client=client,
-        db=database,
-        transaction_id=transaction.id,
-        request=split_request,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        created = await create_transactions(context, create_request)
+        updated = await bulk_update_transactions(context, bulk_request)
+        selected = await update_transaction(
+            context, transaction.id, update_request, update_balance=False
+        )
+        grouped = await group_transactions(context, group_request)
+        split_result = await split_transaction(context, transaction.id, split_request)
 
     assert [item.id for item in created] == [transaction.id]
     assert [item.id for item in updated] == [transaction.id]
@@ -148,8 +133,9 @@ async def test_transaction_writes_cache_canonical_upstream_responses() -> None:
         split_transaction_request=split_request,
     )
     assert database.upsert.await_count == 5
-    assert database.delete_cached_responses.await_count == 5
-    database.delete_cached_responses.assert_awaited_with("summary:")
+    assert database.delete_cached_responses.await_count == 10
+    database.delete_cached_responses.assert_any_await("summary:")
+    database.delete_cached_responses.assert_any_await("health:stale:transactions")
 
 
 @pytest.mark.asyncio
@@ -184,12 +170,11 @@ async def test_transaction_deletes_reconcile_cached_records_after_upstream_succe
     database.upsert = AsyncMock(side_effect=lambda record: record)
     bulk_request = DeleteTransactionsRequest(ids=[100, 101])
 
-    await bulk_delete_transactions(client=client, db=database, request=bulk_request)
-    await delete_transaction(client=client, db=database, transaction_id=transaction.id)
-    await ungroup_transactions(
-        client=client, db=database, transaction_id=transaction.id
-    )
-    await unsplit_transaction(client=client, db=database, transaction_id=transaction.id)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        await bulk_delete_transactions(context, bulk_request)
+        await delete_transaction(context, transaction.id)
+        await ungroup_transactions(context, transaction.id)
+        await unsplit_transaction(context, transaction.id)
 
     bulk_delete.assert_awaited_once_with(delete_transactions_request=bulk_request)
     single_delete.assert_awaited_once_with(id=transaction.id)
@@ -200,8 +185,9 @@ async def test_transaction_deletes_reconcile_cached_records_after_upstream_succe
     database.delete.assert_any_await(Transaction, 101)
     database.delete.assert_any_await(Transaction, transaction.id)
     database.upsert.assert_awaited_once()
-    assert database.delete_cached_responses.await_count == 4
-    database.delete_cached_responses.assert_awaited_with("summary:")
+    assert database.delete_cached_responses.await_count == 8
+    database.delete_cached_responses.assert_any_await("summary:")
+    database.delete_cached_responses.assert_any_await("health:stale:transactions")
 
 
 @pytest.mark.asyncio
@@ -231,19 +217,15 @@ async def test_attachment_operations_reconcile_known_cached_transaction() -> Non
     database.list = AsyncMock(return_value=[transaction])
     database.upsert = AsyncMock(side_effect=lambda record: record)
 
-    uploaded = await upload_transaction_attachment(
-        client=client,
-        db=database,
-        transaction_id=transaction.id,
-        file=("receipt.pdf", b"synthetic"),
-        notes="Receipt",
-    )
-    url = await fetch_attachment_by_id(client=client, file_id=attachment.id or 0)
-    await delete_transaction_attachment(
-        client=client,
-        db=database,
-        file_id=attachment.id or 0,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        uploaded = await upload_transaction_attachment(
+            context,
+            transaction.id,
+            ("receipt.pdf", b"synthetic"),
+            notes="Receipt",
+        )
+        url = await fetch_attachment_by_id(context, attachment.id or 0)
+        await delete_transaction_attachment(context, attachment.id or 0)
 
     assert uploaded == attachment
     assert url.url == "https://example.invalid/file"

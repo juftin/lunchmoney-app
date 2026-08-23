@@ -1,17 +1,12 @@
-"""Accounts data endpoints."""
+"""Account endpoints."""
 
 import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from lunchmoney.models import (
-    ManualAccountObject,
-    PlaidAccountObject,
-)
+from lunchmoney.models import ManualAccountObject, PlaidAccountObject
 
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_app.client import LunchMoneyApp
-from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.app.dependencies import OperationContext, get_operation_context
 from lunchmoney_app.schemas import (
     AccountsSummary,
     ManualAccountCreateRequest,
@@ -30,26 +25,16 @@ from lunchmoney_app.services import (
 )
 
 router = APIRouter(tags=["Accounts"])
-"""FastAPI APIRouter for financial accounts endpoints."""
 
 
 @router.get(
-    path="/accounts",
-    response_model=AccountsSummary,
-    operation_id="list_accounts",
+    path="/accounts", response_model=AccountsSummary, operation_id="list_accounts"
 )
 async def list_accounts(
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> AccountsSummary:
-    """List complete synchronized manual and Plaid account collections.
-
-    **Parameters:**
-
-    - **db**: Database manager instance.
-
-    **Returns:** Full account objects separated into manual and Plaid collections.
-    """
-    return await fetch_accounts(db=db)
+    """List complete manual and Plaid account collections."""
+    return await fetch_accounts(context)
 
 
 @router.get(
@@ -58,17 +43,10 @@ async def list_accounts(
     operation_id="list_manual_accounts",
 )
 async def list_manual_accounts(
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> list[ManualAccountObject]:
-    """List synchronized manual accounts with every Lunch Money field.
-
-    **Parameters:**
-
-    - **db**: Database manager instance.
-
-    **Returns:** Complete synchronized manual-account objects.
-    """
-    return await fetch_manual_accounts(db=db)
+    """List all manual accounts."""
+    return await fetch_manual_accounts(context)
 
 
 @router.get(
@@ -77,17 +55,10 @@ async def list_manual_accounts(
     operation_id="list_plaid_accounts",
 )
 async def list_plaid_accounts(
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> list[PlaidAccountObject]:
-    """List synchronized Plaid accounts with every Lunch Money field.
-
-    **Parameters:**
-
-    - **db**: Database manager instance.
-
-    **Returns:** Complete synchronized Plaid-account objects.
-    """
-    return await fetch_plaid_accounts(db=db)
+    """List all Plaid accounts."""
+    return await fetch_plaid_accounts(context)
 
 
 @router.get(
@@ -97,18 +68,10 @@ async def list_plaid_accounts(
 )
 async def get_manual_account(
     id: int,
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> ManualAccountObject | None:
-    """Fetch one synchronized manual account.
-
-    **Parameters:**
-
-    - **id**: Identifier of the manual account to retrieve.
-    - **db**: Database manager instance.
-
-    **Returns:** Matching account, or `None` when it has not been synchronized.
-    """
-    return await fetch_manual_account_by_id(db=db, account_id=id)
+    """Return one manual account when available."""
+    return await fetch_manual_account_by_id(context, id)
 
 
 @router.get(
@@ -118,18 +81,10 @@ async def get_manual_account(
 )
 async def get_plaid_account(
     id: int,
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> PlaidAccountObject | None:
-    """Fetch one synchronized Plaid account.
-
-    **Parameters:**
-
-    - **id**: Identifier of the Plaid account to retrieve.
-    - **db**: Database manager instance.
-
-    **Returns:** Matching account, or `None` when it has not been synchronized.
-    """
-    return await fetch_plaid_account_by_id(db=db, account_id=id)
+    """Return one Plaid account when available."""
+    return await fetch_plaid_account_by_id(context, id)
 
 
 @router.post(
@@ -139,11 +94,10 @@ async def get_plaid_account(
 )
 async def create_manual_account(
     request: ManualAccountCreateRequest,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> ManualAccountObject:
-    """Create a manual account and store Lunch Money's canonical response."""
-    return await create_manual_account_service(client=client, db=db, request=request)
+    """Create a manual account."""
+    return await create_manual_account_service(context, request)
 
 
 @router.put(
@@ -154,55 +108,35 @@ async def create_manual_account(
 async def update_manual_account(
     id: int,
     request: ManualAccountUpdateRequest,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> ManualAccountObject:
-    """Update a manual account and store Lunch Money's canonical response."""
-    return await update_manual_account_service(
-        client=client,
-        db=db,
-        account_id=id,
-        request=request,
-    )
+    """Update a manual account."""
+    return await update_manual_account_service(context, id, request)
 
 
 @router.delete(
-    path="/manual_accounts/{id}",
-    status_code=204,
-    operation_id="delete_manual_account",
+    path="/manual_accounts/{id}", status_code=204, operation_id="delete_manual_account"
 )
 async def delete_manual_account(
     id: int,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
     delete_items: bool | None = None,
     delete_balance_history: bool | None = None,
 ) -> None:
-    """Delete a manual account upstream and then remove its cached row."""
+    """Delete a manual account."""
     await delete_manual_account_service(
-        client=client,
-        db=db,
-        account_id=id,
-        delete_items=delete_items,
-        delete_balance_history=delete_balance_history,
+        context, id, delete_items, delete_balance_history
     )
 
 
 @router.post(
-    path="/plaid_accounts/fetch",
-    status_code=204,
-    operation_id="trigger_plaid_fetch",
+    path="/plaid_accounts/fetch", status_code=204, operation_id="trigger_plaid_fetch"
 )
 async def trigger_plaid_fetch(
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
     id: int | None = None,
 ) -> None:
     """Trigger a Lunch Money transaction fetch for eligible Plaid accounts."""
-    await trigger_plaid_fetch_service(
-        client=client,
-        start_date=start_date,
-        end_date=end_date,
-        account_id=id,
-    )
+    await trigger_plaid_fetch_service(context, start_date, end_date, id)

@@ -16,6 +16,12 @@ server for using your Lunch Money data from an MCP-enabled assistant. It also ru
 as a standalone application with a RESTful API and database backend that keeps
 itself in sync with all of your Lunch Money data.
 
+It supports two persistence modes: `stateful` uses SQLite or PostgreSQL for
+synchronized reads, the dashboard, and scheduling; `ephemeral` reads Lunch
+Money live for each operation without creating a database or retaining
+financial data between operations. HTTP defaults to stateful, while local MCP
+stdio defaults to ephemeral.
+
 ## Quickstart
 
 Use Lunch Money from your favorite MCP-enabled assistant in a few minutes.

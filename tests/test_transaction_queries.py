@@ -13,6 +13,10 @@ from lunchmoney_app.database import LunchMoneyDatabase
 from lunchmoney_app.database.models import Transaction
 from lunchmoney_app.schemas import TransactionQuery
 from lunchmoney_app.services import fetch_transactions
+from lunchmoney_app.services.operations import (
+    EphemeralOperationContextFactory,
+    StatefulOperationContextFactory,
+)
 
 
 @pytest.mark.asyncio
@@ -29,7 +33,6 @@ async def test_live_transaction_query_forwards_filters_and_returns_all_results()
         LunchMoneyApp,
         SimpleNamespace(refresh_transactions=refresh_transactions),
     )
-    database = create_autospec(LunchMoneyDatabase, instance=True)
     query = TransactionQuery(
         start_date=datetime.date(2026, 1, 1),
         end_date=datetime.date(2026, 1, 31),
@@ -37,12 +40,8 @@ async def test_live_transaction_query_forwards_filters_and_returns_all_results()
         include_children=True,
     )
 
-    transactions = await fetch_transactions(
-        client=client,
-        db=database,
-        query=query,
-        live=True,
-    )
+    async with EphemeralOperationContextFactory(client).operation() as context:
+        transactions = await fetch_transactions(context, query)
 
     assert [transaction.id for transaction in transactions] == [
         first.id,
@@ -91,12 +90,10 @@ async def test_persisted_transaction_query_applies_filters_and_returns_all_resul
     )
     query = TransactionQuery(manual_account_id=3)
 
-    transactions = await fetch_transactions(
-        client=create_autospec(LunchMoneyApp, instance=True),
-        db=database,
-        query=query,
-        live=False,
-    )
+    async with StatefulOperationContextFactory(
+        create_autospec(LunchMoneyApp, instance=True), database
+    ).operation() as context:
+        transactions = await fetch_transactions(context, query)
     assert [transaction.id for transaction in transactions] == [
         newer.id,
         older.id,
@@ -124,12 +121,13 @@ async def test_persisted_transaction_query_includes_group_children_when_requeste
     database = create_autospec(LunchMoneyDatabase, instance=True)
     database.list = AsyncMock(return_value=[group_parent, *group_parent.group_children])
 
-    transactions = await fetch_transactions(
-        client=create_autospec(LunchMoneyApp, instance=True),
-        db=database,
-        query=TransactionQuery(manual_account_id=3, include_group_children=True),
-        live=False,
-    )
+    async with StatefulOperationContextFactory(
+        create_autospec(LunchMoneyApp, instance=True), database
+    ).operation() as context:
+        transactions = await fetch_transactions(
+            context,
+            TransactionQuery(manual_account_id=3, include_group_children=True),
+        )
 
     assert [transaction.id for transaction in transactions] == [group_child.id]
     assert transactions[0].group_parent_id == group_parent.id

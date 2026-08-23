@@ -341,10 +341,10 @@ class SyncStatusSummary(BaseModel):
     """Synchronization status and engine environment metadata for dashboard display."""
 
     persistence_mode: str
-    """Data persistence mode (e.g. Persistent (SQLite), Stateless (In-Memory))."""
-    db_driver: str = "sqlite+aiosqlite"
+    """Configured stateful persistence mode."""
+    db_driver: str
     """Database driver / dialect name (e.g. sqlite+aiosqlite)."""
-    db_url: str = "sqlite+aiosqlite:///:memory:"
+    db_url: str
     """Sanitized database connection URL with credentials masked."""
     stored_transactions: int = 0
     """Total transaction records persisted in local database."""

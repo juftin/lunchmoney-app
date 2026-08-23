@@ -13,6 +13,10 @@ from lunchmoney_app.database import LunchMoneyDatabase
 from lunchmoney_app.database.models import Category
 from lunchmoney_app.schemas import CategoryQuery
 from lunchmoney_app.services import fetch_categories
+from lunchmoney_app.services.operations import (
+    EphemeralOperationContextFactory,
+    StatefulOperationContextFactory,
+)
 
 
 @pytest.mark.asyncio
@@ -29,12 +33,10 @@ async def test_live_category_query_forwards_upstream_controls() -> None:
         ),
     )
 
-    result = await fetch_categories(
-        client=client,
-        db=create_autospec(LunchMoneyDatabase, instance=True),
-        query=CategoryQuery(format="flattened", is_group=False),
-        live=True,
-    )
+    async with EphemeralOperationContextFactory(client).operation() as context:
+        result = await fetch_categories(
+            context, CategoryQuery(format="flattened", is_group=False)
+        )
 
     assert result == [category_object()]
     get_all_categories.assert_awaited_once_with(format="flattened", is_group=False)
@@ -51,30 +53,11 @@ async def test_persisted_category_query_recreates_upstream_views() -> None:
     database.list = AsyncMock(return_value=[group, *group.children, standalone])
     client = create_autospec(LunchMoneyApp, instance=True)
 
-    nested = await fetch_categories(
-        client=client,
-        db=database,
-        query=CategoryQuery(format="nested"),
-        live=False,
-    )
-    flattened = await fetch_categories(
-        client=client,
-        db=database,
-        query=CategoryQuery(format="flattened"),
-        live=False,
-    )
-    groups = await fetch_categories(
-        client=client,
-        db=database,
-        query=CategoryQuery(is_group=True),
-        live=False,
-    )
-    ungrouped = await fetch_categories(
-        client=client,
-        db=database,
-        query=CategoryQuery(is_group=False),
-        live=False,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        nested = await fetch_categories(context, CategoryQuery(format="nested"))
+        flattened = await fetch_categories(context, CategoryQuery(format="flattened"))
+        groups = await fetch_categories(context, CategoryQuery(is_group=True))
+        ungrouped = await fetch_categories(context, CategoryQuery(is_group=False))
 
     assert [category.id for category in nested] == [standalone.id, group.id]
     nested_group = next(category for category in nested if category.id == group.id)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
 from typing import cast
 
@@ -12,7 +13,6 @@ from pydantic import ValidationError
 
 from lunchmoney_app.__about__ import __application__, __version__
 from lunchmoney_app.app.dependencies import get_lunchmoney_app, get_shared_database
-from lunchmoney_app.config import get_settings
 from lunchmoney_app.config import (
     McpCliSettings,
     ScheduleCliSettings,
@@ -20,8 +20,9 @@ from lunchmoney_app.config import (
     SyncCliSettings,
     configure_runtime_mode,
     configure_runtime_settings,
-    get_secret_settings,
     export_runtime_settings,
+    get_secret_settings,
+    get_settings,
     parse_cli_settings,
 )
 from lunchmoney_app.completion import CompletionShell, render_completion
@@ -30,7 +31,8 @@ from lunchmoney_app.logging_config import LOG_CONFIG
 from lunchmoney_app.mcp import server as mcp_server
 from lunchmoney_app.scheduler import run_schedule_process
 from lunchmoney_app.services import execute_sync
-from lunchmoney_app.services.operations import data_operation
+from lunchmoney_app.services.errors import StatefulModeRequired
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -109,6 +111,8 @@ def main(argv: list[str] | None = None) -> None:
     if parsed.command == "schedule":
         settings = parse_cli_settings(runtime_arguments, ScheduleCliSettings)
         configure_runtime_settings(settings)
+        if settings.persistence_mode == "ephemeral":
+            _exit_stateful_mode_required()
         configure_runtime_mode("schedule")
         asyncio.run(run_schedule_process(settings=settings))
         return
@@ -122,13 +126,16 @@ def main(argv: list[str] | None = None) -> None:
         configure_runtime_settings(settings)
         configure_runtime_mode("sync")
         sync_arguments = sync_parser.parse_args(runtime_arguments)
-        asyncio.run(
-            _run_sync(
-                days=sync_arguments.days,
-                incremental=sync_arguments.incremental,
-                safety_margin_minutes=settings.sync_safety_margin_minutes,
+        try:
+            asyncio.run(
+                _run_sync(
+                    days=sync_arguments.days,
+                    incremental=sync_arguments.incremental,
+                    safety_margin_minutes=settings.sync_safety_margin_minutes,
+                )
             )
-        )
+        except StatefulModeRequired:
+            _exit_stateful_mode_required()
         return
     if parsed.command == "doctor":
         doctor_parser = _create_doctor_parser()
@@ -188,6 +195,13 @@ def _create_sync_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _exit_stateful_mode_required() -> None:
+    """Exit safely when a CLI operation is unavailable without persistence."""
+    error = StatefulModeRequired()
+    print(json.dumps(error.as_dict()), file=sys.stderr)
+    raise SystemExit(1)
+
+
 def _create_doctor_parser() -> argparse.ArgumentParser:
     """Create the command-specific parser for local diagnostics."""
     return argparse.ArgumentParser(
@@ -216,15 +230,14 @@ async def _run_sync(
     safety_margin_minutes : int
         Overlap applied to an incremental transaction refresh.
     """
+    settings = get_settings()
+    if settings.persistence_mode == "ephemeral":
+        raise StatefulModeRequired
     client = get_lunchmoney_app()
-    async with data_operation(
-        client=client,
-        database=None if get_settings().ephemeral else get_shared_database(),
-        days=days,
-        refresh=False,
-    ) as db:
+    factory = StatefulOperationContextFactory(client, get_shared_database())
+    async with factory.operation() as context:
         response = await execute_sync(
-            db=db,
+            db=context.database,
             client=client,
             days=days,
             incremental=incremental,

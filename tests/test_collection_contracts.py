@@ -23,7 +23,7 @@ from database.factories import (
     tag_object,
     transaction_object,
 )
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
+from lunchmoney_app.app.dependencies import get_operation_context
 from lunchmoney_app.app.main import fastapi_app
 from lunchmoney_app.schemas import AccountsSummary
 from lunchmoney_app.mcp.tools.accounts import (
@@ -86,8 +86,7 @@ def _collection_contract_app() -> FastAPI:
     app.include_router(tags_router_module.router, prefix="/api")
     app.include_router(recurring_router_module.router, prefix="/api")
     app.include_router(transactions_router_module.router, prefix="/api")
-    app.dependency_overrides[get_database] = lambda: object()
-    app.dependency_overrides[get_lunchmoney_app] = lambda: object()
+    app.dependency_overrides[get_operation_context] = lambda: object()
     return app
 
 

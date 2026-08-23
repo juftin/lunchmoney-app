@@ -28,24 +28,22 @@ environment values and take precedence over an application `.env` file.
 
 ## Data handling
 
-Every operational command (`mcp`, `serve`, `schedule`, and `sync`) accepts the
-same data-handling flags. Stdio MCP uses the privacy-focused default: each
-request goes to Lunch Money and nothing is retained when it finishes.
+The application has exactly two persistence modes. HTTP runtimes default to
+`stateful`; stdio MCP defaults to `ephemeral` when no mode is selected.
 
-| Flag          | What it does                                                         |
-| :------------ | :------------------------------------------------------------------- |
-| No flag       | Keeps data available for later requests, except for stdio MCP        |
-| `--stateless` | Keeps a live Lunch Money data cache between requests                 |
-| `--ephemeral` | Sends each request to Lunch Money and keeps nothing when it finishes |
+| Flag                           | What it does                                                                                                                  |
+| :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| `--persistence-mode stateful`  | Reads synchronized data from SQLite or PostgreSQL and enables sync, scheduling, and the dashboard                             |
+| `--persistence-mode ephemeral` | Reads Lunch Money live for each operation and creates no database, migrations, locks, or cross-operation financial-data cache |
 
-Use `--stateless` when a running server should reuse its live data between
-requests without retaining it after shutdown. Use `--ephemeral` when every
-request should go straight to Lunch Money:
+Select database-free operation explicitly for a remote MCP server:
 
 ```bash
-lunchmoney-app mcp --streamable-http --stateless
-lunchmoney-app mcp --streamable-http --ephemeral
+lunchmoney-app mcp --streamable-http --persistence-mode ephemeral
 ```
+
+Database and scheduler settings are configuration errors in ephemeral mode.
+The `schedule` and `sync` commands are stateful-only.
 
 ## Shell completion
 

@@ -1,15 +1,10 @@
 """FastMCP tools for database synchronization operations."""
 
-from typing import TYPE_CHECKING
-
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_app.mcp.app import mcp
 from lunchmoney_app.schemas import ScheduledSyncStatus, SyncResult
 from lunchmoney_app.services import execute_mcp_sync, get_scheduled_sync_status
 
-if TYPE_CHECKING:
-    from lunchmoney_app import LunchMoneyDatabase
-    from lunchmoney_app.client import LunchMoneyApp
+from lunchmoney_app.services.operations import get_stateful_operation_context
 
 
 @mcp.tool()
@@ -34,11 +29,10 @@ async def sync_data(
     SyncResult
         Summary of synchronized records.
     """
-    db: LunchMoneyDatabase = get_database()
-    client: LunchMoneyApp = get_lunchmoney_app()
+    context = get_stateful_operation_context()
     return await execute_mcp_sync(
-        db=db,
-        client=client,
+        db=context.database,
+        client=context.client,
         days=days,
         incremental=incremental,
         safety_margin_minutes=safety_margin_minutes,
@@ -48,8 +42,7 @@ async def sync_data(
 @mcp.tool()
 async def get_sync_status() -> ScheduledSyncStatus | None:
     """Return the result of the latest attempted scheduled synchronization."""
-    db: LunchMoneyDatabase = get_database()
-    return await get_scheduled_sync_status(db=db)
+    return await get_scheduled_sync_status(db=get_stateful_operation_context().database)
 
 
 __all__ = ["get_sync_status", "sync_data"]

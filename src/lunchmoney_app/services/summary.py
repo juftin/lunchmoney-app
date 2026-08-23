@@ -1,17 +1,15 @@
-"""Service logic for live Lunch Money budget summary queries."""
+"""Service logic for budget-summary operations."""
 
 import datetime
 
-from lunchmoney.models import CategoryObject, SummaryResponseObject
+from lunchmoney.models import SummaryResponseObject
 
-from lunchmoney_app.client import LunchMoneyApp
-from lunchmoney_app.database import LunchMoneyDatabase
-from lunchmoney_app.database.models import Category
+from lunchmoney_app.services.adapters.summary import SummaryQuery
+from lunchmoney_app.services.operations import OperationContext
 
 
 async def fetch_account_summary(
-    db: LunchMoneyDatabase,
-    client: LunchMoneyApp,
+    context: OperationContext,
     start_date: datetime.date,
     end_date: datetime.date,
     include_exclude_from_budgets: bool | None = None,
@@ -20,78 +18,15 @@ async def fetch_account_summary(
     include_totals: bool | None = None,
     include_rollover_pool: bool | None = None,
 ) -> SummaryResponseObject:
-    """Fetch a live budget summary for a specified date range.
-
-    Parameters
-    ----------
-    client : LunchMoneyApp
-        Configured Lunch Money API client.
-    start_date : datetime.date
-        Inclusive start of the requested budget range.
-    end_date : datetime.date
-        Inclusive end of the requested budget range.
-    include_exclude_from_budgets : bool | None
-        Whether excluded categories should be included.
-    include_occurrences : bool | None
-        Whether category budget occurrences should be included.
-    include_past_budget_dates : bool | None
-        Whether prior occurrences should be included with occurrences.
-    include_totals : bool | None
-        Whether top-level inflow and outflow totals should be included.
-    include_rollover_pool : bool | None
-        Whether rollover-pool details should be included.
-
-    Returns
-    -------
-    SummaryResponseObject
-        Upstream budget summary response for the requested range.
-    """
-    payload = await db.get_cached_response(f"summary:{start_date}:{end_date}")
-    if payload is None:
-        summary = await client.client.summary.get_budget_summary(
+    """Return a shaped summary through the selected reader."""
+    return await context.summary.get(
+        SummaryQuery(
             start_date=start_date,
             end_date=end_date,
-            include_exclude_from_budgets=True,
-            include_occurrences=True,
-            include_past_budget_dates=True,
-            include_totals=True,
-            include_rollover_pool=True,
+            include_exclude_from_budgets=include_exclude_from_budgets,
+            include_occurrences=include_occurrences,
+            include_past_budget_dates=include_past_budget_dates,
+            include_totals=include_totals,
+            include_rollover_pool=include_rollover_pool,
         )
-        category_objects = await client.refresh(model=CategoryObject, cache=False)
-        await db.upsert_many(
-            [Category.from_api(category) for category in category_objects.values()]
-        )
-        payload = summary.model_dump(mode="json")
-        await db.upsert_cached_response(f"summary:{start_date}:{end_date}", payload)
-    summary = SummaryResponseObject.model_validate(payload)
-    categories = {category.id: category for category in await db.list(Category)}
-    rows = summary.categories
-    if include_exclude_from_budgets is not True:
-        rows = [
-            row
-            for row in rows
-            if (category := categories.get(row.category_id)) is None
-            or not category.exclude_from_budget
-        ]
-    if include_occurrences is not True:
-        rows = [row.model_copy(update={"occurrences": None}) for row in rows]
-    elif include_past_budget_dates is not True:
-        rows = [
-            row.model_copy(
-                update={
-                    "occurrences": [
-                        occurrence
-                        for occurrence in row.occurrences or []
-                        if occurrence.in_range
-                    ]
-                }
-            )
-            for row in rows
-        ]
-    return summary.model_copy(
-        update={
-            "categories": rows,
-            "totals": summary.totals if include_totals else None,
-            "rollover_pool": summary.rollover_pool if include_rollover_pool else None,
-        }
     )

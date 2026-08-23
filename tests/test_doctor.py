@@ -48,3 +48,25 @@ def test_doctor_checks_local_sqlite_directory_without_opening_the_database(
     assert "configuration file: " in report.render()
     assert "SQLite data directory is writable" in report.render()
     assert "synthetic-access-token" not in report.render()
+
+
+def test_doctor_skips_storage_and_lock_checks_in_ephemeral_mode(
+    tmp_path: Path,
+) -> None:
+    """Describe database and lock infrastructure as unused in ephemeral mode."""
+    report = build_doctor_report(
+        settings=RuntimeSettings.model_validate(
+            {
+                "persistence_mode": "ephemeral",
+                "schedule_transactions_cron": None,
+                "schedule_metadata_cron": None,
+                "schedule_cron": None,
+                "embed_scheduler": False,
+            }
+        ),
+        secret_settings=SecretSettings(access_token="synthetic-access-token"),
+        config_path=tmp_path / ".env",
+    )
+
+    assert "database: not used in ephemeral mode" in report.render()
+    assert "Redis lock backend: not used in ephemeral mode" in report.render()

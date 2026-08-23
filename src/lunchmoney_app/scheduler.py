@@ -11,7 +11,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from lunchmoney_app.app.dependencies import get_lunchmoney_app, get_shared_database
 from lunchmoney_app.config import RuntimeSettings, get_settings
-from lunchmoney_app.services.operations import data_operation
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 from lunchmoney_app.services import run_scheduled_sync as execute_scheduled_sync
 
 logger = logging.getLogger(__name__)
@@ -268,15 +268,15 @@ async def run_scheduled_sync() -> None:
         _active_sync_tasks.add(task)
     try:
         settings = get_settings()
+        if settings.persistence_mode == "ephemeral":
+            from lunchmoney_app.services.errors import StatefulModeRequired
+
+            raise StatefulModeRequired
         client = get_lunchmoney_app()
-        async with data_operation(
-            client=client,
-            database=None if settings.ephemeral else get_shared_database(),
-            days=settings.schedule_days,
-            refresh=False,
-        ) as db:
+        factory = StatefulOperationContextFactory(client, get_shared_database())
+        async with factory.operation() as context:
             result = await execute_scheduled_sync(
-                db=db,
+                db=context.database,
                 client=client,
                 days=settings.schedule_days,
             )

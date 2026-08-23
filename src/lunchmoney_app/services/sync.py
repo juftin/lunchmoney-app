@@ -18,6 +18,7 @@ from lunchmoney_app.schemas import (
     SyncResponse,
     SyncResult,
 )
+from lunchmoney_app.services.operations import clear_unpersisted_stale_domains
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +52,11 @@ async def execute_sync(
     """
     started_at = time.perf_counter()
     try:
-        if db.is_stateless:
+        if db.database_url.startswith("sqlite") and (
+            ":memory:" in db.database_url or "mode=memory" in db.database_url
+        ):
             logger.info(
-                "Initializing stateless schema and triggering %s-day sync...", days
+                "Initializing in-memory schema and triggering %s-day sync...", days
             )
             await db.create_tables()
         else:
@@ -66,6 +69,12 @@ async def execute_sync(
             incremental=incremental,
             safety_margin_minutes=safety_margin_minutes,
         )
+        try:
+            await db.delete_cached_responses("health:stale:")
+        except Exception:
+            logger.exception("Unable to clear cache projection health markers")
+        else:
+            clear_unpersisted_stale_domains()
     except Exception as error:
         metrics.record_sync(
             status="failure", duration_seconds=time.perf_counter() - started_at
