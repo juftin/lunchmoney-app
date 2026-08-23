@@ -116,6 +116,11 @@ async def observe_request(
             content={"detail": error.as_dict()},
         )
     except Exception:
+        logger.exception(
+            "Unhandled request failure path=%s request_id=%s",
+            request.url.path,
+            request_id,
+        )
         response = JSONResponse(
             status_code=status_code,
             content={"detail": "Internal server error"},

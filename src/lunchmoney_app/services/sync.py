@@ -7,10 +7,10 @@ from typing import Literal, cast
 
 from lunchmoney.exceptions import ApiException
 
-from lunchmoney_app.app.sync import sync_database
+from lunchmoney_app.app.sync import SyncScope, sync_database
 from lunchmoney_app.client import LunchMoneyApp, SyncSummary
 from lunchmoney_app.database import LunchMoneyDatabase, ScheduledSyncRun, run_migrations
-from lunchmoney_app.locks import get_migration_lock
+from lunchmoney_app.locks import LockTimeoutError, get_migration_lock
 from lunchmoney_app.observability import metrics
 from lunchmoney_app.schemas import (
     ScheduledSyncStatus,
@@ -23,12 +23,25 @@ from lunchmoney_app.services.operations import clear_unpersisted_stale_domains
 logger = logging.getLogger(__name__)
 
 
+def _validate_sync_parameters(*, days: int, safety_margin_minutes: int | None) -> None:
+    """Reject date-window values that could silently skip upstream data."""
+    if days < 1:
+        msg = "days must be greater than or equal to 1"
+        raise ValueError(msg)
+    if safety_margin_minutes is not None and safety_margin_minutes < 0:
+        msg = "safety_margin_minutes must be greater than or equal to 0"
+        raise ValueError(msg)
+
+
 async def execute_sync(
     db: LunchMoneyDatabase,
     client: LunchMoneyApp,
     days: int = 30,
     incremental: bool = False,
     safety_margin_minutes: int | None = None,
+    scope: SyncScope = SyncScope.ALL,
+    *,
+    _lock_blocking: bool = True,
 ) -> SyncResponse:
     """Initialize the database schema and synchronize Lunch Money data.
 
@@ -44,13 +57,23 @@ async def execute_sync(
         Whether to resume transaction sync from its successful watermark.
     safety_margin_minutes : int | None
         Optional overlap override for an incremental transaction sync.
+    scope : SyncScope
+        Domain workload to synchronize. Interactive calls default to all domains.
+    _lock_blocking : bool
+        Whether this caller waits for the shared migration/synchronization lock.
+        Scheduled jobs use nonblocking acquisition so contention is recorded as a
+        skipped run.
 
     Returns
     -------
     SyncResponse
         Status summary and record counts of synchronized objects.
     """
+    _validate_sync_parameters(days=days, safety_margin_minutes=safety_margin_minutes)
     started_at = time.perf_counter()
+    lock = get_migration_lock(timeout=-1 if _lock_blocking else 0)
+    if not lock.acquire(blocking=_lock_blocking):
+        raise LockTimeoutError("Another migration or synchronization is running")
     try:
         if db.database_url.startswith("sqlite") and (
             ":memory:" in db.database_url or "mode=memory" in db.database_url
@@ -61,13 +84,14 @@ async def execute_sync(
             await db.create_tables()
         else:
             logger.info("Triggering database migrations and %s-day sync...", days)
-            await run_migrations()
+            await run_migrations(database_url=db.database_url)
         summary: SyncSummary = await sync_database(
             db=db,
             client=client,
             days=days,
             incremental=incremental,
             safety_margin_minutes=safety_margin_minutes,
+            scope=scope,
         )
         try:
             await db.delete_cached_responses("health:stale:")
@@ -82,6 +106,8 @@ async def execute_sync(
         if isinstance(error, ApiException):
             metrics.record_upstream_failure(error)
         raise
+    finally:
+        lock.release()
     metrics.record_sync(
         status="success", duration_seconds=time.perf_counter() - started_at
     )
@@ -139,6 +165,7 @@ async def run_scheduled_sync(
     db: LunchMoneyDatabase,
     client: LunchMoneyApp,
     days: int = 30,
+    scope: SyncScope = SyncScope.ALL,
 ) -> ScheduledSyncStatus:
     """Run the scheduled metadata and incremental transaction synchronization.
 
@@ -150,6 +177,8 @@ async def run_scheduled_sync(
         Lunch Money API client wrapper.
     days : int
         Rolling transaction window used when no transaction watermark exists.
+    scope : SyncScope
+        Metadata or transaction workload selected by the triggering schedule.
 
     Returns
     -------
@@ -157,23 +186,21 @@ async def run_scheduled_sync(
         Final successful, failed, or skipped run status.
     """
     started_at = datetime.datetime.now(datetime.timezone.utc)
-    lock = get_migration_lock()
-    if not lock.acquire(blocking=False):
-        result = ScheduledSyncStatus(
-            status="skipped",
-            started_at=started_at,
-            finished_at=datetime.datetime.now(datetime.timezone.utc),
-            message="Skipped because another migration or synchronization is running.",
-        )
-        await _record_scheduled_sync_status(db=db, status=result)
-        return result
-
     try:
         response = await execute_sync(
             db=db,
             client=client,
             days=days,
             incremental=True,
+            scope=scope,
+            _lock_blocking=False,
+        )
+    except LockTimeoutError:
+        result = ScheduledSyncStatus(
+            status="skipped",
+            started_at=started_at,
+            finished_at=datetime.datetime.now(datetime.timezone.utc),
+            message="Skipped because another migration or synchronization is running.",
         )
     except Exception:
         logger.exception("Scheduled synchronization failed")
@@ -190,9 +217,6 @@ async def run_scheduled_sync(
             finished_at=datetime.datetime.now(datetime.timezone.utc),
             synced=response.synced,
         )
-    finally:
-        lock.release()
-
     await _record_scheduled_sync_status(db=db, status=result)
     return result
 

@@ -314,14 +314,7 @@ class StatefulTransactionAdapter:
 
     async def delete_attachment(self, file_id: int) -> None:
         """Remove attachment metadata from its known cached owner."""
-        for transaction in await self._database.list(Transaction):
-            attachments = [
-                item for item in transaction.attachments if item.api_id != file_id
-            ]
-            if len(attachments) != len(transaction.attachments):
-                transaction.attachments = attachments
-                transaction.files_present = True
-                await self._database.upsert(transaction)
+        await self._database.delete_transaction_attachment(file_id)
         self.invalidate()
 
     def invalidate(self) -> None:

@@ -31,12 +31,12 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 
 _Reference Spec_: [`INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-0-incremental-etl)
 
-- [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_app/mcp/tools/`](../src/lunchmoney_app/mcp/tools/).
+- [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_app/mcp/tools/`](../../src/lunchmoney_app/mcp/tools/).
 - [x] **Config Additions**: Add persistence-mode selection and configurable synchronization safety margins.
-- [x] **SyncMetadata Model**: Create `SyncMetadata` table in [`src/lunchmoney_app/database/models/sync.py`](../src/lunchmoney_app/database/models/sync.py).
+- [x] **SyncMetadata Model**: Create `SyncMetadata` table in [`src/lunchmoney_app/database/models/sync.py`](../../src/lunchmoney_app/database/models/sync.py).
 - [x] **Alembic Migration**: Add migration `0002_add_sync_metadata_table.py` for `sync_metadata`.
 - [x] **Stateful Database Lifecycle**: Support migrations and explicit schema initialization through the stateful backend.
-- [x] **Opt-In Incremental Sync Logic**: Update [`src/lunchmoney_app/app/sync.py`](../src/lunchmoney_app/app/sync.py) & [`src/lunchmoney_app/services/sync.py`](../src/lunchmoney_app/services/sync.py) to handle transaction-only `incremental: bool = False` and `updated_since` timestamp filtering.
+- [x] **Opt-In Incremental Sync Logic**: Update [`src/lunchmoney_app/app/sync.py`](../../src/lunchmoney_app/app/sync.py) & [`src/lunchmoney_app/services/sync.py`](../../src/lunchmoney_app/services/sync.py) to handle transaction-only `incremental: bool = False` and `updated_since` timestamp filtering.
 - [x] **Router & Tool Integration**: Expose `incremental` and `safety_margin_minutes` parameters on `POST /api/sync` and `sync_data` FastMCP tool.
 - [x] **Test Suite**: Cover persistence configuration, database initialization, migrations, incremental transaction policy, and transport delegation.
 
@@ -103,10 +103,10 @@ _Reference Spec_: [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-4-budgets--spendi
 
 _Reference Spec_: [`MCP_GUIDE.md`](../MCP_GUIDE.md) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-5-production-security--cicd)
 
-- [x] **API Key Guard**: Implement `verify_api_key` middleware in [`src/lunchmoney_app/app/auth.py`](../src/lunchmoney_app/app/auth.py).
-- [x] **MCP Executable Entrypoint**: Add `lunchmoney-app = "lunchmoney_app.mcp.server:main"` script in `pyproject.toml`.
+- [x] **API Key Guard**: Implement `verify_api_key` middleware in [`src/lunchmoney_app/app/auth.py`](../../src/lunchmoney_app/app/auth.py).
+- [x] **Application Entrypoint**: Add `lunchmoney-app = "lunchmoney_app.cli:main"` script in `pyproject.toml`.
 - [x] **MCP Multi-Transport**: Support `--sse` transport flag in `mcp.run()`.
-- [x] **MCP Resources**: Register `lunchmoney://summary` and `lunchmoney://categories` resources in [`src/lunchmoney_app/mcp/server.py`](../src/lunchmoney_app/mcp/server.py).
+- [x] **MCP Resources**: Register `lunchmoney://summary` and `lunchmoney://categories` resources in [`src/lunchmoney_app/mcp/server.py`](../../src/lunchmoney_app/mcp/server.py).
 - [x] **MCP Prompts**: Register `budget_health_check` and `uncategorized_transactions_audit` prompts.
 - [x] **GitHub Actions CI**: Add `.github/workflows/ci.yaml` running `task lint`, `task check`, `task test`, and `docker build`.
 
@@ -165,7 +165,7 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-financial-
 
 - [x] **HTML Dashboard**: Add authenticated, accessible single-user, single-account server-rendered summary, spending, budget, transaction, and sync-status views without a separate JavaScript application.
 - [x] **Service Reuse**: Keep dashboard routes as thin delegators to existing services and test authorized, empty, and error rendering.
-- [ ] **Interactive Category Tree**: Group dashboard spending by parent category with accessible child disclosure and a local mascot brand mark.
+- [x] **Interactive Category Tree**: Group dashboard spending by parent category with accessible child disclosure and a local mascot brand mark.
 
 ### 🧰 Sprint 12: CLI, Packaging & Operator Experience
 
@@ -212,6 +212,9 @@ _Reference Spec_: [`DESIGN_EPHEMERAL_STATEFUL.md`](DESIGN_EPHEMERAL_STATEFUL.md)
 
 ### 🧹 Follow-Up Hardening
 
+- [x] **Authoritative Sync Reconciliation**: Serialize all synchronization,
+      migrate the injected database, reconcile complete metadata deletions, and
+      prune transactions only inside authoritative date windows.
 - [ ] **Plaid Fetch Summary Invalidation**: Invalidate cached summary snapshots after a successful Plaid fetch trigger, so imported transactions cannot leave stale summary data before the next synchronization.
 - [ ] **Upstream HTTP Error Mapping**: Translate generated Lunch Money client errors, especially upstream 404 responses, into the corresponding REST API status instead of returning generic 500 responses.
 

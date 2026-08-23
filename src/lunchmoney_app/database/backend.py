@@ -4,6 +4,7 @@ import asyncio
 import os
 from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
+from datetime import date
 from heapq import heappop, heappush
 from pathlib import Path
 from types import TracebackType
@@ -14,7 +15,7 @@ from typing_extensions import Self
 from alembic import command
 from alembic.config import Config
 
-from sqlalchemy import delete, event, update
+from sqlalchemy import delete, event, true, update
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
@@ -786,6 +787,112 @@ class LunchMoneyDatabase:
                     stored_by_index[index] = stored
         return [stored_by_index[index] for index in range(len(requested))]
 
+    async def upsert_many_without_reload(
+        self,
+        records: Iterable[SQLModel],
+    ) -> None:
+        """Atomically persist a batch without rebuilding graphs for the caller.
+
+        Synchronization only needs a durable projection, so avoiding the final eager
+        reload saves several relationship queries per record while retaining the
+        same graph-upsert semantics as :meth:`upsert_many`.
+        """
+        requested = list(records)
+        for record in requested:
+            _ensure_supported_record(record)
+        if not requested:
+            return
+
+        ordered = _dependency_order(requested)
+        async with self.session_factory() as session:
+            async with session.begin():
+                await _detach_claimed_children(session, requested)
+                for _, ordered_record in ordered:
+                    await _upsert_record(session, ordered_record)
+
+    async def reconcile_sync_projection(
+        self,
+        *,
+        records: Iterable[SQLModel] = (),
+        authoritative_ids: dict[type[SQLModel], set[int]],
+        transaction_window: tuple[date, date] | None = None,
+    ) -> None:
+        """Atomically upsert a projection and remove rows absent upstream.
+
+        Metadata collections are complete snapshots. Transaction collections are
+        authoritative only for an explicitly queried date window; incremental
+        updated-since responses therefore omit ``transaction_window`` and never
+        prune unrelated rows.
+        """
+        requested = list(records)
+        for record in requested:
+            _ensure_supported_record(record)
+        ordered = _dependency_order(requested)
+        async with self.session_factory() as session:
+            async with session.begin():
+                await _detach_claimed_children(session, requested)
+                for _, ordered_record in ordered:
+                    await _upsert_record(session, ordered_record)
+                for model, ids in authoritative_ids.items():
+                    _ensure_supported_model(model)
+                    if model is Transaction:
+                        continue
+                    id_column = _primary_key_attribute(model)
+                    absent = id_column.not_in(ids) if ids else true()
+                    if model is Tag:
+                        await session.exec(
+                            delete(TransactionTagLink).where(
+                                cast(Any, TransactionTagLink.tag_id).not_in(ids)
+                                if ids
+                                else true()
+                            )
+                        )
+                    elif model is Category:
+                        await session.exec(
+                            update(Transaction)
+                            .where(
+                                cast(Any, Transaction.category_id).not_in(ids)
+                                if ids
+                                else cast(Any, Transaction.category_id).is_not(None)
+                            )
+                            .values(category_id=None)
+                        )
+                    elif model is PlaidAccount:
+                        await session.exec(
+                            update(Transaction)
+                            .where(
+                                cast(Any, Transaction.plaid_account_id).not_in(ids)
+                                if ids
+                                else cast(Any, Transaction.plaid_account_id).is_not(
+                                    None
+                                )
+                            )
+                            .values(plaid_account_id=None)
+                        )
+                    elif model is ManualAccount:
+                        await session.exec(
+                            update(Transaction)
+                            .where(
+                                cast(Any, Transaction.manual_account_id).not_in(ids)
+                                if ids
+                                else cast(Any, Transaction.manual_account_id).is_not(
+                                    None
+                                )
+                            )
+                            .values(manual_account_id=None)
+                        )
+                    await session.exec(delete(model).where(absent))
+
+                if transaction_window is not None:
+                    start_date, end_date = transaction_window
+                    transaction_ids = authoritative_ids.get(Transaction, set())
+                    condition = cast(Any, Transaction.var_date).between(
+                        start_date, end_date
+                    )
+                    if transaction_ids:
+                        condition &= cast(Any, Transaction.id).not_in(transaction_ids)
+                    await session.exec(delete(Transaction).where(condition))
+
     async def get(
         self,
         model: type[RecordT],
@@ -825,6 +932,21 @@ class LunchMoneyDatabase:
                 if record is None:
                     return False
                 await session.delete(record)
+            return True
+
+    async def delete_transaction_attachment(self, file_id: int) -> bool:
+        """Delete an attachment directly by its upstream identifier."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                result = await session.exec(
+                    select(TransactionAttachment).where(
+                        TransactionAttachment.api_id == file_id
+                    )
+                )
+                attachment = result.first()
+                if attachment is None:
+                    return False
+                await session.delete(attachment)
             return True
 
     async def __aenter__(self) -> Self:

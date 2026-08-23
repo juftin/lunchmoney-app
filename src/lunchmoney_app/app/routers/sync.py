@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from lunchmoney_app.schemas import ScheduledSyncStatus, SyncResponse
 from lunchmoney_app.services import execute_sync, get_scheduled_sync_status
@@ -24,9 +24,9 @@ async def sync(
     context: Annotated[
         StatefulOperationContext, Depends(dependency=get_stateful_operation_context)
     ],
-    days: int = 30,
+    days: Annotated[int, Query(ge=1)] = 30,
     incremental: bool = False,
-    safety_margin_minutes: int | None = None,
+    safety_margin_minutes: Annotated[int | None, Query(ge=0)] = None,
 ) -> SyncResponse:
     """Initialize the schema and synchronize Lunch Money data for a date window.
 

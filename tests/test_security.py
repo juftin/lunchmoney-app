@@ -2,10 +2,14 @@
 
 import asyncio
 
+import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from lunchmoney_app.app.security import apply_security_middleware
+from lunchmoney_app.app.security import (
+    RequestBodyLimitMiddleware,
+    apply_security_middleware,
+)
 from lunchmoney_app.config import RuntimeSettings
 
 
@@ -56,6 +60,31 @@ def test_network_policy_rejects_oversized_bodies() -> None:
     assert response.json() == {
         "detail": "Request body exceeds the configured size limit"
     }
+
+
+@pytest.mark.asyncio
+async def test_stream_limit_does_not_start_a_second_response() -> None:
+    """Do not emit a replacement response after downstream headers were sent."""
+    sent: list[dict[str, object]] = []
+
+    async def downstream(scope: object, receive: object, send: object) -> None:
+        """Start a response before consuming the oversized request body."""
+        del scope
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await receive()
+
+    async def receive() -> dict[str, object]:
+        """Return one streamed chunk exceeding the configured limit."""
+        return {"type": "http.request", "body": b"12345", "more_body": False}
+
+    async def send(message: dict[str, object]) -> None:
+        """Capture downstream ASGI messages."""
+        sent.append(message)
+
+    middleware = RequestBodyLimitMiddleware(downstream, max_body_bytes=4)
+    await middleware({"type": "http", "headers": []}, receive, send)
+
+    assert [message["type"] for message in sent] == ["http.response.start"]
 
 
 def test_network_policy_times_out_slow_requests() -> None:

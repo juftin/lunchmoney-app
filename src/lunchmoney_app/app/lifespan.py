@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 logger.info(
                     "Worker acquired startup lock. Executing database migrations..."
                 )
-                await run_migrations()
+                await run_migrations(database_url=db.database_url)
         except LockTimeoutError:
             logger.debug(
                 "Worker process skipped startup database migrations "

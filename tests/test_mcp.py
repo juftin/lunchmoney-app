@@ -152,7 +152,7 @@ async def test_mcp_runtime_lifespan_migrates_persistent_storage(
     async with mcp_app_module.mcp_lifespan(mcp):
         pass
 
-    run_migrations.assert_awaited_once_with()
+    run_migrations.assert_awaited_once_with(database_url=database.database_url)
     database.dispose.assert_awaited_once_with()
 
 
@@ -400,6 +400,21 @@ async def test_mcp_sync_tool_forwards_incremental_options(
         incremental=True,
         safety_margin_minutes=9,
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "arguments",
+    [{"days": 0}, {"safety_margin_minutes": -1}],
+)
+async def test_mcp_sync_tool_rejects_invalid_windows(
+    arguments: dict[str, int],
+) -> None:
+    """Expose sync window constraints in the MCP tool input schema."""
+    from fastmcp.exceptions import ValidationError
+
+    with pytest.raises(ValidationError, match="greater than or equal to"):
+        await mcp.call_tool("sync_data", arguments)
 
 
 def test_pydantic_models() -> None:

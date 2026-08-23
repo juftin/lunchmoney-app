@@ -2,7 +2,7 @@
 
 import asyncio
 import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import ANY, AsyncMock, MagicMock, Mock
 
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -79,7 +79,9 @@ def test_embedded_scheduler_starts_inside_local_fastapi_process(
         lambda settings, timezone: scheduler,
     )
 
-    started = scheduler_module.start_embedded_scheduler(settings=RuntimeSettings())
+    started = scheduler_module.start_embedded_scheduler(
+        settings=RuntimeSettings(embed_scheduler=True)
+    )
 
     assert started is scheduler
     assert scheduler.add_job.call_count == 2
@@ -137,6 +139,7 @@ async def test_schedule_process_coalesces_and_replaces_its_job(
 
     await scheduler_module.run_schedule_process(
         settings=RuntimeSettings(),
+        cron="*/10 * * * *",
         shutdown_event=shutdown_event,
     )
 
@@ -147,6 +150,10 @@ async def test_schedule_process_coalesces_and_replaces_its_job(
     assert calls[0].kwargs["coalesce"] is True
     assert calls[0].kwargs["max_instances"] == 1
     assert calls[0].kwargs["replace_existing"] is True
+    assert calls[0].kwargs["kwargs"] == {
+        "scope": scheduler_module.SyncScope.TRANSACTIONS
+    }
+    assert calls[1].kwargs["kwargs"] == {"scope": scheduler_module.SyncScope.METADATA}
     scheduler.start.assert_called_once()
     scheduler.pause.assert_called_once()
     scheduler.shutdown.assert_called_once_with(wait=False)
@@ -161,8 +168,9 @@ async def test_scheduled_sync_skips_when_another_run_holds_lock(
 
     database = MagicMock()
     database.record_scheduled_sync_run = AsyncMock()
-    execute_sync = AsyncMock()
-    monkeypatch.setattr(sync_service, "get_migration_lock", _ContendedLock)
+    from lunchmoney_app.locks import LockTimeoutError
+
+    execute_sync = AsyncMock(side_effect=LockTimeoutError("busy"))
     monkeypatch.setattr(sync_service, "execute_sync", execute_sync)
 
     result = await sync_service.run_scheduled_sync(
@@ -171,7 +179,14 @@ async def test_scheduled_sync_skips_when_another_run_holds_lock(
     )
 
     assert result.status == "skipped"
-    execute_sync.assert_not_awaited()
+    execute_sync.assert_awaited_once_with(
+        db=database,
+        client=ANY,
+        days=30,
+        incremental=True,
+        scope=sync_service.SyncScope.ALL,
+        _lock_blocking=False,
+    )
     database.record_scheduled_sync_run.assert_awaited_once()
 
 
@@ -182,7 +197,6 @@ async def test_scheduled_sync_records_incremental_result(
     """Use incremental sync and persist its successful record-count summary."""
     import lunchmoney_app.services.sync as sync_service
 
-    lock = _AcquiredLock()
     database = MagicMock()
     database.record_scheduled_sync_run = AsyncMock()
     response = SyncResponse(
@@ -197,7 +211,6 @@ async def test_scheduled_sync_records_incremental_result(
         )
     )
     execute_sync = AsyncMock(return_value=response)
-    monkeypatch.setattr(sync_service, "get_migration_lock", lambda: lock)
     monkeypatch.setattr(sync_service, "execute_sync", execute_sync)
 
     client = MagicMock()
@@ -214,8 +227,9 @@ async def test_scheduled_sync_records_incremental_result(
         client=client,
         days=45,
         incremental=True,
+        scope=sync_service.SyncScope.ALL,
+        _lock_blocking=False,
     )
-    assert lock.released is True
     recorded_call = database.record_scheduled_sync_run.await_args
     assert recorded_call is not None
     recorded = recorded_call.args[0]

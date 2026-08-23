@@ -12,7 +12,7 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > **1. Incremental Transaction Sync is Opt-In**:
 >
 > - Default behavior for `POST /api/sync` and `sync_data` FastMCP tool: `incremental: bool = False`.
-> - When `incremental=False`, transactions use the standard rolling date window from `days: int = 30` (or explicit service-layer `start_date` / `end_date`) and no watermark is written.
+> - When `incremental=False`, transactions use the standard rolling date window from `days: int = 30` (or explicit service-layer `start_date` / `end_date`) and replace the projection only inside that authoritative window. Historical rows outside it are preserved.
 > - When `incremental=True`, only transactions consult `SyncMetadata(domain="transactions")`. An existing watermark produces `updated_since = last_synced_at - timedelta(minutes=safety_margin)`; a missing watermark falls back to the standard date window.
 > - User, Plaid account, manual account, category, and tag refreshes are full refreshes in both modes.
 
@@ -27,6 +27,8 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 >
 > - Incremental execution captures a UTC start time, refreshes upstream data, and persists the record graph before writing the transaction watermark.
 > - An upstream or record-persistence failure leaves an absent watermark absent and preserves an existing watermark at its exact prior timestamp.
+> - Complete metadata snapshots reconcile deletions for users, accounts, categories, tags, and recurring items. Incremental transaction responses never delete absent rows because an `updated_since` response is not a complete collection.
+> - Every interactive and scheduled synchronization acquires the shared migration/sync lock in the service layer. Scheduled work uses nonblocking acquisition and records a skipped result when another worker owns the lock.
 
 > [!NOTE]
 > **4. Synchronization Requires Stateful Mode**:

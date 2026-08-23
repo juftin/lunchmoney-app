@@ -4,7 +4,7 @@ from pathlib import Path
 from collections.abc import AsyncIterator
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
-from unittest.mock import ANY, AsyncMock, create_autospec
+from unittest.mock import ANY, AsyncMock, MagicMock, create_autospec
 
 import sys
 import pytest
@@ -52,6 +52,32 @@ def test_app_initializes_instance_cache(monkeypatch: pytest.MonkeyPatch) -> None
     app = create_app(monkeypatch, cache=False)
 
     assert app.cache is False
+
+
+def test_app_preserves_explicit_empty_model_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Allow callers to intentionally disable default refresh models and kwargs."""
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+
+    app = app_module.LunchMoneyApp(
+        access_token="token",
+        lunchable_models=[],
+        lunchable_models_kwargs={},
+    )
+
+    assert list(app._lunchable_models) == []
+    assert app._lunchable_models_kwargs == {}
+
+
+def test_app_rejects_nonpositive_transaction_pagination(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject pagination settings that cannot advance an upstream query."""
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+
+    with pytest.raises(ValueError, match="greater than zero"):
+        app_module.LunchMoneyApp(access_token="token", transaction_pagination=0)
 
 
 @pytest.mark.asyncio
@@ -446,6 +472,7 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
         days: int = 30,
         incremental: bool = False,
         safety_margin_minutes: int | None = None,
+        scope: Any = None,
     ) -> app_module.SyncSummary:
         assert incremental is False
         assert safety_margin_minutes is None
@@ -508,6 +535,64 @@ def test_fastapi_sync_endpoint_forwards_incremental_options(
     )
 
 
+@pytest.mark.parametrize(
+    "query",
+    ["days=0", "days=-1", "safety_margin_minutes=-1"],
+)
+def test_fastapi_sync_endpoint_rejects_invalid_windows(
+    monkeypatch: pytest.MonkeyPatch,
+    query: str,
+) -> None:
+    """Reject sync windows that could omit or invert upstream data."""
+    from starlette.testclient import TestClient
+
+    sync_router_module = sys.modules["lunchmoney_app.app.routers.sync"]
+    mock_execute_sync = AsyncMock()
+    monkeypatch.setattr(sync_router_module, "execute_sync", mock_execute_sync)
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+    monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
+
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
+        response = client.post(f"/api/sync?{query}")
+
+    assert response.status_code == 422
+    mock_execute_sync.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("days", "safety_margin_minutes", "message"),
+    [
+        (0, None, "days"),
+        (30, -1, "safety_margin_minutes"),
+    ],
+)
+async def test_execute_sync_rejects_invalid_windows_before_side_effects(
+    monkeypatch: pytest.MonkeyPatch,
+    days: int,
+    safety_margin_minutes: int | None,
+    message: str,
+) -> None:
+    """Enforce sync window invariants for every non-HTTP caller."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    migrations = AsyncMock()
+    sync_database_mock = AsyncMock()
+    monkeypatch.setattr(sync_service_module, "run_migrations", migrations)
+    monkeypatch.setattr(sync_service_module, "sync_database", sync_database_mock)
+
+    with pytest.raises(ValueError, match=message):
+        await sync_service_module.execute_sync(
+            db=MagicMock(database_url="sqlite+aiosqlite:///stateful.db"),
+            client=MagicMock(),
+            days=days,
+            safety_margin_minutes=safety_margin_minutes,
+        )
+
+    migrations.assert_not_awaited()
+    sync_database_mock.assert_not_awaited()
+
+
 @pytest.mark.asyncio
 async def test_execute_sync_forwards_incremental_options(
     monkeypatch: pytest.MonkeyPatch,
@@ -521,7 +606,8 @@ async def test_execute_sync_forwards_incremental_options(
     database.database_url = "sqlite+aiosqlite:///stateful.db"
     client = create_autospec(LunchMoneyApp, instance=True)
     sync_database_mock = AsyncMock(return_value=SyncSummary())
-    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    migrations = AsyncMock()
+    monkeypatch.setattr(sync_service_module, "run_migrations", migrations)
     monkeypatch.setattr(sync_service_module, "sync_database", sync_database_mock)
 
     await sync_service_module.execute_sync(
@@ -538,7 +624,9 @@ async def test_execute_sync_forwards_incremental_options(
         days=45,
         incremental=True,
         safety_margin_minutes=7,
+        scope=sync_service_module.SyncScope.ALL,
     )
+    migrations.assert_awaited_once_with(database_url=database.database_url)
 
 
 @pytest.mark.asyncio
