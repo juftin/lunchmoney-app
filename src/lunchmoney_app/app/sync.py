@@ -3,6 +3,7 @@ Database synchronization services for Lunch Money data.
 """
 
 import datetime
+from typing import Any
 
 from lunchmoney.models.transaction_object import TransactionObject
 from lunchmoney.models import (
@@ -189,14 +190,12 @@ async def sync_database(
                 *record.group_children,
             )
         }
+    cached_responses: dict[str, dict[str, Any]] = {}
     if budget_settings is not None:
-        await db.upsert_cached_response(
-            "budget-settings", budget_settings.model_dump(mode="json")
-        )
+        cached_responses["budget-settings"] = budget_settings.model_dump(mode="json")
     if summary is not None:
-        await db.upsert_cached_response(
-            f"summary:{resolved_start_date}:{resolved_end_date}",
-            summary.model_dump(mode="json"),
+        cached_responses[f"summary:{resolved_start_date}:{resolved_end_date}"] = (
+            summary.model_dump(mode="json")
         )
     if recurring_response is not None:
         recurring_payload = {
@@ -205,10 +204,10 @@ async def sync_database(
                 for item in recurring_response.recurring_items or []
             ]
         }
-        await db.upsert_cached_response(
-            f"recurring:{resolved_start_date}:{resolved_end_date}", recurring_payload
+        cached_responses[f"recurring:{resolved_start_date}:{resolved_end_date}"] = (
+            recurring_payload
         )
-        await db.upsert_cached_response("recurring:latest", recurring_payload)
+        cached_responses["recurring:latest"] = recurring_payload
         records.extend(
             RecurringItem(
                 id=item.id,
@@ -216,28 +215,31 @@ async def sync_database(
             )
             for item in recurring_response.recurring_items or []
         )
-        authoritative_ids[RecurringItem] = {
-            item.id for item in recurring_response.recurring_items or []
-        }
+        # A date-bounded recurring response is not a complete definition list.
+        # Persist returned definitions, but never infer global deletions from absence.
+    sync_metadata: list[SyncMetadata] = []
+    if scope in {SyncScope.ALL, SyncScope.METADATA}:
+        sync_metadata.append(
+            SyncMetadata(domain="metadata", last_synced_at=sync_started_at)
+        )
+    if scope in {SyncScope.ALL, SyncScope.TRANSACTIONS}:
+        sync_metadata.append(
+            SyncMetadata(domain="transactions", last_synced_at=sync_started_at)
+        )
+        if transaction_window is not None:
+            sync_metadata.append(
+                SyncMetadata(
+                    domain="transactions:authoritative",
+                    last_synced_at=sync_started_at,
+                )
+            )
     await db.reconcile_sync_projection(
         records=records,
         authoritative_ids=authoritative_ids,
         transaction_window=transaction_window,
+        cached_responses=cached_responses,
+        sync_metadata=sync_metadata,
     )
-    if scope in {SyncScope.ALL, SyncScope.METADATA}:
-        await db.upsert_sync_metadata(
-            SyncMetadata(
-                domain="metadata",
-                last_synced_at=sync_started_at,
-            )
-        )
-    if scope in {SyncScope.ALL, SyncScope.TRANSACTIONS}:
-        await db.upsert_sync_metadata(
-            SyncMetadata(
-                domain="transactions",
-                last_synced_at=sync_started_at,
-            )
-        )
 
     return SyncSummary(
         user=1 if user_obj is not None else 0,

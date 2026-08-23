@@ -125,7 +125,7 @@ def test_embedded_scheduler_rejects_nonlocal_or_multiworker_runtime(
 async def test_schedule_process_coalesces_and_replaces_its_job(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Register coalesced jobs for transactions and metadata workloads and close gracefully."""
+    """Preserve the legacy cron override as one combined synchronization job."""
     import lunchmoney_app.scheduler as scheduler_module
 
     scheduler = _SchedulerDouble()
@@ -143,20 +143,45 @@ async def test_schedule_process_coalesces_and_replaces_its_job(
         shutdown_event=shutdown_event,
     )
 
-    assert scheduler.add_job.call_count == 2
+    assert scheduler.add_job.call_count == 1
     calls = scheduler.add_job.call_args_list
-    assert calls[0].kwargs["id"] == scheduler_module.SCHEDULE_TRANSACTIONS_ID
-    assert calls[1].kwargs["id"] == scheduler_module.SCHEDULE_METADATA_ID
+    assert calls[0].kwargs["id"] == scheduler_module.SCHEDULE_ID
     assert calls[0].kwargs["coalesce"] is True
     assert calls[0].kwargs["max_instances"] == 1
     assert calls[0].kwargs["replace_existing"] is True
-    assert calls[0].kwargs["kwargs"] == {
-        "scope": scheduler_module.SyncScope.TRANSACTIONS
-    }
-    assert calls[1].kwargs["kwargs"] == {"scope": scheduler_module.SyncScope.METADATA}
+    assert calls[0].kwargs["kwargs"] == {"scope": scheduler_module.SyncScope.ALL}
     scheduler.start.assert_called_once()
     scheduler.pause.assert_called_once()
     scheduler.shutdown.assert_called_once_with(wait=False)
+
+
+def test_split_scheduler_settings_register_independent_workloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use independent jobs only when operators opt into split cron settings."""
+    import lunchmoney_app.scheduler as scheduler_module
+
+    scheduler = _SchedulerDouble()
+    monkeypatch.setattr(
+        scheduler_module, "build_scheduler", lambda settings, timezone: scheduler
+    )
+
+    scheduler_module._create_scheduler(
+        settings=RuntimeSettings(
+            schedule_cron="15 4 * * *",
+            schedule_transactions_cron="*/10 * * * *",
+            schedule_metadata_cron="0 * * * *",
+        )
+    )
+
+    assert scheduler.add_job.call_count == 2
+    calls = scheduler.add_job.call_args_list
+    assert calls[0].kwargs["id"] == scheduler_module.SCHEDULE_TRANSACTIONS_ID
+    assert calls[0].kwargs["kwargs"] == {
+        "scope": scheduler_module.SyncScope.TRANSACTIONS
+    }
+    assert calls[1].kwargs["id"] == scheduler_module.SCHEDULE_METADATA_ID
+    assert calls[1].kwargs["kwargs"] == {"scope": scheduler_module.SyncScope.METADATA}
 
 
 @pytest.mark.asyncio
@@ -168,6 +193,11 @@ async def test_scheduled_sync_skips_when_another_run_holds_lock(
 
     database = MagicMock()
     database.record_scheduled_sync_run = AsyncMock()
+    database.get_sync_metadata = AsyncMock(
+        return_value=MagicMock(
+            last_synced_at=datetime.datetime.now(datetime.timezone.utc)
+        )
+    )
     from lunchmoney_app.locks import LockTimeoutError
 
     execute_sync = AsyncMock(side_effect=LockTimeoutError("busy"))
@@ -199,6 +229,11 @@ async def test_scheduled_sync_records_incremental_result(
 
     database = MagicMock()
     database.record_scheduled_sync_run = AsyncMock()
+    database.get_sync_metadata = AsyncMock(
+        return_value=MagicMock(
+            last_synced_at=datetime.datetime.now(datetime.timezone.utc)
+        )
+    )
     response = SyncResponse(
         synced=SyncDetails(
             user=1,
@@ -235,6 +270,53 @@ async def test_scheduled_sync_records_incremental_result(
     recorded = recorded_call.args[0]
     assert recorded.status == "success"
     assert recorded.synced == response.synced.model_dump(mode="json")
+
+
+@pytest.mark.asyncio
+async def test_scheduled_sync_periodically_reconciles_transaction_deletions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use a full authoritative window after the daily reconciliation expires."""
+    import lunchmoney_app.services.sync as sync_service
+
+    database = MagicMock()
+    database.record_scheduled_sync_run = AsyncMock()
+    database.get_sync_metadata = AsyncMock(
+        return_value=MagicMock(
+            last_synced_at=datetime.datetime.now(datetime.timezone.utc)
+            - datetime.timedelta(days=2)
+        )
+    )
+    execute_sync = AsyncMock(
+        return_value=SyncResponse(
+            synced=SyncDetails(
+                user=0,
+                plaid_accounts=0,
+                manual_accounts=0,
+                categories=0,
+                tags=0,
+                transactions=0,
+                total=0,
+            )
+        )
+    )
+    monkeypatch.setattr(sync_service, "execute_sync", execute_sync)
+
+    result = await sync_service.run_scheduled_sync(
+        db=database,
+        client=MagicMock(),
+        scope=sync_service.SyncScope.TRANSACTIONS,
+    )
+
+    assert result.status == "success"
+    execute_sync.assert_awaited_once_with(
+        db=database,
+        client=ANY,
+        days=30,
+        incremental=False,
+        scope=sync_service.SyncScope.TRANSACTIONS,
+        _lock_blocking=False,
+    )
 
 
 @pytest.mark.asyncio

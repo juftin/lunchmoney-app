@@ -23,6 +23,7 @@ class AccountAdapter(Protocol):
     async def get_plaid(self, account_id: int) -> PlaidAccountObject | None: ...
     async def store_manual(self, account: ManualAccountObject) -> None: ...
     async def delete_manual(self, account_id: int, delete_items: bool) -> None: ...
+    async def invalidate_after_plaid_fetch(self) -> None: ...
     def invalidate(self, transactions: bool = False) -> None: ...
 
 
@@ -104,6 +105,11 @@ class StatefulAccountAdapter:
             await self._database.delete_cached_responses("summary:")
         self.invalidate(transactions=True)
 
+    async def invalidate_after_plaid_fetch(self) -> None:
+        """Invalidate snapshots potentially changed by newly imported transactions."""
+        await self._database.delete_cached_responses("summary:")
+        self.invalidate(transactions=True)
+
     def invalidate(self, transactions: bool = False) -> None:
         """Invalidate affected operation-local account reads."""
         prefixes = ["accounts"]
@@ -181,6 +187,10 @@ class EphemeralAccountAdapter:
     async def delete_manual(self, account_id: int, delete_items: bool) -> None:
         """Retain no deleted account state and invalidate operation reads."""
         del account_id, delete_items
+        self.invalidate(transactions=True)
+
+    async def invalidate_after_plaid_fetch(self) -> None:
+        """Invalidate operation-local reads after triggering a live import."""
         self.invalidate(transactions=True)
 
     def invalidate(self, transactions: bool = False) -> None:

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 from collections.abc import AsyncIterator
+import asyncio
+import threading
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import ANY, AsyncMock, MagicMock, create_autospec
@@ -627,6 +629,100 @@ async def test_execute_sync_forwards_incremental_options(
         scope=sync_service_module.SyncScope.ALL,
     )
     migrations.assert_awaited_once_with(database_url=database.database_url)
+
+
+@pytest.mark.asyncio
+async def test_execute_sync_does_not_block_event_loop_while_waiting_for_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Let an owning sync progress while a concurrent caller waits for its lock."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    acquire_started = threading.Event()
+    allow_acquire = threading.Event()
+
+    class WaitingLock:
+        """Block acquisition in a worker thread until the test releases it."""
+
+        renewal_interval = None
+
+        def __init__(self, timeout: float | int = -1) -> None:
+            """Accept the lock factory's configured timeout."""
+            del timeout
+
+        def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
+            """Wait for the simulated owner to finish."""
+            del blocking, timeout
+            acquire_started.set()
+            return allow_acquire.wait(timeout=2)
+
+        def release(self) -> None:
+            """Release the acquired test lock."""
+
+    monkeypatch.setattr(sync_service_module, "get_migration_lock", WaitingLock)
+    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    monkeypatch.setattr(
+        sync_service_module,
+        "sync_database",
+        AsyncMock(return_value=sync_service_module.SyncSummary()),
+    )
+    database = MagicMock(database_url="sqlite+aiosqlite:///stateful.db")
+    database.delete_cached_responses = AsyncMock()
+
+    sync_task = asyncio.create_task(
+        sync_service_module.execute_sync(db=database, client=MagicMock())
+    )
+    assert await asyncio.to_thread(acquire_started.wait, 1)
+    event_loop_progressed = asyncio.Event()
+    asyncio.get_running_loop().call_soon(event_loop_progressed.set)
+    await asyncio.wait_for(event_loop_progressed.wait(), timeout=0.2)
+    allow_acquire.set()
+    await sync_task
+
+
+@pytest.mark.asyncio
+async def test_execute_sync_stops_when_redis_lease_is_lost(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cancel projection work instead of overlapping after lease renewal fails."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    class LostLeaseLock:
+        """Model an acquired lease that is rejected at its first renewal."""
+
+        renewal_interval = 0.01
+
+        def __init__(self, timeout: float | int = -1) -> None:
+            """Accept the lock factory's configured timeout."""
+            del timeout
+
+        def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
+            """Acquire the initial lease."""
+            del blocking, timeout
+            return True
+
+        def renew(self) -> bool:
+            """Report that another worker can no longer be excluded."""
+            return False
+
+        def release(self) -> None:
+            """Release any remaining owned state."""
+
+    async def blocked_sync(**kwargs: object) -> None:
+        """Represent projection work that must be cancelled on ownership loss."""
+        del kwargs
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(sync_service_module, "get_migration_lock", LostLeaseLock)
+    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    monkeypatch.setattr(sync_service_module, "sync_database", blocked_sync)
+    database = MagicMock(database_url="sqlite+aiosqlite:///stateful.db")
+
+    with pytest.raises(sync_service_module.LockOwnershipLostError):
+        await asyncio.wait_for(
+            sync_service_module.execute_sync(db=database, client=MagicMock()),
+            timeout=0.5,
+        )
 
 
 @pytest.mark.asyncio

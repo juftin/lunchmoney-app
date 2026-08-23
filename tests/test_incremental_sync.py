@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import event
 
 from lunchmoney_app.app.sync import sync_database
 from lunchmoney_app.client import LunchMoneyApp, UserObject
@@ -217,21 +218,13 @@ async def test_successful_incremental_sync_creates_watermark_after_upsert(
     """Advance the transaction watermark only after records are persisted."""
     events: list[str] = []
     original_reconcile = database.reconcile_sync_projection
-    original_upsert_metadata = database.upsert_sync_metadata
 
     async def tracked_reconcile(**kwargs: Any) -> None:
         """Record completion of the data upsert."""
         await original_reconcile(**kwargs)
         events.append("records")
 
-    async def tracked_upsert_metadata(metadata: SyncMetadata) -> SyncMetadata:
-        """Record the watermark write after persisting it."""
-        result = await original_upsert_metadata(metadata)
-        events.append("watermark")
-        return result
-
     monkeypatch.setattr(database, "reconcile_sync_projection", tracked_reconcile)
-    monkeypatch.setattr(database, "upsert_sync_metadata", tracked_upsert_metadata)
     started_at = datetime.datetime.now(datetime.timezone.utc)
 
     await sync_database(
@@ -248,7 +241,7 @@ async def test_successful_incremental_sync_creates_watermark_after_upsert(
         <= datetime.datetime.now(datetime.timezone.utc)
     )
     assert events[0] == "records"
-    assert "watermark" in events[1:]
+    assert len(events) == 1
 
 
 @pytest.mark.asyncio
@@ -407,3 +400,114 @@ async def test_metadata_reconciliation_removes_deleted_tags_and_recurring_items(
 
     assert [tag.id for tag in await database.list(Tag)] == [1]
     assert [item.id for item in await database.list(RecurringItem)] == [10]
+
+
+@pytest.mark.asyncio
+async def test_bounded_recurring_reconciliation_preserves_absent_definitions(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Do not globally delete recurring definitions absent from a date window."""
+    retained = RecurringItem(id=10, payload={"payee": "in window"})
+    out_of_window = RecurringItem(id=11, payload={"payee": "outside window"})
+    await database.upsert_many_without_reload([retained, out_of_window])
+
+    await database.reconcile_sync_projection(
+        records=[retained],
+        authoritative_ids={},
+    )
+
+    assert [item.id for item in await database.list(RecurringItem)] == [10, 11]
+
+
+@pytest.mark.asyncio
+async def test_sync_projection_prefetch_query_count_does_not_scale_per_record(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Load existing transaction graphs in a batch instead of once per record."""
+    from database.factories import transaction_object
+
+    transactions = []
+    for transaction_id in range(100, 120):
+        transaction = Transaction.from_api(
+            transaction_object(transaction_id=transaction_id, tag_ids=[])
+        )
+        transaction.category_id = None
+        transaction.plaid_account_id = None
+        transactions.append(transaction)
+    await database.upsert_many_without_reload(transactions)
+    select_count = 0
+
+    def count_selects(
+        connection: Any,
+        cursor: Any,
+        statement: str,
+        parameters: Any,
+        context: Any,
+        executemany: bool,
+    ) -> None:
+        """Count SQL SELECT statements issued during batch reconciliation."""
+        del connection, cursor, parameters, context, executemany
+        nonlocal select_count
+        if statement.lstrip().upper().startswith("SELECT"):
+            select_count += 1
+
+    event.listen(database.engine.sync_engine, "before_cursor_execute", count_selects)
+    try:
+        await database.reconcile_sync_projection(
+            records=transactions,
+            authoritative_ids={Transaction: {item.id for item in transactions}},
+        )
+    finally:
+        event.remove(
+            database.engine.sync_engine, "before_cursor_execute", count_selects
+        )
+
+    assert select_count < len(transactions)
+
+
+@pytest.mark.asyncio
+async def test_projection_cache_and_watermark_roll_back_together(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Keep cache, normalized rows, and watermarks on one transaction boundary."""
+    item = RecurringItem(id=99, payload={"payee": "atomic"})
+
+    def fail_watermark_insert(
+        connection: Any,
+        cursor: Any,
+        statement: str,
+        parameters: Any,
+        context: Any,
+        executemany: bool,
+    ) -> None:
+        """Fail after projection and cache statements have been staged."""
+        del connection, cursor, parameters, context, executemany
+        if statement.lstrip().upper().startswith("INSERT INTO SYNC_METADATA"):
+            raise RuntimeError("synthetic watermark failure")
+
+    event.listen(
+        database.engine.sync_engine, "before_cursor_execute", fail_watermark_insert
+    )
+    try:
+        with pytest.raises(RuntimeError, match="synthetic watermark failure"):
+            await database.reconcile_sync_projection(
+                records=[item],
+                authoritative_ids={},
+                cached_responses={"recurring:latest": {"items": []}},
+                sync_metadata=[
+                    SyncMetadata(
+                        domain="metadata",
+                        last_synced_at=datetime.datetime.now(datetime.timezone.utc),
+                    )
+                ],
+            )
+    finally:
+        event.remove(
+            database.engine.sync_engine,
+            "before_cursor_execute",
+            fail_watermark_insert,
+        )
+
+    assert await database.get(RecurringItem, item.id) is None
+    assert await database.get_cached_response("recurring:latest") is None
+    assert await database.get_sync_metadata("metadata") is None

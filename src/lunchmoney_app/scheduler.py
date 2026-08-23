@@ -183,9 +183,31 @@ def _create_scheduler(
 ) -> AsyncIOScheduler:
     """Create a scheduler and register its stable, coalescing synchronization jobs."""
     resolved_timezone = timezone or settings.schedule_timezone
-    txn_cron_str = _normalize_cron(
-        cron or settings.schedule_transactions_cron or settings.schedule_cron
+    legacy_cron_str = _normalize_cron(cron or settings.schedule_cron)
+    split_configured = bool(
+        settings.schedule_transactions_cron or settings.schedule_metadata_cron
     )
+    if legacy_cron_str is not None and (cron is not None or not split_configured):
+        scheduler = build_scheduler(settings, timezone=resolved_timezone)
+        try:
+            trigger = CronTrigger.from_crontab(
+                legacy_cron_str, timezone=resolved_timezone
+            )
+            scheduler.add_job(
+                run_scheduled_sync,
+                trigger=trigger,
+                id=SCHEDULE_ID,
+                coalesce=True,
+                max_instances=1,
+                replace_existing=True,
+                kwargs={"scope": SyncScope.ALL},
+            )
+        except (TypeError, ValueError) as error:
+            msg = f"Invalid scheduler cron or timezone: {error}"
+            raise SchedulerConfigurationError(msg) from error
+        return scheduler
+
+    txn_cron_str = _normalize_cron(settings.schedule_transactions_cron)
     meta_cron_str = _normalize_cron(settings.schedule_metadata_cron)
 
     if cron is not None or settings.embed_scheduler:

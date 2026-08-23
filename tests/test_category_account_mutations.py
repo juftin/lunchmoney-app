@@ -203,7 +203,7 @@ async def test_deletes_reconcile_cached_transaction_relationships() -> None:
 
 @pytest.mark.asyncio
 async def test_plaid_fetch_forwards_its_optional_scope() -> None:
-    """Forward optional Plaid fetch scope without touching the local cache."""
+    """Forward Plaid fetch scope and invalidate transaction-derived snapshots."""
     trigger = AsyncMock()
     client = cast(
         LunchMoneyApp,
@@ -221,6 +221,7 @@ async def test_plaid_fetch_forwards_its_optional_scope() -> None:
         await trigger_plaid_fetch(context, start_date, end_date, account_id=42)
 
     trigger.assert_awaited_once_with(start_date=start_date, end_date=end_date, id=42)
+    database.delete_cached_responses.assert_any_await("summary:")
 
 
 def test_mutation_routes_are_registered() -> None:

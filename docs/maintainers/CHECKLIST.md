@@ -135,7 +135,8 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-8-production-runtime--schedul
 
 - [x] **Gunicorn Runtime**: Replace FastAPI CLI deployment commands with Gunicorn and the maintained Uvicorn worker package; retain direct Uvicorn for local development.
 - [x] **Dedicated Scheduler**: Add an opt-in `lunchmoney-app schedule` APScheduler process with configurable cron, timezone, graceful lifecycle, and sync run reporting; each run refreshes full metadata and incrementally refreshes transactions.
-- [x] **Multi-Worker Safety**: Ensure Gunicorn workers never start schedulers; serialize scheduled syncs with the distributed lock and test duplicate-prevention behavior.
+- [x] **Multi-Worker Safety**: Ensure Gunicorn workers never start schedulers; serialize scheduled syncs with async-safe acquisition and renewable Redis leases, and test duplicate-prevention behavior.
+- [x] **Scheduler Compatibility**: Preserve `LUNCHMONEY_SCHEDULE_CRON` as one combined workload at its configured cadence while allowing explicit metadata and transaction cron settings to opt into split jobs.
 - [x] **Stable Scheduler Constraint**: Use one dedicated APScheduler 3.11 process; HA/multi-scheduler operation is explicitly unsupported because APScheduler 3 job stores cannot be shared.
 - [x] **Local Embedded Scheduler**: Allow an explicitly configured, single-worker development FastAPI process to run the scheduler through its lifespan; reject Gunicorn and multi-worker modes.
 
@@ -215,8 +216,12 @@ _Reference Spec_: [`DESIGN_EPHEMERAL_STATEFUL.md`](DESIGN_EPHEMERAL_STATEFUL.md)
 - [x] **Authoritative Sync Reconciliation**: Serialize all synchronization,
       migrate the injected database, reconcile complete metadata deletions, and
       prune transactions only inside authoritative date windows.
-- [ ] **Plaid Fetch Summary Invalidation**: Invalidate cached summary snapshots after a successful Plaid fetch trigger, so imported transactions cannot leave stale summary data before the next synchronization.
-- [ ] **Upstream HTTP Error Mapping**: Translate generated Lunch Money client errors, especially upstream 404 responses, into the corresponding REST API status instead of returning generic 500 responses.
+- [x] **Atomic and Scalable Sync Projection**: Commit normalized rows, response
+      snapshots, and watermarks together; preserve bounded recurring definitions;
+      periodically reconcile scheduled transaction deletions; and batch-prefetch
+      existing graphs.
+- [x] **Plaid Fetch Summary Invalidation**: Invalidate cached summary snapshots after a successful Plaid fetch trigger, so imported transactions cannot leave stale summary data before the next synchronization.
+- [x] **Upstream HTTP Error Mapping**: Translate generated Lunch Money client errors, especially upstream 404 responses, into the corresponding REST API status instead of returning generic 500 responses without exposing upstream response details.
 
 ---
 

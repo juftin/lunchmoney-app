@@ -97,4 +97,7 @@ async def trigger_plaid_fetch(
         end_date=end_date,
         id=account_id,
     )
-    context.accounts.invalidate(transactions=True)
+    await context.project(
+        "accounts",
+        context.accounts.invalidate_after_plaid_fetch(),
+    )

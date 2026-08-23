@@ -70,6 +70,37 @@ def test_redis_lock_acquire_release() -> None:
     mock_inner_lock.release.assert_called_once()
 
 
+def test_redis_lock_renews_owned_lease() -> None:
+    """Extend the owned Redis lease before its expiration can permit overlap."""
+    mock_redis = MagicMock()
+    mock_inner_lock = MagicMock()
+    mock_inner_lock.extend.return_value = True
+    mock_redis.lock.return_value = mock_inner_lock
+
+    lock = Redis(client=mock_redis, name="long_sync", expire=60)
+
+    mock_redis.lock.assert_called_once_with(
+        name="long_sync", timeout=60, thread_local=False
+    )
+    assert lock.renewal_interval == 20
+    assert lock.renew() is True
+    mock_inner_lock.extend.assert_called_once_with(60, replace_ttl=True)
+
+
+def test_redis_lock_reports_lost_lease() -> None:
+    """Report ownership loss when Redis rejects renewal after lease expiry."""
+    mock_redis = MagicMock()
+    mock_inner_lock = MagicMock()
+    mock_inner_lock.extend.side_effect = __import__(
+        "redis"
+    ).exceptions.LockNotOwnedError
+    mock_redis.lock.return_value = mock_inner_lock
+
+    lock = Redis(client=mock_redis, name="expired_sync")
+
+    assert lock.renew() is False
+
+
 def test_redis_lock_contention() -> None:
     """Raise LockTimeoutError when Redis lock acquisition fails."""
     mock_redis = MagicMock()

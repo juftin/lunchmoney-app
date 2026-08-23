@@ -6,9 +6,11 @@ from importlib import import_module
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from lunchmoney.exceptions import ApiException
+from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from lunchmoney_app.app.main import fastapi_app
+from lunchmoney_app.app.main import fastapi_app, observe_request
 from lunchmoney_app.observability import MetricsRegistry, log_event
 
 
@@ -17,6 +19,34 @@ class RateLimitedError(Exception):
 
     status: int = 429
     """HTTP status exposed by the generated Lunch Money client."""
+
+
+@pytest.mark.asyncio
+async def test_request_observer_maps_upstream_status_without_exposing_body() -> None:
+    """Preserve an upstream HTTP status while returning a bounded safe response."""
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/transactions/404",
+            "raw_path": b"/api/transactions/404",
+            "query_string": b"",
+            "headers": [],
+            "client": ("127.0.0.1", 1),
+            "server": ("localhost", 80),
+            "scheme": "http",
+        }
+    )
+
+    async def fail(_: Request) -> object:
+        """Raise a representative generated-client not-found response."""
+        raise ApiException(status=404, reason="sensitive upstream reason")
+
+    response = await observe_request(request, fail)
+
+    assert response.status_code == 404
+    assert response.body == b'{"detail":"Lunch Money upstream request failed"}'
+    assert b"sensitive" not in response.body
 
 
 def test_health_liveness_bypasses_rest_api_key(monkeypatch: pytest.MonkeyPatch) -> None:

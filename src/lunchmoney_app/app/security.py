@@ -122,12 +122,13 @@ class RequestBodyLimitMiddleware:
         try:
             await self.app(scope, limited_receive, tracked_send)
         except RequestBodyTooLargeError:
-            if not response_started:
-                await _send_json_error(
-                    send,
-                    status_code=413,
-                    detail="Request body exceeds the configured size limit",
-                )
+            if response_started:
+                raise
+            await _send_json_error(
+                send,
+                status_code=413,
+                detail="Request body exceeds the configured size limit",
+            )
 
 
 class RequestTimeoutMiddleware:

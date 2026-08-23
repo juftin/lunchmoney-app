@@ -8,6 +8,7 @@ from starlette.testclient import TestClient
 
 from lunchmoney_app.app.security import (
     RequestBodyLimitMiddleware,
+    RequestBodyTooLargeError,
     apply_security_middleware,
 )
 from lunchmoney_app.config import RuntimeSettings
@@ -82,7 +83,8 @@ async def test_stream_limit_does_not_start_a_second_response() -> None:
         sent.append(message)
 
     middleware = RequestBodyLimitMiddleware(downstream, max_body_bytes=4)
-    await middleware({"type": "http", "headers": []}, receive, send)
+    with pytest.raises(RequestBodyTooLargeError):
+        await middleware({"type": "http", "headers": []}, receive, send)
 
     assert [message["type"] for message in sent] == ["http.response.start"]
 

@@ -1,5 +1,7 @@
 """Service logic for Lunch Money database synchronization."""
 
+import asyncio
+import contextlib
 import datetime
 import logging
 import time
@@ -10,7 +12,12 @@ from lunchmoney.exceptions import ApiException
 from lunchmoney_app.app.sync import SyncScope, sync_database
 from lunchmoney_app.client import LunchMoneyApp, SyncSummary
 from lunchmoney_app.database import LunchMoneyDatabase, ScheduledSyncRun, run_migrations
-from lunchmoney_app.locks import LockTimeoutError, get_migration_lock
+from lunchmoney_app.locks import (
+    Lock,
+    LockOwnershipLostError,
+    LockTimeoutError,
+    get_migration_lock,
+)
 from lunchmoney_app.observability import metrics
 from lunchmoney_app.schemas import (
     ScheduledSyncStatus,
@@ -72,8 +79,21 @@ async def execute_sync(
     _validate_sync_parameters(days=days, safety_margin_minutes=safety_margin_minutes)
     started_at = time.perf_counter()
     lock = get_migration_lock(timeout=-1 if _lock_blocking else 0)
-    if not lock.acquire(blocking=_lock_blocking):
+    if not await asyncio.to_thread(lock.acquire, _lock_blocking):
         raise LockTimeoutError("Another migration or synchronization is running")
+    renewal_task: asyncio.Task[None] | None = None
+    ownership_lost = asyncio.Event()
+    if lock.renewal_interval is not None:
+        owner_task = asyncio.current_task()
+        if owner_task is None:  # pragma: no cover - asyncio always owns this coroutine
+            msg = "Synchronization must run inside an asyncio task"
+            raise RuntimeError(msg)
+        renewal_task = asyncio.create_task(
+            _renew_lock_while_held(
+                lock=lock, owner_task=owner_task, ownership_lost=ownership_lost
+            ),
+            name="lunchmoney-sync-lock-renewal",
+        )
     try:
         if db.database_url.startswith("sqlite") and (
             ":memory:" in db.database_url or "mode=memory" in db.database_url
@@ -99,6 +119,15 @@ async def execute_sync(
             logger.exception("Unable to clear cache projection health markers")
         else:
             clear_unpersisted_stale_domains()
+    except asyncio.CancelledError as error:
+        if not ownership_lost.is_set():
+            raise
+        metrics.record_sync(
+            status="failure", duration_seconds=time.perf_counter() - started_at
+        )
+        raise LockOwnershipLostError(
+            "Synchronization stopped after losing distributed lock ownership"
+        ) from error
     except Exception as error:
         metrics.record_sync(
             status="failure", duration_seconds=time.perf_counter() - started_at
@@ -107,7 +136,11 @@ async def execute_sync(
             metrics.record_upstream_failure(error)
         raise
     finally:
-        lock.release()
+        if renewal_task is not None:
+            renewal_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await renewal_task
+        await asyncio.to_thread(lock.release)
     metrics.record_sync(
         status="success", duration_seconds=time.perf_counter() - started_at
     )
@@ -122,6 +155,25 @@ async def execute_sync(
         total=summary.total,
     )
     return SyncResponse(message="Synchronization complete", synced=details)
+
+
+async def _renew_lock_while_held(
+    *,
+    lock: Lock,
+    owner_task: asyncio.Task[object],
+    ownership_lost: asyncio.Event,
+) -> None:
+    """Keep a lease alive and stop work immediately if ownership is lost."""
+    interval = lock.renewal_interval
+    if interval is None:
+        return
+    while True:
+        await asyncio.sleep(interval)
+        if not await asyncio.to_thread(lock.renew):
+            logger.error("Lost ownership of the synchronization lock during renewal")
+            ownership_lost.set()
+            owner_task.cancel("Synchronization lock ownership was lost")
+            return
 
 
 async def execute_mcp_sync(
@@ -186,12 +238,18 @@ async def run_scheduled_sync(
         Final successful, failed, or skipped run status.
     """
     started_at = datetime.datetime.now(datetime.timezone.utc)
+    incremental = True
+    if scope in {SyncScope.ALL, SyncScope.TRANSACTIONS}:
+        authoritative = await db.get_sync_metadata("transactions:authoritative")
+        incremental = authoritative is not None and (
+            started_at - authoritative.last_synced_at < datetime.timedelta(days=1)
+        )
     try:
         response = await execute_sync(
             db=db,
             client=client,
             days=days,
-            incremental=True,
+            incremental=incremental,
             scope=scope,
             _lock_blocking=False,
         )

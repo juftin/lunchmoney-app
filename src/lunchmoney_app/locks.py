@@ -16,6 +16,10 @@ class LockTimeoutError(LockError):
     """Raised when acquiring a lock times out or fails to acquire within timeout limits."""
 
 
+class LockOwnershipLostError(LockError):
+    """Raised when an expiring distributed lease can no longer be renewed."""
+
+
 class Lock(ABC):
     """Abstract base class for process and distributed locks."""
 
@@ -49,6 +53,18 @@ class Lock(ABC):
         bool
             True if the lock is currently held, False otherwise.
         """
+
+    def renew(self) -> bool:
+        """Renew ownership when the backend uses expiring leases.
+
+        Non-expiring process locks require no renewal and remain valid while held.
+        """
+        return True
+
+    @property
+    def renewal_interval(self) -> float | None:
+        """Return the recommended lease-renewal interval, if required."""
+        return None
 
     def __enter__(self) -> Self:
         """Context manager entry acquiring the lock.
@@ -170,7 +186,7 @@ class Redis(Lock):
         """Lock key name in Redis."""
         self.expire = expire
         """Expiration time in seconds."""
-        self._lock = client.lock(name=name, timeout=expire)
+        self._lock = client.lock(name=name, timeout=expire, thread_local=False)
 
     def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
         """Acquire the Redis distributed lock.
@@ -209,6 +225,22 @@ class Redis(Lock):
             True if lock key is currently active in Redis.
         """
         return self._lock.locked()
+
+    def renew(self) -> bool:
+        """Replace the Redis lease TTL while this worker still owns the lock."""
+        if self.expire is None:
+            return True
+        try:
+            return bool(self._lock.extend(self.expire, replace_ttl=True))
+        except redis.exceptions.LockNotOwnedError:
+            return False
+
+    @property
+    def renewal_interval(self) -> float | None:
+        """Renew an expiring Redis lease three times during each TTL window."""
+        if self.expire is None:
+            return None
+        return max(float(self.expire) / 3, 0.1)
 
 
 def get_migration_lock(
@@ -254,6 +286,7 @@ __all__ = [
     "Lock",
     "LockError",
     "LockFile",
+    "LockOwnershipLostError",
     "LockTimeoutError",
     "Redis",
     "RedisLock",
