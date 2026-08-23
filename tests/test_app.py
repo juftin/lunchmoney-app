@@ -681,6 +681,50 @@ async def test_execute_sync_does_not_block_event_loop_while_waiting_for_lock(
 
 
 @pytest.mark.asyncio
+async def test_execute_sync_releases_lock_acquired_after_cancellation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Release ownership if cancellation races with blocking acquisition."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    acquire_started = threading.Event()
+    allow_acquire = threading.Event()
+    released = threading.Event()
+
+    class CancelledWaitingLock:
+        """Acquire after cancellation so cleanup ownership can be asserted."""
+
+        renewal_interval = None
+
+        def __init__(self, timeout: float | int = -1) -> None:
+            """Accept the lock factory's configured timeout."""
+            del timeout
+
+        def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
+            """Wait until the cancellation race is deliberately completed."""
+            del blocking, timeout
+            acquire_started.set()
+            return allow_acquire.wait(timeout=2)
+
+        def release(self) -> None:
+            """Record cleanup of ownership acquired by the worker thread."""
+            released.set()
+
+    monkeypatch.setattr(sync_service_module, "get_migration_lock", CancelledWaitingLock)
+    sync_task = asyncio.create_task(
+        sync_service_module.execute_sync(db=MagicMock(), client=MagicMock())
+    )
+    assert await asyncio.to_thread(acquire_started.wait, 1)
+    sync_task.cancel()
+    allow_acquire.set()
+
+    with pytest.raises(asyncio.CancelledError):
+        await sync_task
+
+    assert released.is_set()
+
+
+@pytest.mark.asyncio
 async def test_execute_sync_stops_when_redis_lease_is_lost(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -723,6 +767,56 @@ async def test_execute_sync_stops_when_redis_lease_is_lost(
             sync_service_module.execute_sync(db=database, client=MagicMock()),
             timeout=0.5,
         )
+
+
+@pytest.mark.asyncio
+async def test_execute_sync_stops_and_releases_when_renewal_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Treat a Redis renewal backend error as immediate ownership loss."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    released = threading.Event()
+
+    class FailedRenewalLock:
+        """Model a lease whose Redis renewal request raises."""
+
+        renewal_interval = 0.01
+
+        def __init__(self, timeout: float | int = -1) -> None:
+            """Accept the lock factory's configured timeout."""
+            del timeout
+
+        def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
+            """Acquire the initial lease."""
+            del blocking, timeout
+            return True
+
+        def renew(self) -> bool:
+            """Raise the backend failure that makes ownership unverifiable."""
+            raise ConnectionError("Redis unavailable")
+
+        def release(self) -> None:
+            """Record the best-effort cleanup attempt."""
+            released.set()
+
+    async def blocked_sync(**kwargs: object) -> None:
+        """Represent projection work cancelled after renewal failure."""
+        del kwargs
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(sync_service_module, "get_migration_lock", FailedRenewalLock)
+    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    monkeypatch.setattr(sync_service_module, "sync_database", blocked_sync)
+    database = MagicMock(database_url="sqlite+aiosqlite:///stateful.db")
+
+    with pytest.raises(sync_service_module.LockOwnershipLostError):
+        await asyncio.wait_for(
+            sync_service_module.execute_sync(db=database, client=MagicMock()),
+            timeout=0.5,
+        )
+
+    assert released.is_set()
 
 
 @pytest.mark.asyncio

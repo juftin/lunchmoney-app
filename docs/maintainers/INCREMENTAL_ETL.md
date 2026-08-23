@@ -31,6 +31,7 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > - Synchronization batch-prefetches existing category and transaction graphs, avoiding one eager graph query per incoming record.
 > - Every interactive and scheduled synchronization acquires the shared migration/sync lock in the service layer without blocking the asyncio event loop. Scheduled work uses nonblocking acquisition and records a skipped result when another worker owns the lock.
 > - Redis-backed synchronization locks renew their lease throughout long-running work, so a sync that exceeds the initial TTL remains exclusive. File locks remain owned until explicit release.
+> - Cancellation that races with lock acquisition releases any ownership obtained by the worker thread. A renewal rejection or backend error stops synchronization immediately, attempts cleanup, and records the scheduled run as failed.
 
 > [!NOTE]
 > **4. Synchronization Requires Stateful Mode**:

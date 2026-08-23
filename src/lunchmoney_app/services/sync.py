@@ -79,7 +79,7 @@ async def execute_sync(
     _validate_sync_parameters(days=days, safety_margin_minutes=safety_margin_minutes)
     started_at = time.perf_counter()
     lock = get_migration_lock(timeout=-1 if _lock_blocking else 0)
-    if not await asyncio.to_thread(lock.acquire, _lock_blocking):
+    if not await _acquire_lock(lock=lock, blocking=_lock_blocking):
         raise LockTimeoutError("Another migration or synchronization is running")
     renewal_task: asyncio.Task[None] | None = None
     ownership_lost = asyncio.Event()
@@ -140,7 +140,14 @@ async def execute_sync(
             renewal_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await renewal_task
-        await asyncio.to_thread(lock.release)
+        try:
+            await asyncio.to_thread(lock.release)
+        except Exception:
+            if not ownership_lost.is_set():
+                raise
+            logger.exception(
+                "Unable to release synchronization lock after ownership loss"
+            )
     metrics.record_sync(
         status="success", duration_seconds=time.perf_counter() - started_at
     )
@@ -157,6 +164,24 @@ async def execute_sync(
     return SyncResponse(message="Synchronization complete", synced=details)
 
 
+async def _acquire_lock(*, lock: Lock, blocking: bool) -> bool:
+    """Acquire without blocking the event loop or leaking a cancelled acquisition."""
+    while True:
+        acquire_task = asyncio.create_task(
+            asyncio.to_thread(lock.acquire, blocking, 0.25 if blocking else 0),
+            name="lunchmoney-sync-lock-acquisition",
+        )
+        try:
+            acquired = await asyncio.shield(acquire_task)
+        except asyncio.CancelledError:
+            acquired = await acquire_task
+            if acquired:
+                await asyncio.to_thread(lock.release)
+            raise
+        if acquired or not blocking:
+            return acquired
+
+
 async def _renew_lock_while_held(
     *,
     lock: Lock,
@@ -169,8 +194,13 @@ async def _renew_lock_while_held(
         return
     while True:
         await asyncio.sleep(interval)
-        if not await asyncio.to_thread(lock.renew):
-            logger.error("Lost ownership of the synchronization lock during renewal")
+        try:
+            renewed = await asyncio.to_thread(lock.renew)
+        except Exception:
+            logger.exception("Unable to renew synchronization lock ownership")
+            renewed = False
+        if not renewed:
+            logger.error("Lost synchronization lock ownership during renewal")
             ownership_lost.set()
             owner_task.cancel("Synchronization lock ownership was lost")
             return
@@ -238,13 +268,13 @@ async def run_scheduled_sync(
         Final successful, failed, or skipped run status.
     """
     started_at = datetime.datetime.now(datetime.timezone.utc)
-    incremental = True
-    if scope in {SyncScope.ALL, SyncScope.TRANSACTIONS}:
-        authoritative = await db.get_sync_metadata("transactions:authoritative")
-        incremental = authoritative is not None and (
-            started_at - authoritative.last_synced_at < datetime.timedelta(days=1)
-        )
     try:
+        incremental = True
+        if scope in {SyncScope.ALL, SyncScope.TRANSACTIONS}:
+            authoritative = await db.get_sync_metadata("transactions:authoritative")
+            incremental = authoritative is not None and (
+                started_at - authoritative.last_synced_at < datetime.timedelta(days=1)
+            )
         response = await execute_sync(
             db=db,
             client=client,

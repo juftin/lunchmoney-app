@@ -320,6 +320,30 @@ async def test_scheduled_sync_periodically_reconciles_transaction_deletions(
 
 
 @pytest.mark.asyncio
+async def test_scheduled_sync_records_watermark_lookup_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Persist a failed run when scheduler policy cannot read its watermark."""
+    import lunchmoney_app.services.sync as sync_service
+
+    database = MagicMock()
+    database.get_sync_metadata = AsyncMock(side_effect=RuntimeError("database down"))
+    database.record_scheduled_sync_run = AsyncMock()
+    execute_sync = AsyncMock()
+    monkeypatch.setattr(sync_service, "execute_sync", execute_sync)
+
+    result = await sync_service.run_scheduled_sync(
+        db=database,
+        client=MagicMock(),
+        scope=sync_service.SyncScope.TRANSACTIONS,
+    )
+
+    assert result.status == "failed"
+    execute_sync.assert_not_awaited()
+    database.record_scheduled_sync_run.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_scheduled_sync_status_maps_persisted_record() -> None:
     """Expose the last persisted scheduler result in the public response schema."""
     from lunchmoney_app.database import ScheduledSyncRun
