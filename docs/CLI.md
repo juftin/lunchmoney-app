@@ -2,9 +2,10 @@
 
 ## Commands
 
-The command-line interface provides `mcp`, `serve`, `schedule`, `sync`,
-`doctor`, and `version`. Use command help to see the options applicable to one
-runtime:
+The Click command-line interface provides `mcp`, `serve`, `schedule`, `sync`,
+`doctor`, `version`, and `config`. Use command help to see every option
+applicable to one runtime, including its Pydantic default and environment
+variable alternative:
 
 ```bash
 lunchmoney-app --help
@@ -15,11 +16,24 @@ lunchmoney-app mcp --help
 Money. `sync` performs one foreground synchronization, and `version` prints the
 installed package version.
 
+Use the configuration commands to discover every runtime and environment-only
+setting, inspect safely redacted resolved values, or validate configuration
+without starting a service:
+
+```bash
+lunchmoney-app config list
+lunchmoney-app config show
+lunchmoney-app config validate
+```
+
 ## Configuration
 
-For safe, CLI-exposed runtime settings, precedence is **CLI flags > process
-environment > `.env` > built-in defaults**. Secrets and connection URLs are
-environment/`.env`-only and cannot be passed as command-line flags.
+Click passes only explicitly supplied flags to Pydantic Settings. Pydantic then
+resolves safe runtime settings in this order: **CLI flags, process environment,
+`.env`, then built-in defaults**. It supplies the validated settings object to
+the application. Secrets and connection URLs are environment/`.env`-only,
+appear by name in `config list`, and cannot be passed as command-line flags.
+`config show` always redacts their values.
 
 Use a `.env` file for local development and a secret manager or deployment
 environment in production. Docker Compose also reads its project `.env` file to
@@ -47,8 +61,8 @@ The `schedule` and `sync` commands are stateful-only.
 
 ## Shell completion
 
-Generate a completion script for the installed executable, then source it in
-the current shell:
+Generate Click's native completion script for the installed executable, then
+source it in the current shell. Bash, Zsh, and Fish are supported:
 
 ```bash
 # Bash

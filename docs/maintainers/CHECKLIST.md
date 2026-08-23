@@ -172,6 +172,10 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-financial-
 _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-experience)
 
 - [x] **CLI Subcommands**: Provide `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version` with safe configuration validation and meaningful exit codes.
+- [x] **Click Configuration UX**: Use Click for command help, validation, and
+      native completion while Pydantic Settings retains CLI/environment/`.env`
+      precedence; expose all environment alternatives through redacted `config`
+      inspection commands.
 - [x] **Deployment Docs**: Make Docker Compose the first-class deployment path and document package, scheduler, and upgrade workflows.
 - [x] **Transport & Persistence UX**: Document stdio and Streamable HTTP as
       distinct MCP workflows and expose the shared `--persistence-mode`

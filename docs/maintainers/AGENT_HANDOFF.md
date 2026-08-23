@@ -121,4 +121,10 @@ Planned: a single-user, single–Lunch Money-account, authenticated and accessib
 
 ### Sprint 12: CLI, Packaging & Operator Experience
 
-Planned: evolve the executable into `mcp`, `serve`, `schedule`, `sync`, `doctor`, and `version` subcommands, with clear transport help, redacted diagnostics, documented config precedence, and Docker Compose-first deployment/upgrade examples.
+Completed: the Click executable provides `mcp`, `serve`, `schedule`, `sync`,
+`doctor`, `version`, and `config` subcommands with native shell completion.
+Click owns command parsing and passes only explicit overrides to Pydantic
+Settings, which retains environment/`.env` loading, typed configuration
+objects, and cross-field validation. Command help documents environment
+alternatives, while `config list`, `config show`, and `config validate` expose
+the complete configuration surface without accepting or revealing secrets.

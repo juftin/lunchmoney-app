@@ -8,20 +8,16 @@ from lunchmoney_app.completion import CompletionShell, render_completion
 @pytest.mark.parametrize(
     ("shell", "expected_registration"),
     [
-        ("bash", "complete -F _lunchmoney_app lunchmoney-app"),
-        ("zsh", "compdef _lunchmoney_app lunchmoney-app"),
+        ("bash", "complete -o nosort"),
+        ("zsh", "compdef _lunchmoney_app_completion lunchmoney-app"),
     ],
 )
-def test_completion_scripts_cover_every_runtime_command(
+def test_completion_scripts_use_click_native_activation(
     shell: CompletionShell,
     expected_registration: str,
 ) -> None:
-    """Emit installable scripts that expose the complete public CLI surface."""
+    """Emit Click's installable shell-native activation scripts."""
     completion_script = render_completion(shell)
 
     assert expected_registration in completion_script
-    for command in ("mcp", "serve", "schedule", "sync", "doctor", "version"):
-        assert command in completion_script
-    assert "--persistence-mode" in completion_script
-    assert "--access-token" not in completion_script
-    assert "--print-completion" in completion_script
+    assert "LUNCHMONEY_APP_COMPLETE" in completion_script
