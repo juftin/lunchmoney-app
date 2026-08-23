@@ -14,6 +14,7 @@ from lunchmoney_app.database import LunchMoneyDatabase
 from lunchmoney_app.database.models import Tag, Transaction
 from lunchmoney_app.mcp import mcp
 from lunchmoney_app.services import create_tag, delete_tag, update_tag
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 
 
 @pytest.mark.asyncio
@@ -42,14 +43,10 @@ async def test_tag_mutations_write_upstream_before_cache_updates() -> None:
     create_request = CreateTagRequestObject(name="Synthetic tag")
     update_request = UpdateTagRequestObject(name="Updated tag")
 
-    created = await create_tag(client=client, db=database, request=create_request)
-    updated = await update_tag(
-        client=client,
-        db=database,
-        tag_id=tag.id,
-        request=update_request,
-    )
-    await delete_tag(client=client, db=database, tag_id=tag.id, force=True)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        created = await create_tag(context, create_request)
+        updated = await update_tag(context, tag.id, update_request)
+        await delete_tag(context, tag.id, force=True)
 
     assert created.id == tag.id
     assert updated.name == tag.name
@@ -79,7 +76,8 @@ async def test_tag_deletion_removes_cached_transaction_links() -> None:
     database.upsert_many = AsyncMock()
     database.delete = AsyncMock(return_value=True)
 
-    await delete_tag(client=client, db=database, tag_id=tag.id)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        await delete_tag(context, tag.id)
 
     assert transaction.tag_links == []
     database.upsert_many.assert_awaited_once_with([transaction])

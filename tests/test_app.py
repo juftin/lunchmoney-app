@@ -316,24 +316,25 @@ async def test_explicit_sync_request_skips_automatic_refresh(
 
     from starlette.requests import Request
     from starlette.responses import Response
-    from lunchmoney_app.config import RuntimeSettings
 
-    observed_refresh: list[bool] = []
+    operation_count = 0
 
     @asynccontextmanager
-    async def fake_data_operation(**kwargs: Any) -> AsyncIterator[object]:
-        """Record lifecycle refresh settings without creating application storage."""
-        observed_refresh.append(kwargs["refresh"])
+    async def fake_operation() -> AsyncIterator[object]:
+        """Bind a lifecycle that performs no implicit synchronization."""
+        nonlocal operation_count
+        operation_count += 1
         yield object()
 
     async def call_next(_: Request) -> Response:
         """Return a successful response from the simulated request handler."""
         return Response(status_code=200)
 
-    monkeypatch.setattr(app_main_module, "data_operation", fake_data_operation)
-    monkeypatch.setattr(app_main_module, "get_lunchmoney_app", object)
-    monkeypatch.setattr(app_main_module, "get_shared_database", object)
-    monkeypatch.setattr(app_main_module, "get_settings", RuntimeSettings)
+    monkeypatch.setattr(
+        app_main_module,
+        "_operation_factory",
+        lambda: SimpleNamespace(operation=fake_operation),
+    )
     request = Request(
         {
             "type": "http",
@@ -347,7 +348,64 @@ async def test_explicit_sync_request_skips_automatic_refresh(
     response = await app_main_module.bind_data_operation(request, call_next)
 
     assert response.status_code == 200
-    assert observed_refresh == [False]
+    assert operation_count == 1
+
+
+@pytest.mark.asyncio
+async def test_rest_maps_stateful_mode_boundary_to_conflict_contract() -> None:
+    """Expose one safe REST error for dashboard and synchronization boundaries."""
+    import json
+
+    from starlette.requests import Request
+
+    from lunchmoney_app.services.errors import StatefulModeRequired
+
+    response = await app_main_module.stateful_mode_required_handler(
+        Request({"type": "http", "method": "GET", "path": "/", "headers": []}),
+        StatefulModeRequired(),
+    )
+
+    assert response.status_code == 409
+    assert json.loads(response.body) == {
+        "detail": {
+            "code": "stateful_mode_required",
+            "message": "This operation requires stateful persistence mode.",
+        }
+    }
+
+
+@pytest.mark.asyncio
+async def test_rest_rejects_ephemeral_stateful_route_before_client_resolution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject stateful-only routes before constructing upstream dependencies."""
+    from starlette.requests import Request
+
+    from lunchmoney_app.config import RuntimeSettings
+    from lunchmoney_app.services.errors import StatefulModeRequired
+
+    settings = RuntimeSettings(persistence_mode="ephemeral")
+    operation_factory = create_autospec(
+        app_main_module._operation_factory,
+        side_effect=AssertionError("client resolved"),
+    )
+    monkeypatch.setattr(app_main_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(app_main_module, "_operation_factory", operation_factory)
+
+    with pytest.raises(StatefulModeRequired):
+        await app_main_module.bind_data_operation(
+            Request(
+                {
+                    "type": "http",
+                    "method": "POST",
+                    "path": "/api/sync",
+                    "headers": [],
+                }
+            ),
+            AsyncMock(),
+        )
+
+    operation_factory.assert_not_called()
 
 
 def test_fastapi_api_key_guard(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -460,7 +518,7 @@ async def test_execute_sync_forwards_incremental_options(
     import lunchmoney_app.services.sync as sync_service_module
 
     database = create_autospec(LunchMoneyDatabase, instance=True)
-    database.is_stateless = False
+    database.database_url = "sqlite+aiosqlite:///stateful.db"
     client = create_autospec(LunchMoneyApp, instance=True)
     sync_database_mock = AsyncMock(return_value=SyncSummary())
     monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
@@ -484,7 +542,7 @@ async def test_execute_sync_forwards_incremental_options(
 
 
 @pytest.mark.asyncio
-async def test_explicit_sync_initializes_and_persists_to_stateless_database(
+async def test_explicit_sync_initializes_configured_memory_database(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -516,7 +574,6 @@ async def test_explicit_sync_initializes_and_persists_to_stateless_database(
         raise AssertionError(f"Unexpected model refresh: {model}")
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("STATELESS", "true")
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     get_settings.cache_clear()
     from lunchmoney_app.client import LunchableData
@@ -527,7 +584,7 @@ async def test_explicit_sync_initializes_and_persists_to_stateless_database(
     client.refresh_transactions.return_value = {}
 
     try:
-        async with LunchMoneyDatabase() as database:
+        async with LunchMoneyDatabase("sqlite+aiosqlite:///:memory:") as database:
             response = await execute_sync(db=database, client=client)
             persisted_user = await database.get(User, 1)
 
@@ -585,13 +642,13 @@ async def test_execute_mcp_sync_forwards_incremental_options(
 
 @pytest.mark.asyncio
 async def test_fastapi_database_dependencies(tmp_path: Path) -> None:
-    """Verify get_database and get_db_session dependencies yield expected instances."""
+    """Require a bound context before resolving a database dependency."""
     from lunchmoney_app.app import get_database, get_db_session
     from lunchmoney_app.database import LunchMoneyDatabase
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    db_instance = get_database()
-    assert isinstance(db_instance, LunchMoneyDatabase)
+    with pytest.raises(RuntimeError, match="No data operation"):
+        get_database()
 
     db_path = tmp_path / "dep.db"
     db_url = f"sqlite+aiosqlite:///{db_path}"
@@ -625,11 +682,11 @@ def test_fastapi_lifespan_migration_single_worker(
         assert migrations_ran is True
 
 
-def test_stateless_startup_syncs_and_persists_without_manual_schema_setup(
+def test_stateful_memory_sqlite_startup_syncs_and_persists(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Initialize the cached stateless schema before real sync persistence."""
+    """Initialize an explicitly configured stateful memory SQLite backend."""
     from lunchmoney_app.app.dependencies import get_database
     from lunchmoney_app.client import (
         CategoryObject,
@@ -666,9 +723,11 @@ def test_stateless_startup_syncs_and_persists_without_manual_schema_setup(
         return {}
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("STATELESS", "true")
     monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
-    monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
+    monkeypatch.setenv(
+        "LUNCHMONEY_DATABASE_URL",
+        "sqlite+aiosqlite:///file:test-stateful-memory?mode=memory&cache=shared&uri=true",
+    )
     monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
     monkeypatch.setattr(app_module.LunchMoneyApp, "refresh", mock_refresh)
     monkeypatch.setattr(

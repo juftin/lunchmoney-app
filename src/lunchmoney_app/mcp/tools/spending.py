@@ -1,15 +1,12 @@
-"""FastMCP tools for grouped spending analysis operations."""
+"""FastMCP spending analytics tools."""
 
 import datetime
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-from lunchmoney_app.app.dependencies import get_database
 from lunchmoney_app.mcp.app import mcp
 from lunchmoney_app.schemas import GroupedSpendingResponse, SpendingTrendsResponse
 from lunchmoney_app.services import fetch_category_spending, fetch_spending_trends
-
-if TYPE_CHECKING:
-    from lunchmoney_app import LunchMoneyDatabase
+from lunchmoney_app.services.operations import get_operation_context
 
 
 @mcp.tool()
@@ -18,25 +15,9 @@ async def get_category_spending(
     end_date: datetime.date | None = None,
     days: int | None = 30,
 ) -> GroupedSpendingResponse:
-    """Fetch grouped spending analysis by category over specified date range.
-
-    Parameters
-    ----------
-    start_date : datetime.date | None
-        Optional start date for transaction filtering.
-    end_date : datetime.date | None
-        Optional end date for transaction filtering.
-    days : int | None
-        Number of past days to query if start_date is omitted. Default is 30.
-
-    Returns
-    -------
-    GroupedSpendingResponse
-        Grouped spending report with parent/child category rollups and totals.
-    """
-    db: LunchMoneyDatabase = get_database()
+    """Return grouped spending over an inclusive period."""
     return await fetch_category_spending(
-        db=db, start_date=start_date, end_date=end_date, days=days
+        get_operation_context(), start_date, end_date, days
     )
 
 
@@ -47,14 +28,9 @@ async def get_spending_trends(
     end_date: datetime.date | None = None,
     days: int | None = 30,
 ) -> SpendingTrendsResponse:
-    """Fetch time-series income and spending totals over a date range."""
-    db: LunchMoneyDatabase = get_database()
+    """Return calendar-bucketed spending and income trends."""
     return await fetch_spending_trends(
-        db=db,
-        granularity=granularity,
-        start_date=start_date,
-        end_date=end_date,
-        days=days,
+        get_operation_context(), granularity, start_date, end_date, days
     )
 
 

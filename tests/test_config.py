@@ -7,7 +7,6 @@ import pytest
 
 from lunchmoney_app.config import (
     DEFAULT_DATABASE_URL,
-    IN_MEMORY_DATABASE_URL,
     McpCliSettings,
     RuntimeSettings,
     ScheduleCliSettings,
@@ -19,6 +18,7 @@ from lunchmoney_app.config import (
     get_secret_settings,
     get_settings,
     parse_cli_settings,
+    validate_persistence_configuration,
 )
 from lunchmoney_app.database import resolve_database_url
 
@@ -41,7 +41,7 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LUNCHMONEY_APP_OAUTH_BASE_URL", raising=False)
     monkeypatch.delenv("LUNCHMONEY_APP_OAUTH_AUDIENCE", raising=False)
     monkeypatch.delenv("LUNCHMONEY_ENVIRONMENT", raising=False)
-    monkeypatch.delenv("LUNCHMONEY_STATELESS", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_PERSISTENCE_MODE", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SCHEDULE_CRON", raising=False)
     monkeypatch.delenv("LUNCHMONEY_SCHEDULE_TIMEZONE", raising=False)
@@ -69,7 +69,7 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.mcp_oauth_client_id is None
     assert settings.mcp_oauth_base_url is None
     assert settings.mcp_oauth_audience is None
-    assert settings.stateless is False
+    assert settings.persistence_mode == "stateful"
     assert settings.sync_safety_margin_minutes == 5
     assert settings.schedule_transactions_cron is None
     assert settings.schedule_metadata_cron is None
@@ -114,7 +114,7 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LUNCHMONEY_APP_OAUTH_CLIENT_SECRET", "synthetic-secret")
     monkeypatch.setenv("LUNCHMONEY_APP_OAUTH_BASE_URL", "https://mcp.example.com")
     monkeypatch.setenv("LUNCHMONEY_APP_OAUTH_AUDIENCE", "https://mcp.example.com")
-    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
+    monkeypatch.setenv("LUNCHMONEY_PERSISTENCE_MODE", "stateful")
     monkeypatch.setenv("LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES", "10")
     monkeypatch.setenv("LUNCHMONEY_SCHEDULE_CRON", "15 4 * * 1-5")
     monkeypatch.setenv("LUNCHMONEY_SCHEDULE_TIMEZONE", "America/Denver")
@@ -148,7 +148,7 @@ def test_settings_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     assert secret_settings.mcp_oauth_client_secret == "synthetic-secret"
     assert settings.mcp_oauth_base_url == "https://mcp.example.com"
     assert settings.mcp_oauth_audience == "https://mcp.example.com"
-    assert settings.stateless is True
+    assert settings.persistence_mode == "stateful"
     assert settings.sync_safety_margin_minutes == 10
     assert settings.schedule_cron == "15 4 * * 1-5"
     assert settings.schedule_timezone == "America/Denver"
@@ -303,10 +303,7 @@ def test_mcp_help_explains_data_handling_without_storage_details(
         )
 
     help_output = " ".join(capsys.readouterr().out.split())
-    assert "Keep a live Lunch Money data cache between requests" in help_output
-    assert (
-        "Pass each request through to Lunch Money without retaining data" in help_output
-    )
+    assert "Persistence mode: stateful database cache" in help_output
     assert "SQLite" not in help_output
 
 
@@ -456,38 +453,47 @@ def test_mcp_transport_defaults_use_ephemeral_stdio_and_persistent_http() -> Non
 
     persistent_stdio_parser = create_argument_parser()
     persistent_stdio_settings = parse_cli_settings(
-        ["--stdio", "--no-ephemeral"],
+        ["--stdio", "--persistence-mode", "stateful"],
         McpCliSettings,
         root_parser=persistent_stdio_parser,
     )
     persistent_stdio_result = apply_transport_defaults(
         persistent_stdio_settings,
-        persistent_stdio_parser.parse_args(["--stdio", "--no-ephemeral"]),
+        persistent_stdio_parser.parse_args(
+            ["--stdio", "--persistence-mode", "stateful"]
+        ),
     )
 
-    assert stdio_result.ephemeral is True
-    assert http_result.ephemeral is False
-    assert persistent_stdio_result.ephemeral is False
+    assert stdio_result.persistence_mode == "ephemeral"
+    assert http_result.persistence_mode == "stateful"
+    assert persistent_stdio_result.persistence_mode == "stateful"
 
 
 @pytest.mark.parametrize(
     "settings_type",
     [McpCliSettings, ScheduleCliSettings, ServeCliSettings, SyncCliSettings],
 )
-def test_operational_commands_share_persistence_flags(
+def test_operational_commands_share_persistence_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
     settings_type: type[
         McpCliSettings | ScheduleCliSettings | ServeCliSettings | SyncCliSettings
     ],
 ) -> None:
     """Expose the same explicit storage selections to every runtime command."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("LUNCHMONEY_SCHEDULE_CRON", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_SCHEDULE_TRANSACTIONS_CRON", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_SCHEDULE_METADATA_CRON", raising=False)
+    monkeypatch.delenv("LUNCHMONEY_EMBED_SCHEDULER", raising=False)
     root_parser = None
     if settings_type is McpCliSettings:
         from lunchmoney_app.mcp.server import create_argument_parser
 
         root_parser = create_argument_parser()
 
-    stateless = parse_cli_settings(
-        ["--stateless"],
+    stateful = parse_cli_settings(
+        ["--persistence-mode", "stateful"],
         settings_type,
         root_parser=root_parser,
     )
@@ -498,71 +504,85 @@ def test_operational_commands_share_persistence_flags(
         root_parser = create_argument_parser()
 
     ephemeral = parse_cli_settings(
-        ["--ephemeral"],
+        ["--persistence-mode", "ephemeral"],
         settings_type,
         root_parser=root_parser,
     )
 
-    assert stateless.stateless is True
-    assert ephemeral.ephemeral is True
+    assert stateful.persistence_mode == "stateful"
+    assert ephemeral.persistence_mode == "ephemeral"
 
 
-def test_stateless_settings_select_shared_memory_url(
+def test_explicit_memory_database_url_is_valid_in_stateful_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Resolve the shared in-memory URL when stateless mode is enabled."""
-    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
-    monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
-    get_settings.cache_clear()
+    """Treat an explicit memory URL as an ordinary stateful backend."""
+    memory_url = "sqlite+aiosqlite:///:memory:"
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", memory_url)
+    secrets = SecretSettings()
+    validate_persistence_configuration(RuntimeSettings(), secrets)
+    assert resolve_database_url() == memory_url
 
-    assert resolve_database_url() == IN_MEMORY_DATABASE_URL
-    get_settings.cache_clear()
 
-
-def test_database_url_overrides_stateless_mode(
+def test_ephemeral_rejects_environment_database_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Preserve explicit and environment database URL precedence in stateless mode."""
-    environment_url = "sqlite+aiosqlite:///environment.db"
-    explicit_url = "sqlite+aiosqlite:///explicit.db"
-    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
-    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", environment_url)
-    get_settings.cache_clear()
+    """Reject an explicit environment database URL in ephemeral mode."""
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+    with pytest.raises(ValueError, match="database settings"):
+        validate_persistence_configuration(
+            RuntimeSettings.model_validate(
+                {
+                    "persistence_mode": "ephemeral",
+                    "schedule_transactions_cron": None,
+                    "schedule_metadata_cron": None,
+                    "schedule_cron": None,
+                    "embed_scheduler": False,
+                }
+            ),
+            SecretSettings(),
+        )
 
-    assert resolve_database_url() == environment_url
-    assert resolve_database_url(explicit_url) == explicit_url
-    get_settings.cache_clear()
 
-
-def test_dotenv_database_url_overrides_stateless_mode(
+def test_ephemeral_rejects_dotenv_database_url(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Preserve a database URL supplied through Pydantic's `.env` source."""
+    """Reject an explicit dotenv database URL in ephemeral mode."""
     dotenv_url = "sqlite+aiosqlite:///dotenv.db"
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     (tmp_path / ".env").write_text(f"LUNCHMONEY_DATABASE_URL={dotenv_url}\n")
-    get_settings.cache_clear()
+    with pytest.raises(ValueError, match="database settings"):
+        validate_persistence_configuration(
+            RuntimeSettings.model_validate(
+                {
+                    "persistence_mode": "ephemeral",
+                    "schedule_transactions_cron": None,
+                    "schedule_metadata_cron": None,
+                    "schedule_cron": None,
+                    "embed_scheduler": False,
+                }
+            ),
+            SecretSettings(),
+        )
 
-    assert resolve_database_url() == dotenv_url
-    get_settings.cache_clear()
 
-
-def test_dotenv_default_database_url_overrides_stateless_mode(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+@pytest.mark.parametrize(
+    "scheduler_settings",
+    [
+        {"schedule_cron": "0 * * * *"},
+        {"schedule_transactions_cron": "0 * * * *"},
+        {"schedule_metadata_cron": "0 * * * *"},
+        {"embed_scheduler": True},
+    ],
+)
+def test_ephemeral_rejects_enabled_scheduler_settings(
+    scheduler_settings: dict[str, object],
 ) -> None:
-    """Preserve an explicitly configured default URL over stateless mode."""
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("LUNCHMONEY_STATELESS", "true")
-    monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
-    (tmp_path / ".env").write_text(f"LUNCHMONEY_DATABASE_URL={DEFAULT_DATABASE_URL}\n")
-    get_settings.cache_clear()
-
-    assert resolve_database_url() == DEFAULT_DATABASE_URL
-    get_settings.cache_clear()
+    """Reject every scheduler activation in ephemeral mode."""
+    with pytest.raises(ValueError, match="scheduler settings"):
+        RuntimeSettings(persistence_mode="ephemeral", **scheduler_settings)
 
 
 def test_get_settings_cached() -> None:

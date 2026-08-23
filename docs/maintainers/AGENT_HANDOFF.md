@@ -4,6 +4,14 @@
 
 This document is an **exhaustive hand-off guide** for AI coding agents and human engineers maintaining **Lunch Money MCP**. It records architectural conventions, the completed implementation history through Sprint 7, and the prioritized operational-product roadmap that follows completion of the Lunch Money v2 API coverage matrix.
 
+The active persistence-mode migration supersedes this document wherever it
+describes persistence-mode behavior. Implementation agents must
+read [`DESIGN_EPHEMERAL_STATEFUL.md`](DESIGN_EPHEMERAL_STATEFUL.md),
+[`EPHEMERAL_ENDPOINT_MATRIX.md`](EPHEMERAL_ENDPOINT_MATRIX.md),
+[`EPHEMERAL_IMPLEMENTATION_HANDOFF.md`](EPHEMERAL_IMPLEMENTATION_HANDOFF.md),
+and [`EPHEMERAL_VERIFICATION.md`](EPHEMERAL_VERIFICATION.md). Completed sprint
+descriptions below remain historical records of the current implementation.
+
 ---
 
 ## 🏛️ System Architectural Principles & Conventions
@@ -13,7 +21,7 @@ This document is an **exhaustive hand-off guide** for AI coding agents and human
 - **Services Layer (`src/lunchmoney_app/services/`)**: All business logic, DB queries, API calls, and domain rollups **must** reside in `services/`.
 - **FastAPI Routers (`src/lunchmoney_app/app/routers/`)**: Routers must be clean 1-to-2 line delegators calling service functions.
 - **FastMCP Server (`src/lunchmoney_app/mcp/server.py`)**: FastMCP tools must be clean 1-to-2 line delegators calling the exact same service functions as FastAPI routers. FastMCP tools are explicitly registered via `@mcp.tool()`, so route `operation_id` alignment is decoupled and not required.
-- **Upstream-First Mutation Pattern**: All write operations (create/update/delete) **must** call the Lunch Money v2 API first. Upon receiving the canonical API response object, the service converts it to a SQLModel record (`Model.from_api()`) and executes `await db.upsert()` or `await db.delete()`.
+- **Upstream-First Mutation Pattern**: All write operations (create/update/delete) **must** call the Lunch Money v2 API first. The canonical response is authoritative. The selected stateful projector reconciles SQLModel storage; ephemeral mode retains no projection.
 
 ### 2. Code Quality & Verification Standard
 
@@ -39,7 +47,7 @@ All commits **must** use the Gitmoji convention:
 
 ```mermaid
 graph LR
-    S0[Sprint 0: Incremental ETL & Stateless Engine] --> S1[Sprint 1: Complete Read-Only Coverage]
+    S0[Sprint 0: Incremental ETL] --> S1[Sprint 1: Complete Read-Only Coverage]
     S1 --> S2[Sprint 2: Category & Account Mutations]
     S2 --> S3[Sprint 3: Transaction Mutations & Splits]
     S3 --> S4[Sprint 4: Budgets & Spending Trends]
@@ -57,9 +65,9 @@ graph LR
 
 ## 🛠️ Sprint Specifications
 
-### Sprint 0: Incremental ETL & Stateless Engine
+### Sprint 0: Incremental ETL
 
-Completed: `SyncMetadata` watermark tracking, opt-in incremental sync (`incremental=True`), configurable safety overlap margins (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`), and in-memory SQLite support (`LUNCHMONEY_STATELESS=true`).
+Completed: `SyncMetadata` watermark tracking, opt-in incremental sync (`incremental=True`), configurable safety overlap margins (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`), and the stateful-only synchronization boundary.
 
 ### Sprint 1: Complete Read-Only 100% v2 API Coverage
 
@@ -91,7 +99,7 @@ Completed: upstream-first tag `POST`, `PUT`, and `DELETE` operations through RES
 
 ### Sprint 8: Production Runtime & Scheduled Sync
 
-Completed: The executable has three runtime commands: `mcp` serves MCP only, `serve` runs the FastAPI application and its MCP routes in one local Uvicorn process, optionally with the embedded scheduler, and `schedule` runs only scheduled sync. MCP stdio defaults to ephemeral per-operation storage for local clients; Streamable HTTP defaults to persistent storage for remote servers. All operational commands accept the same `--stateless` and `--ephemeral` persistence controls. Gunicorn with the maintained Uvicorn worker package serves production HTTP. The opt-in APScheduler 3.11-driven `lunchmoney-app schedule` process runs cron-based sync with timezone configuration, missed-run coalescing, one-at-a-time execution, persisted run reporting, and a shared migration/sync lock. The `serve` and `schedule` commands use Pydantic Settings' native kebab-case CLI flags, with their resolved settings shared by the FastAPI lifespan and scheduled jobs. Scheduler work is isolated from Gunicorn workers. `LUNCHMONEY_EMBED_SCHEDULER=true` is supported only for a local, direct single-worker FastAPI process; it is rejected under Gunicorn, multi-worker, and non-development configurations. APScheduler 3 job stores cannot be shared, so production uses one scheduler process plus any number of web workers.
+Completed: The executable has dedicated `mcp`, `serve`, `schedule`, and `sync` runtimes. MCP stdio defaults to database-free ephemeral operation; HTTP defaults to stateful synchronized storage. The shared `--persistence-mode` option accepts exactly `stateful` or `ephemeral`. Dashboard, synchronization, cache status, watermarks, and scheduling are stateful-only. Gunicorn with the maintained Uvicorn worker package serves production HTTP. The opt-in APScheduler 3.11-driven `lunchmoney-app schedule` process runs cron-based sync with timezone configuration, missed-run coalescing, one-at-a-time execution, persisted run reporting, and a shared migration/sync lock. Scheduler work is isolated from Gunicorn workers. `LUNCHMONEY_EMBED_SCHEDULER=true` is supported only for a local, direct single-worker FastAPI process; it is rejected under Gunicorn, multi-worker, non-development, and ephemeral configurations.
 
 ### Sprint 9: Upstream API Compatibility & Coverage Audit
 

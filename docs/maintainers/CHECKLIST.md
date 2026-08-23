@@ -27,18 +27,18 @@ When a sprint contains independent, non-overlapping tasks (e.g. creating paralle
 
 ## 🎯 Master Implementation Checklist
 
-### 🏁 Sprint 0: Incremental ETL & Stateless Engine
+### 🏁 Sprint 0: Incremental ETL
 
-_Reference Spec_: [`INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-0-incremental-etl--stateless-engine)
+_Reference Spec_: [`INCREMENTAL_ETL.md`](INCREMENTAL_ETL.md) & [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md#sprint-0-incremental-etl)
 
 - [x] **MCP Tools Modularization**: Refactor FastMCP tools into modular domain package in [`src/lunchmoney_app/mcp/tools/`](../src/lunchmoney_app/mcp/tools/).
-- [x] **Config Additions**: Add `stateless: bool` (`LUNCHMONEY_STATELESS`) and `sync_safety_margin_minutes: int` (`LUNCHMONEY_SYNC_SAFETY_MARGIN_MINUTES`) in [`src/lunchmoney_app/config.py`](../src/lunchmoney_app/config.py).
+- [x] **Config Additions**: Add persistence-mode selection and configurable synchronization safety margins.
 - [x] **SyncMetadata Model**: Create `SyncMetadata` table in [`src/lunchmoney_app/database/models/sync.py`](../src/lunchmoney_app/database/models/sync.py).
 - [x] **Alembic Migration**: Add migration `0002_add_sync_metadata_table.py` for `sync_metadata`.
-- [x] **Stateless In-Memory Database**: Update [`src/lunchmoney_app/database/backend.py`](../src/lunchmoney_app/database/backend.py) to support `StaticPool` in-memory SQLite and `create_tables()` helper.
+- [x] **Stateful Database Lifecycle**: Support migrations and explicit schema initialization through the stateful backend.
 - [x] **Opt-In Incremental Sync Logic**: Update [`src/lunchmoney_app/app/sync.py`](../src/lunchmoney_app/app/sync.py) & [`src/lunchmoney_app/services/sync.py`](../src/lunchmoney_app/services/sync.py) to handle transaction-only `incremental: bool = False` and `updated_since` timestamp filtering.
 - [x] **Router & Tool Integration**: Expose `incremental` and `safety_margin_minutes` parameters on `POST /api/sync` and `sync_data` FastMCP tool.
-- [x] **Test Suite**: Cover stateless configuration, database initialization, migrations, incremental transaction policy, and transport delegation in `tests/test_config.py`, `tests/database/test_backend.py`, `tests/database/test_migrations.py`, `tests/test_incremental_sync.py`, `tests/test_app.py`, and `tests/test_mcp.py`.
+- [x] **Test Suite**: Cover persistence configuration, database initialization, migrations, incremental transaction policy, and transport delegation.
 
 ---
 
@@ -178,12 +178,32 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-ex
       inspection commands.
 - [x] **Deployment Docs**: Make Docker Compose the first-class deployment path and document package, scheduler, and upgrade workflows.
 - [x] **Transport & Persistence UX**: Document stdio and Streamable HTTP as
-      distinct MCP workflows and expose shared `--stateless` and `--ephemeral`
-      controls across operational commands, with privacy-preserving stdio defaults.
+      distinct MCP workflows and expose the shared `--persistence-mode`
+      control across operational commands, with a privacy-preserving stdio default.
 - [x] **Documentation Information Architecture**: Keep the README focused on
       end-user MCP setup and move CLI and database reference material into
       dedicated guides; exclude engineering plans and handoff documents from
       the published documentation site.
+
+### 🫥 Persistence Modes: Database-Free Ephemeral Runtime
+
+_Reference Spec_: [`DESIGN_EPHEMERAL_STATEFUL.md`](DESIGN_EPHEMERAL_STATEFUL.md)
+
+- [x] **Architecture Design**: Define the two-mode contract, database-free
+      operation lifecycle, domain source boundaries, error behavior, and
+      implementation acceptance criteria.
+- [x] **Agent Hand-off Package**: Document every endpoint capability, atomic
+      implementation packet, file boundary, fixture contract, architecture
+      guard, and final review gate for downstream implementation agents.
+- [x] **Two Explicit Modes**: Replace boolean selection and SQLite-backed
+      `ephemeral` settings with validated `stateful` and database-free
+      `ephemeral` persistence modes.
+- [x] **Mode-Specific Domain Sources**: Add focused stateful and upstream-backed
+      readers/projectors so ephemeral requests never instantiate a database.
+- [x] **Stateful-Only Synchronization**: Restrict migrations, synchronization,
+      incremental watermarks, and scheduling to stateful mode.
+- [x] **Coverage and Documentation**: Verify both mode contracts and update
+      user/operator documentation that describes persistence behavior.
 
 ---
 

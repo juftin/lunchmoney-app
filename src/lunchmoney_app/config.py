@@ -11,11 +11,6 @@ from pydantic_settings import BaseSettings, CliSettingsSource, SettingsConfigDic
 DEFAULT_DATABASE_URL: str = "sqlite+aiosqlite:///lunchmoney.db"
 """Default persistent SQLite connection URL used when omitted."""
 
-IN_MEMORY_DATABASE_URL: str = (
-    "sqlite+aiosqlite:///file:memdb?mode=memory&cache=shared&uri=true"
-)
-"""Shared in-memory SQLite connection URL used by stateless mode."""
-
 
 def _split_comma_separated_values(value: str) -> tuple[str, ...]:
     """Normalize a comma-separated network policy value.
@@ -89,6 +84,11 @@ class SecretSettings(BaseSettings):
     )
     """Redis connection URL for distributed locking."""
 
+    @property
+    def database_url_is_explicit(self) -> bool:
+        """Return whether a supported settings source supplied a database URL."""
+        return "database_url" in self.model_fields_set
+
 
 class RuntimeSettingsBase(BaseSettings):
     """Base model configuration for environment-backed non-secret settings."""
@@ -148,28 +148,14 @@ class ExecutionSettings(BaseModel):
 class PersistenceSettings(BaseModel):
     """Non-secret settings selecting the lifetime of stored financial data."""
 
-    stateless: bool = Field(
-        default=False,
-        description="Keep a live Lunch Money data cache between requests",
+    persistence_mode: Literal["stateful", "ephemeral"] = Field(
+        default="stateful",
+        description="Persistence mode: stateful database cache or database-free ephemeral",
     )
-    """Whether to keep a live Lunch Money data cache between requests."""
-
-    ephemeral: bool = Field(
-        default=False,
-        description="Pass each request through to Lunch Money without retaining data",
-    )
-    """Whether requests should pass through to Lunch Money without retained data."""
-
-    @model_validator(mode="after")
-    def _validate_memory_modes(self) -> "PersistenceSettings":
-        """Reject mutually exclusive shared-memory and ephemeral modes."""
-        if self.stateless and self.ephemeral:
-            msg = "stateless and ephemeral cannot both be enabled"
-            raise ValueError(msg)
-        return self
+    """Selected persistence mode."""
 
 
-class StatelessSettings(PersistenceSettings):
+class SyncSettings(PersistenceSettings):
     """Persistence and synchronization settings for non-MCP runtimes."""
 
     sync_safety_margin_minutes: int = Field(
@@ -179,7 +165,7 @@ class StatelessSettings(PersistenceSettings):
     """Safety overlap margin for incremental ETL queries."""
 
 
-class SyncCliSettings(StatelessSettings, RuntimeSettingsBase):
+class SyncCliSettings(SyncSettings, RuntimeSettingsBase):
     """CLI-visible settings for one foreground synchronization."""
 
 
@@ -354,13 +340,26 @@ class BindSettings(BaseModel):
 class RuntimeSettings(
     OAuthSettings,
     ExecutionSettings,
-    StatelessSettings,
+    SyncSettings,
     ScheduleSettings,
     EmbeddedSchedulerSettings,
     BindSettings,
     RuntimeSettingsBase,
 ):
     """All non-secret environment settings used by application components."""
+
+    @model_validator(mode="after")
+    def _validate_ephemeral_scheduler(self) -> "RuntimeSettings":
+        """Reject scheduler configuration that requires durable state."""
+        if self.persistence_mode == "ephemeral" and (
+            self.schedule_transactions_cron is not None
+            or self.schedule_metadata_cron is not None
+            or self.schedule_cron is not None
+            or self.embed_scheduler
+        ):
+            msg = "scheduler settings require stateful persistence mode"
+            raise ValueError(msg)
+        return self
 
 
 class McpCliSettings(
@@ -373,7 +372,7 @@ class McpCliSettings(
 
 
 class ScheduleCliSettings(
-    StatelessSettings,
+    SyncSettings,
     ScheduleSettings,
     RuntimeSettingsBase,
 ):
@@ -383,7 +382,7 @@ class ScheduleCliSettings(
 class ServeCliSettings(
     OAuthSettings,
     ExecutionSettings,
-    StatelessSettings,
+    SyncSettings,
     ScheduleSettings,
     EmbeddedSchedulerSettings,
     BindSettings,
@@ -446,6 +445,10 @@ def configure_runtime_settings(settings: RuntimeSettings) -> None:
     settings : RuntimeSettings
         Configuration parsed before the FastAPI or scheduler runtime starts.
     """
+    validate_persistence_configuration(
+        settings=settings,
+        secret_settings=get_secret_settings(),
+    )
     global _runtime_settings
     _runtime_settings = settings
     get_settings.cache_clear()
@@ -510,3 +513,29 @@ def get_settings() -> RuntimeSettings:
 def get_secret_settings() -> SecretSettings:
     """Return cached environment-only secret settings."""
     return SecretSettings()
+
+
+def validate_persistence_configuration(
+    settings: RuntimeSettings,
+    secret_settings: SecretSettings,
+) -> None:
+    """Validate persistence settings that span public and secret sources.
+
+    Parameters
+    ----------
+    settings : RuntimeSettings
+        Resolved non-secret runtime configuration.
+    secret_settings : SecretSettings
+        Resolved environment-only configuration with source provenance.
+
+    Raises
+    ------
+    ValueError
+        If database configuration is explicitly combined with ephemeral mode.
+    """
+    if (
+        settings.persistence_mode == "ephemeral"
+        and secret_settings.database_url_is_explicit
+    ):
+        msg = "database settings cannot be provided in ephemeral persistence mode"
+        raise ValueError(msg)

@@ -6,14 +6,12 @@ import json
 import sys
 from typing import Literal, cast
 
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_app.app.auth import get_mcp_oauth_provider
 from lunchmoney_app.config import (
     McpCliSettings,
     RuntimeSettings,
     configure_runtime_mode,
     configure_runtime_settings,
-    get_settings,
     parse_cli_settings,
 )
 from lunchmoney_app.mcp.app import mcp
@@ -31,6 +29,7 @@ from lunchmoney_app.mcp.tools import (
     user,
 )
 from lunchmoney_app.services import fetch_account_summary, fetch_categories
+from lunchmoney_app.services.operations import get_operation_context
 
 
 Transport = Literal["stdio", "http", "sse", "streamable-http"]
@@ -57,34 +56,29 @@ _ = (
     mime_type="text/markdown",
 )
 async def account_summary_resource() -> str:
-    """Render the current month's cached Lunch Money summary as Markdown."""
+    """Render the current month's Lunch Money summary as Markdown."""
     today = datetime.date.today()
     summary = await fetch_account_summary(
-        db=get_database(),
-        client=get_lunchmoney_app(),
+        context=get_operation_context(),
         start_date=today.replace(day=1),
         end_date=today,
         include_totals=True,
     )
     if summary is None:
-        return (
-            "# Lunch Money summary\n\nNo cached summary is available for this period."
-        )
+        return "# Lunch Money summary\n\nNo summary is available for this period."
     return f"# Lunch Money summary\n\n```json\n{summary.model_dump_json(indent=2)}\n```"
 
 
 @mcp.resource(
     "lunchmoney://categories",
-    description="Complete synchronized category hierarchy.",
+    description="Complete category hierarchy for the selected persistence mode.",
     mime_type="application/json",
 )
 async def categories_resource() -> str:
     """Render configured categories as a flat JSON collection resource."""
     categories = await fetch_categories(
-        client=get_lunchmoney_app(),
-        db=get_database(),
+        context=get_operation_context(),
         query=CategoryQuery(),
-        live=get_settings().stateless,
     )
     return json.dumps([category.model_dump(mode="json") for category in categories])
 
@@ -201,11 +195,11 @@ def apply_transport_defaults(
     RuntimeSettings
         Settings with the stdio-only ephemeral default applied when appropriate.
     """
-    persistence_fields = {"stateless", "ephemeral"}
+    persistence_fields = {"persistence_mode"}
     if (
         args.transport or "stdio"
     ) == "stdio" and not persistence_fields & settings.model_fields_set:
-        settings.ephemeral = True
+        settings.persistence_mode = "ephemeral"
     return settings
 
 

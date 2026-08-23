@@ -5,6 +5,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from lunchmoney_app.config import RuntimeSettings
+from lunchmoney_app.services.errors import StatefulModeRequired
+
 
 @pytest.fixture(autouse=True)
 def reset_runtime_configuration() -> Iterator[None]:
@@ -158,6 +161,47 @@ def test_cli_runs_one_foreground_sync(monkeypatch: pytest.MonkeyPatch) -> None:
         incremental=True,
         safety_margin_minutes=7,
     )
+
+
+def test_cli_maps_ephemeral_sync_to_safe_nonzero_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Return the stable mode error without exposing a traceback."""
+    import lunchmoney_app.cli as cli
+
+    settings = Mock(sync_safety_margin_minutes=5)
+    monkeypatch.setattr(cli, "_resolve_settings", Mock(return_value=settings))
+    monkeypatch.setattr(cli, "configure_runtime_settings", Mock())
+    monkeypatch.setattr(cli, "configure_runtime_mode", Mock())
+    monkeypatch.setattr(cli, "_run_sync", AsyncMock(side_effect=StatefulModeRequired()))
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(["sync"])
+
+    assert error.value.code == 1
+    stderr = capsys.readouterr().err
+    assert "stateful_mode_required" in stderr
+    assert "Traceback" not in stderr
+
+
+@pytest.mark.asyncio
+async def test_ephemeral_sync_checks_mode_before_constructing_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Raise the stable mode boundary before resolving upstream configuration."""
+    import lunchmoney_app.cli as cli
+
+    monkeypatch.setattr(
+        cli, "get_settings", lambda: RuntimeSettings(persistence_mode="ephemeral")
+    )
+    get_lunchmoney_app = Mock(side_effect=AssertionError("client accessed"))
+    monkeypatch.setattr(cli, "get_lunchmoney_app", get_lunchmoney_app)
+
+    with pytest.raises(StatefulModeRequired):
+        await cli._run_sync(days=30, incremental=False, safety_margin_minutes=5)
+
+    get_lunchmoney_app.assert_not_called()
 
 
 def test_cli_prefers_flags_then_pydantic_environment(

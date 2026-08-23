@@ -18,6 +18,7 @@ from database.factories import (
     plaid_account_object,
     tag_object,
     transaction_object,
+    user_object,
 )
 from lunchmoney_app.app.main import fastapi_app
 from lunchmoney_app.client import LunchMoneyApp
@@ -31,7 +32,7 @@ from lunchmoney_app.database.models import (
     Transaction,
 )
 from lunchmoney_app.mcp import mcp
-from lunchmoney_app.schemas import CategoryQuery
+from lunchmoney_app.schemas import AccountsSummary, CategoryQuery, TransactionQuery
 from lunchmoney_app.services import (
     fetch_account_summary,
     fetch_accounts,
@@ -45,7 +46,13 @@ from lunchmoney_app.services import (
     fetch_recurring_items,
     fetch_tag_by_id,
     fetch_tags,
+    fetch_transactions,
     fetch_transaction_by_id,
+    fetch_user_info,
+)
+from lunchmoney_app.services.operations import (
+    EphemeralOperationContextFactory,
+    StatefulOperationContextFactory,
 )
 
 
@@ -80,6 +87,56 @@ def _recurring_item() -> RecurringObject:
 
 
 @pytest.mark.asyncio
+async def test_ephemeral_core_readers_use_only_live_canonical_sources() -> None:
+    """Serve representative live domains without constructing database records."""
+    user = user_object()
+    manual = manual_account_object()
+    plaid = plaid_account_object()
+    category = category_object()
+    tag = tag_object()
+    transaction = transaction_object()
+    refresh_transactions = AsyncMock(return_value={transaction.id: transaction})
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                me=SimpleNamespace(get_me=AsyncMock(return_value=user)),
+                manual_accounts=SimpleNamespace(
+                    get_all_manual_accounts=AsyncMock(
+                        return_value=SimpleNamespace(manual_accounts=[manual])
+                    )
+                ),
+                plaid=SimpleNamespace(
+                    get_all_plaid_accounts=AsyncMock(
+                        return_value=SimpleNamespace(plaid_accounts=[plaid])
+                    )
+                ),
+                categories=SimpleNamespace(
+                    get_all_categories=AsyncMock(
+                        return_value=SimpleNamespace(categories=[category])
+                    )
+                ),
+                tags=SimpleNamespace(
+                    get_all_tags=AsyncMock(return_value=SimpleNamespace(tags=[tag]))
+                ),
+            ),
+            refresh_transactions=refresh_transactions,
+        ),
+    )
+
+    async with EphemeralOperationContextFactory(client).operation() as context:
+        assert await fetch_user_info(context) == user
+        assert await fetch_accounts(context) == AccountsSummary(
+            manual_accounts=[manual], plaid_accounts=[plaid]
+        )
+        assert await fetch_categories(context, CategoryQuery()) == [category]
+        assert await fetch_tags(context) == [tag]
+        assert await fetch_transactions(context, TransactionQuery()) == [transaction]
+
+    refresh_transactions.assert_awaited_once_with(cache=False)
+
+
+@pytest.mark.asyncio
 async def test_summary_service_reads_period_snapshot() -> None:
     """Read a summary snapshot using its synchronized transaction period."""
     summary = SummaryResponseObject.model_validate({"aligned": True, "categories": []})
@@ -87,22 +144,54 @@ async def test_summary_service_reads_period_snapshot() -> None:
     database.get_cached_response.return_value = summary.model_dump(mode="json")
     client = create_autospec(LunchMoneyApp, instance=True)
 
-    result = await fetch_account_summary(
-        db=database,
-        client=client,
-        start_date=datetime.date(2026, 1, 1),
-        end_date=datetime.date(2026, 1, 31),
-        include_exclude_from_budgets=True,
-        include_occurrences=True,
-        include_past_budget_dates=True,
-        include_totals=True,
-        include_rollover_pool=True,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        result = await fetch_account_summary(
+            context,
+            start_date=datetime.date(2026, 1, 1),
+            end_date=datetime.date(2026, 1, 31),
+            include_exclude_from_budgets=True,
+            include_occurrences=True,
+            include_past_budget_dates=True,
+            include_totals=True,
+            include_rollover_pool=True,
+        )
 
     assert result == summary
     database.get_cached_response.assert_awaited_once_with(
         "summary:2026-01-01:2026-01-31"
     )
+    database.list.assert_not_awaited()
+    client.refresh.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ephemeral_summary_skips_categories_when_exclusions_are_included() -> (
+    None
+):
+    """Avoid an unrelated live category request when no exclusion shaping is needed."""
+    summary = SummaryResponseObject.model_validate({"aligned": True, "categories": []})
+    get_budget_summary = AsyncMock(return_value=summary)
+    get_all_categories = AsyncMock(side_effect=AssertionError("categories accessed"))
+    client = cast(
+        LunchMoneyApp,
+        SimpleNamespace(
+            client=SimpleNamespace(
+                summary=SimpleNamespace(get_budget_summary=get_budget_summary),
+                categories=SimpleNamespace(get_all_categories=get_all_categories),
+            )
+        ),
+    )
+
+    async with EphemeralOperationContextFactory(client).operation() as context:
+        result = await fetch_account_summary(
+            context,
+            start_date=datetime.date(2026, 1, 1),
+            end_date=datetime.date(2026, 1, 31),
+            include_exclude_from_budgets=True,
+        )
+
+    assert result == summary
+    get_all_categories.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -125,20 +214,13 @@ async def test_recurring_services_read_period_snapshot() -> None:
     start_date = datetime.date(2026, 1, 1)
     end_date = datetime.date(2026, 1, 31)
 
-    listed = await fetch_recurring_items(
-        db=database,
-        client=client,
-        start_date=start_date,
-        end_date=end_date,
-        include_suggested=True,
-    )
-    selected = await fetch_recurring_item_by_id(
-        db=database,
-        client=client,
-        recurring_item_id=recurring_item.id,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        listed = await fetch_recurring_items(
+            context, start_date, end_date, include_suggested=True
+        )
+        selected = await fetch_recurring_item_by_id(
+            context, recurring_item.id, start_date, end_date
+        )
 
     assert listed == [recurring_item]
     assert selected == recurring_item
@@ -161,11 +243,8 @@ async def test_recurring_item_service_reads_an_undated_cached_item() -> None:
     )
     client = create_autospec(LunchMoneyApp, instance=True)
 
-    result = await fetch_recurring_item_by_id(
-        db=database,
-        client=client,
-        recurring_item_id=recurring_item.id,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        result = await fetch_recurring_item_by_id(context, recurring_item.id)
 
     assert result == recurring_item
     database.get.assert_awaited_once_with(RecurringItem, recurring_item.id)
@@ -185,10 +264,9 @@ async def test_recurring_service_filters_suggested_items_by_default() -> None:
     }
     client = create_autospec(LunchMoneyApp, instance=True)
 
-    default_items = await fetch_recurring_items(db=database, client=client)
-    all_items = await fetch_recurring_items(
-        db=database, client=client, include_suggested=True
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        default_items = await fetch_recurring_items(context)
+        all_items = await fetch_recurring_items(context, include_suggested=True)
 
     assert default_items == [recurring_item]
     assert all_items == [recurring_item, suggested]
@@ -214,11 +292,8 @@ async def test_recurring_service_refreshes_a_missing_requested_window() -> None:
     database.get_cached_response.return_value = None
     start_date = datetime.date(2025, 1, 1)
 
-    result = await fetch_recurring_items(
-        db=database,
-        client=client,
-        start_date=start_date,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        result = await fetch_recurring_items(context, start_date=start_date)
 
     assert result == [recurring_item]
     get_all_recurring.assert_awaited_once_with(
@@ -252,12 +327,8 @@ async def test_summary_service_refreshes_a_missing_requested_window() -> None:
     start_date = datetime.date(2025, 1, 1)
     end_date = datetime.date(2025, 1, 31)
 
-    result = await fetch_account_summary(
-        db=database,
-        client=client,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        result = await fetch_account_summary(context, start_date, end_date)
 
     assert result.aligned is True
     get_budget_summary.assert_awaited_once_with(
@@ -310,12 +381,12 @@ async def test_summary_service_refreshes_categories_before_filtering_a_new_snaps
     database.get_cached_response.return_value = None
     database.list.return_value = [Category.from_api(category)]
 
-    result = await fetch_account_summary(
-        db=database,
-        client=client,
-        start_date=datetime.date(2025, 1, 1),
-        end_date=datetime.date(2025, 1, 31),
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        result = await fetch_account_summary(
+            context,
+            datetime.date(2025, 1, 1),
+            datetime.date(2025, 1, 31),
+        )
 
     assert result.categories == []
     refresh.assert_awaited_once_with(model=CategoryObject, cache=False)
@@ -329,10 +400,12 @@ async def test_synchronized_tag_services_map_records_and_missing_items() -> None
     database = create_autospec(LunchMoneyDatabase, instance=True)
     database.list = AsyncMock(return_value=[tag])
     database.get = AsyncMock(side_effect=[tag, None])
+    client = create_autospec(LunchMoneyApp, instance=True)
 
-    listed = await fetch_tags(db=database)
-    selected = await fetch_tag_by_id(db=database, tag_id=tag.id)
-    missing = await fetch_tag_by_id(db=database, tag_id=999)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        listed = await fetch_tags(context)
+        selected = await fetch_tag_by_id(context, tag.id)
+        missing = await fetch_tag_by_id(context, 999)
 
     assert listed[0].model_dump(mode="json") == tag_object().model_dump(mode="json")
     assert selected is not None
@@ -358,19 +431,12 @@ async def test_synchronized_single_item_services_map_all_domain_records() -> Non
         side_effect=[category, manual_account, plaid_account, transaction]
     )
 
-    category_result = await fetch_category_by_id(db=database, category_id=category.id)
-    manual_result = await fetch_manual_account_by_id(
-        db=database,
-        account_id=manual_account.id,
-    )
-    plaid_result = await fetch_plaid_account_by_id(
-        db=database,
-        account_id=plaid_account.id,
-    )
-    transaction_result = await fetch_transaction_by_id(
-        db=database,
-        transaction_id=transaction.id,
-    )
+    client = create_autospec(LunchMoneyApp, instance=True)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        category_result = await fetch_category_by_id(context, category.id)
+        manual_result = await fetch_manual_account_by_id(context, manual_account.id)
+        plaid_result = await fetch_plaid_account_by_id(context, plaid_account.id)
+        transaction_result = await fetch_transaction_by_id(context, transaction.id)
 
     assert category_result is not None
     assert category_result.model_dump(mode="json") == category_api.model_dump(
@@ -408,14 +474,11 @@ async def test_synchronized_collection_services_preserve_complete_api_objects() 
         side_effect=[[category], [manual_account], [plaid_account]]
     )
 
-    categories = await fetch_categories(
-        client=create_autospec(LunchMoneyApp, instance=True),
-        db=database,
-        query=CategoryQuery(),
-        live=False,
-    )
-    manual_accounts = await fetch_manual_accounts(db=database)
-    plaid_accounts = await fetch_plaid_accounts(db=database)
+    client = create_autospec(LunchMoneyApp, instance=True)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        categories = await fetch_categories(context, CategoryQuery())
+        manual_accounts = await fetch_manual_accounts(context)
+        plaid_accounts = await fetch_plaid_accounts(context)
 
     assert categories[0].model_dump(mode="json") == category_api.model_dump(mode="json")
     assert manual_accounts[0].model_dump(mode="json") == manual_account_api.model_dump(
@@ -442,7 +505,9 @@ async def test_shared_accounts_service_preserves_complete_source_collections() -
         ]
     )
 
-    accounts = await fetch_accounts(db=database)
+    client = create_autospec(LunchMoneyApp, instance=True)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        accounts = await fetch_accounts(context)
 
     assert accounts.manual_accounts[0].model_dump(mode="json") == (
         manual_account_api.model_dump(mode="json")

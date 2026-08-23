@@ -10,7 +10,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from lunchmoney_app.client import LunchMoneyApp
 from lunchmoney_app.config import get_secret_settings
 from lunchmoney_app.database import LunchMoneyDatabase
-from lunchmoney_app.services.operations import get_operation_database
+from lunchmoney_app.services.operations import (
+    OperationContext,
+    get_operation_context,
+    get_stateful_operation_context,
+)
 
 
 @cache
@@ -26,8 +30,8 @@ def get_shared_database() -> LunchMoneyDatabase:
 
 
 def get_database() -> LunchMoneyDatabase:
-    """Return the active operation database or the process-shared database."""
-    return get_operation_database() or get_shared_database()
+    """Return storage for a bound stateful operation only."""
+    return get_stateful_operation_context().database
 
 
 get_database.cache_clear = get_shared_database.cache_clear  # type: ignore[attr-defined]
@@ -74,5 +78,7 @@ __all__ = [
     "get_database",
     "get_db_session",
     "get_lunchmoney_app",
+    "get_operation_context",
     "get_shared_database",
+    "OperationContext",
 ]

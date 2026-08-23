@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
 from collections.abc import Callable
-from typing import Any, TypeVar, cast
+from typing import Any, Literal, TypeVar, cast, get_args, get_origin
 
 import click
 import uvicorn
@@ -36,7 +37,8 @@ from lunchmoney_app.logging_config import LOG_CONFIG
 from lunchmoney_app.mcp import server as mcp_server
 from lunchmoney_app.scheduler import run_schedule_process
 from lunchmoney_app.services import execute_sync
-from lunchmoney_app.services.operations import data_operation
+from lunchmoney_app.services.errors import StatefulModeRequired
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 
 SettingsType = TypeVar("SettingsType", bound=BaseSettings)
 """Concrete Pydantic Settings model resolved for one command."""
@@ -56,6 +58,8 @@ def _field_click_type(field: FieldInfo) -> click.ParamType[Any]:
     """Map a Pydantic field's primitive type and bounds to a Click type."""
     default = field.default
     annotation = field.annotation
+    if get_origin(annotation) is Literal:
+        return click.Choice(tuple(str(value) for value in get_args(annotation)))
     if isinstance(default, bool) or annotation is bool:
         return click.BOOL
     minimum: int | float | None = None
@@ -254,6 +258,8 @@ def schedule_command(ctx: click.Context, **values: Any) -> None:
     """Run the opt-in synchronization scheduler."""
     settings = _resolve_settings(ctx, ScheduleCliSettings, values)
     configure_runtime_settings(settings)
+    if settings.persistence_mode == "ephemeral":
+        _exit_stateful_mode_required()
     configure_runtime_mode("schedule")
     asyncio.run(run_schedule_process(settings=settings))
 
@@ -302,13 +308,16 @@ def sync_command(
     settings = _resolve_settings(ctx, SyncCliSettings, values)
     configure_runtime_settings(settings)
     configure_runtime_mode("sync")
-    asyncio.run(
-        _run_sync(
-            days=days,
-            incremental=incremental,
-            safety_margin_minutes=settings.sync_safety_margin_minutes,
+    try:
+        asyncio.run(
+            _run_sync(
+                days=days,
+                incremental=incremental,
+                safety_margin_minutes=settings.sync_safety_margin_minutes,
+            )
         )
-    )
+    except StatefulModeRequired:
+        _exit_stateful_mode_required()
 
 
 @cli.command("doctor")
@@ -329,6 +338,13 @@ def doctor_command() -> None:
 def version_command() -> None:
     """Print the installed package version."""
     click.echo(f"{__application__} {__version__}")
+
+
+def _exit_stateful_mode_required() -> None:
+    """Exit safely when a CLI operation is unavailable without persistence."""
+    error = StatefulModeRequired()
+    click.echo(json.dumps(error.as_dict()), err=True)
+    raise SystemExit(1)
 
 
 @cli.group("config")
@@ -392,16 +408,15 @@ async def _run_sync(
     incremental: bool,
     safety_margin_minutes: int,
 ) -> None:
-    """Execute one sync and print its concise result."""
+    """Execute one stateful sync and print its concise result."""
+    settings = get_settings()
+    if settings.persistence_mode == "ephemeral":
+        raise StatefulModeRequired
     client = get_lunchmoney_app()
-    async with data_operation(
-        client=client,
-        database=None if get_settings().ephemeral else get_shared_database(),
-        days=days,
-        refresh=False,
-    ) as db:
+    factory = StatefulOperationContextFactory(client, get_shared_database())
+    async with factory.operation() as context:
         response = await execute_sync(
-            db=db,
+            db=context.database,
             client=client,
             days=days,
             incremental=incremental,

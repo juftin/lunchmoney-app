@@ -29,6 +29,7 @@ from lunchmoney_app.services import (
     fetch_spending_trends,
     set_budget_value,
 )
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 from database.factories import category_object, transaction_object
 
 
@@ -88,7 +89,8 @@ async def test_budget_settings_service_reads_cached_response() -> None:
     database.get_cached_response.return_value = settings.model_dump(mode="json")
     client = create_autospec(LunchMoneyApp, instance=True)
 
-    result = await fetch_budget_settings(db=database, client=client)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        result = await fetch_budget_settings(context)
 
     assert result == settings
     database.get_cached_response.assert_awaited_once_with("budget-settings")
@@ -110,7 +112,8 @@ async def test_budget_settings_service_refreshes_a_missing_snapshot() -> None:
     database = AsyncMock()
     database.get_cached_response.return_value = None
 
-    result = await fetch_budget_settings(db=database, client=client)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        result = await fetch_budget_settings(context)
 
     assert result == settings
     get_budget_settings.assert_awaited_once_with()
@@ -139,13 +142,9 @@ async def test_budget_mutation_services_forward_to_lunch_money_client() -> None:
     )
     database = create_autospec(LunchMoneyDatabase, instance=True)
 
-    result = await set_budget_value(client=client, db=database, request=request)
-    await clear_budget_value(
-        client=client,
-        db=database,
-        category_id=request.category_id,
-        start_date=request.start_date,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        result = await set_budget_value(context, request)
+        await clear_budget_value(context, request.category_id, request.start_date)
 
     assert result == response
     upsert_budget.assert_awaited_once_with(upsert_budget_request_object=request)
@@ -153,8 +152,9 @@ async def test_budget_mutation_services_forward_to_lunch_money_client() -> None:
         category_id=request.category_id,
         start_date=request.start_date,
     )
-    assert database.delete_cached_responses.await_count == 2
-    database.delete_cached_responses.assert_awaited_with("summary:")
+    assert database.delete_cached_responses.await_count == 4
+    database.delete_cached_responses.assert_any_await("summary:")
+    database.delete_cached_responses.assert_any_await("health:stale:budgets")
 
 
 @pytest.mark.asyncio
@@ -195,12 +195,26 @@ async def test_spending_trends_aggregate_calendar_periods(
         )
         await database.upsert(transaction)
 
-    response = await fetch_spending_trends(
-        db=database,
-        granularity="weekly",
-        start_date=datetime.date(2026, 1, 1),
-        end_date=datetime.date(2026, 1, 31),
-    )
+    client = create_autospec(LunchMoneyApp, instance=True)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        response = await fetch_spending_trends(
+            context,
+            granularity="weekly",
+            start_date=datetime.date(2026, 1, 1),
+            end_date=datetime.date(2026, 1, 31),
+        )
+        daily = await fetch_spending_trends(
+            context,
+            granularity="daily",
+            start_date=datetime.date(2026, 1, 1),
+            end_date=datetime.date(2026, 1, 31),
+        )
+        monthly = await fetch_spending_trends(
+            context,
+            granularity="monthly",
+            start_date=datetime.date(2026, 1, 1),
+            end_date=datetime.date(2026, 1, 31),
+        )
 
     assert response.granularity == "weekly"
     assert [
@@ -210,19 +224,6 @@ async def test_spending_trends_aggregate_calendar_periods(
         (datetime.date(2026, 1, 5), 10.0, 100.0),
         (datetime.date(2026, 1, 12), 20.0, 0.0),
     ]
-
-    daily = await fetch_spending_trends(
-        db=database,
-        granularity="daily",
-        start_date=datetime.date(2026, 1, 1),
-        end_date=datetime.date(2026, 1, 31),
-    )
-    monthly = await fetch_spending_trends(
-        db=database,
-        granularity="monthly",
-        start_date=datetime.date(2026, 1, 1),
-        end_date=datetime.date(2026, 1, 31),
-    )
 
     assert [trend.start_date for trend in daily.trends] == [
         datetime.date(2026, 1, 5),
@@ -253,14 +254,12 @@ async def test_budget_settings_mcp_tool_delegates_to_service(
     budget_tools = sys.modules["lunchmoney_app.mcp.tools.budgets"]
     fetch_settings = AsyncMock(return_value=_budget_settings())
     monkeypatch.setattr(budget_tools, "fetch_budget_settings", fetch_settings)
-    database = object()
-    client = object()
-    monkeypatch.setattr(budget_tools, "get_database", lambda: database)
-    monkeypatch.setattr(budget_tools, "get_lunchmoney_app", lambda: client)
+    context = object()
+    monkeypatch.setattr(budget_tools, "get_operation_context", lambda: context)
 
     await mcp.call_tool("get_budget_settings", {})
 
-    fetch_settings.assert_awaited_once_with(db=database, client=client)
+    fetch_settings.assert_awaited_once_with(context)
 
 
 @pytest.mark.asyncio

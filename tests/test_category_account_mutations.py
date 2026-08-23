@@ -34,6 +34,7 @@ from lunchmoney_app.services import (
     update_category,
     update_manual_account,
 )
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 
 
 def _category_create_request() -> CreateCategoryRequestObject:
@@ -76,19 +77,10 @@ async def test_category_mutations_write_upstream_before_cache_updates() -> None:
     create_request = _category_create_request()
     update_request = UpdateCategoryRequestObject(name="Updated category")
 
-    created = await create_category(client=client, db=database, request=create_request)
-    updated = await update_category(
-        client=client,
-        db=database,
-        category_id=category.id,
-        request=update_request,
-    )
-    await delete_category(
-        client=client,
-        db=database,
-        category_id=category.id,
-        force=True,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        created = await create_category(context, create_request)
+        updated = await update_category(context, category.id, update_request)
+        await delete_category(context, category.id, force=True)
 
     assert created.id == category.id
     assert updated.name == category.name
@@ -128,24 +120,15 @@ async def test_manual_account_mutations_write_upstream_before_cache_updates() ->
     create_request = _manual_account_create_request()
     update_request = ManualAccountUpdateRequest(name="Updated account")
 
-    created = await create_manual_account(
-        client=client,
-        db=database,
-        request=create_request,
-    )
-    updated = await update_manual_account(
-        client=client,
-        db=database,
-        account_id=account.id,
-        request=update_request,
-    )
-    await delete_manual_account(
-        client=client,
-        db=database,
-        account_id=account.id,
-        delete_items=True,
-        delete_balance_history=False,
-    )
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        created = await create_manual_account(context, create_request)
+        updated = await update_manual_account(context, account.id, update_request)
+        await delete_manual_account(
+            context,
+            account.id,
+            delete_items=True,
+            delete_balance_history=False,
+        )
 
     assert created.id == account.id
     assert updated.name == account.name
@@ -201,17 +184,14 @@ async def test_deletes_reconcile_cached_transaction_relationships() -> None:
     account_database.list = AsyncMock(return_value=[account_transaction])
     account_database.delete = AsyncMock(return_value=True)
 
-    await delete_category(
-        client=category_client,
-        db=category_database,
-        category_id=category.id,
-    )
-    await delete_manual_account(
-        client=account_client,
-        db=account_database,
-        account_id=account.id,
-        delete_items=True,
-    )
+    async with StatefulOperationContextFactory(
+        category_client, category_database
+    ).operation() as context:
+        await delete_category(context, category.id)
+    async with StatefulOperationContextFactory(
+        account_client, account_database
+    ).operation() as context:
+        await delete_manual_account(context, account.id, delete_items=True)
 
     assert category_transaction.category_id is None
     category_database.upsert_many.assert_awaited_once_with([category_transaction])
@@ -236,12 +216,9 @@ async def test_plaid_fetch_forwards_its_optional_scope() -> None:
     start_date = datetime.date(2026, 1, 1)
     end_date = datetime.date(2026, 1, 31)
 
-    await trigger_plaid_fetch(
-        client=client,
-        start_date=start_date,
-        end_date=end_date,
-        account_id=42,
-    )
+    database = create_autospec(LunchMoneyDatabase, instance=True)
+    async with StatefulOperationContextFactory(client, database).operation() as context:
+        await trigger_plaid_fetch(context, start_date, end_date, account_id=42)
 
     trigger.assert_awaited_once_with(start_date=start_date, end_date=end_date, id=42)
 

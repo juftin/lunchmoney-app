@@ -1,19 +1,16 @@
-"""Live budget settings endpoints."""
+"""Budget endpoints."""
 
+import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-import datetime
-
 from lunchmoney.models import (
     BudgetSettingsResponseObject,
     BudgetUpsertResponseObject,
     UpsertBudgetRequestObject,
 )
 
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_app.client import LunchMoneyApp
-from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.app.dependencies import OperationContext, get_operation_context
 from lunchmoney_app.services import (
     clear_budget_value,
     fetch_budget_settings,
@@ -21,7 +18,6 @@ from lunchmoney_app.services import (
 )
 
 router = APIRouter(tags=["Budgets"])
-"""FastAPI APIRouter for live budget settings endpoints."""
 
 
 @router.get(
@@ -30,18 +26,10 @@ router = APIRouter(tags=["Budgets"])
     operation_id="get_budget_settings",
 )
 async def get_budget_settings(
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> BudgetSettingsResponseObject:
-    """Fetch the authenticated user's budget-period settings.
-
-    **Parameters:**
-
-    - **client**: Configured Lunch Money API client.
-
-    **Returns:** Upstream budget-period settings.
-    """
-    return await fetch_budget_settings(db=db, client=client)
+    """Return the authenticated user's budget-period settings."""
+    return await fetch_budget_settings(context)
 
 
 @router.put(
@@ -51,28 +39,17 @@ async def get_budget_settings(
 )
 async def upsert_budget(
     request: UpsertBudgetRequestObject,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> BudgetUpsertResponseObject:
-    """Set one category's budget value for a budget period."""
-    return await set_budget_value(client=client, db=db, request=request)
+    """Set one category's budget value for a period."""
+    return await set_budget_value(context, request)
 
 
-@router.delete(
-    path="/budgets",
-    status_code=204,
-    operation_id="clear_budget",
-)
+@router.delete(path="/budgets", status_code=204, operation_id="clear_budget")
 async def clear_budget(
     category_id: int,
     start_date: datetime.date,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
 ) -> None:
-    """Clear one category's budget value for a budget period."""
-    await clear_budget_value(
-        client=client,
-        db=db,
-        category_id=category_id,
-        start_date=start_date,
-    )
+    """Clear one category's budget value for a period."""
+    await clear_budget_value(context, category_id, start_date)

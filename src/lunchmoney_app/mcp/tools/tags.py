@@ -1,94 +1,46 @@
-"""FastMCP tools for synchronized transaction tag operations."""
+"""FastMCP tag tools."""
 
-from typing import TYPE_CHECKING
+from lunchmoney.models import CreateTagRequestObject, TagObject, UpdateTagRequestObject
 
-from lunchmoney.models import (
-    CreateTagRequestObject,
-    TagObject,
-    UpdateTagRequestObject,
-)
-
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_app.mcp.app import mcp
 from lunchmoney_app.services import (
-    create_tag as create_tag_service,
-    delete_tag as delete_tag_service,
+    create_tag as create_service,
+    delete_tag as delete_service,
     fetch_tag_by_id,
     fetch_tags,
-    update_tag as update_tag_service,
+    update_tag as update_service,
 )
-
-if TYPE_CHECKING:
-    from lunchmoney_app import LunchMoneyApp, LunchMoneyDatabase
+from lunchmoney_app.services.operations import get_operation_context
 
 
 @mcp.tool()
 async def list_tags() -> list[TagObject]:
-    """List all synchronized transaction tags.
-
-    Returns
-    -------
-    list[TagObject]
-        Complete synchronized transaction tags.
-    """
-    db: LunchMoneyDatabase = get_database()
-    return await fetch_tags(db=db)
+    """List all tags."""
+    return await fetch_tags(get_operation_context())
 
 
 @mcp.tool()
 async def get_tag(tag_id: int) -> TagObject | None:
-    """Fetch one synchronized transaction tag.
-
-    Parameters
-    ----------
-    tag_id : int
-        Identifier of the tag to retrieve.
-
-    Returns
-    -------
-    TagObject | None
-        Matching tag, or ``None`` when it has not been synchronized.
-    """
-    db: LunchMoneyDatabase = get_database()
-    return await fetch_tag_by_id(db=db, tag_id=tag_id)
+    """Return one tag when available."""
+    return await fetch_tag_by_id(get_operation_context(), tag_id)
 
 
 @mcp.tool()
 async def create_tag(request: CreateTagRequestObject) -> TagObject:
-    """Create a transaction tag and cache Lunch Money's canonical response."""
-    client: LunchMoneyApp = get_lunchmoney_app()
-    db: LunchMoneyDatabase = get_database()
-    return await create_tag_service(client=client, db=db, request=request)
+    """Create a tag."""
+    return await create_service(get_operation_context(), request)
 
 
 @mcp.tool()
-async def update_tag(
-    tag_id: int,
-    request: UpdateTagRequestObject,
-) -> TagObject:
-    """Update a transaction tag and cache Lunch Money's canonical response."""
-    client: LunchMoneyApp = get_lunchmoney_app()
-    db: LunchMoneyDatabase = get_database()
-    return await update_tag_service(
-        client=client,
-        db=db,
-        tag_id=tag_id,
-        request=request,
-    )
+async def update_tag(tag_id: int, request: UpdateTagRequestObject) -> TagObject:
+    """Update a tag."""
+    return await update_service(get_operation_context(), tag_id, request)
 
 
 @mcp.tool()
 async def delete_tag(tag_id: int, force: bool | None = None) -> None:
-    """Delete a transaction tag upstream and remove it from the local cache."""
-    client: LunchMoneyApp = get_lunchmoney_app()
-    db: LunchMoneyDatabase = get_database()
-    await delete_tag_service(client=client, db=db, tag_id=tag_id, force=force)
+    """Delete a tag."""
+    await delete_service(get_operation_context(), tag_id, force)
 
 
-__all__ = [
-    "create_tag",
-    "delete_tag",
-    "get_tag",
-    "list_tags",
-    "update_tag",
-]
+__all__ = ["create_tag", "delete_tag", "get_tag", "list_tags", "update_tag"]

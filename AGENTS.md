@@ -74,11 +74,12 @@ For every Lunch Money domain (e.g. `categories`, `transactions`, `accounts`, `us
 
 3. **Upstream-First Write-Back Strategy**:
     - All write operations (create/update/delete) MUST call the Lunch Money v2 API first.
-    - Upon receiving the canonical API response object, convert it to a SQLModel record (`Model.from_api()`) and execute `await db.upsert()` or `await db.delete()`.
+    - Upon receiving the canonical API response object, return it as authoritative and pass it to the selected mode-specific projector. Stateful projectors reconcile SQLModel records; ephemeral projectors retain nothing.
 
 4. **Dual Persistence Modes**:
-    - **Persistent Mode (Default)**: Uses SQLite file (`lunchmoney.db`) or PostgreSQL URL (`LUNCHMONEY_DATABASE_URL`).
-    - **Stateless Mode (`STATELESS=true`)**: Uses shared in-memory SQLite (`sqlite+aiosqlite:///file:memdb?mode=memory&cache=shared&uri=true`) with `StaticPool` and live API refresh per operation.
+    - **Stateful Mode (Default)**: Uses an explicitly configured or default SQLite/PostgreSQL database for synchronized reads, projections, migrations, and scheduling.
+    - **Ephemeral Mode**: Reads and writes through Lunch Money without constructing or retaining a database. Dashboard, sync, scheduling, and cache-status operations require stateful mode.
+    - Follow [`docs/maintainers/DESIGN_EPHEMERAL_STATEFUL.md`](docs/maintainers/DESIGN_EPHEMERAL_STATEFUL.md) and its linked implementation artifacts for the active migration contract.
 
 5. **Opt-In Incremental ETL**:
     - Default sync (`incremental=False`) uses rolling date window (`days=30`).
@@ -88,6 +89,7 @@ For every Lunch Money domain (e.g. `categories`, `transactions`, `accounts`, `us
     - Migration and synchronization operations MUST acquire a distributed lock (`get_migration_lock()`) to guarantee single-worker execution across multi-container environments.
     - When `REDIS_URL` is set, `RedisLock` is used for distributed coordination across instances.
     - When `REDIS_URL` is omitted, the app gracefully falls back to local file-based `LockFile` (`.lunchmoney_*.lock`), requiring zero external infrastructure setup for desktop/CLI usage.
+    - These locks are stateful-only and MUST NOT be constructed in ephemeral mode.
 
 ---
 
