@@ -234,6 +234,17 @@ def test_cli_help_documents_environment_alternatives(
     assert "--access-token" not in output
 
 
+def test_cli_help_preserves_string_default_casing(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Render string defaults exactly as declared by Pydantic Settings."""
+    import lunchmoney_app.cli as cli
+
+    cli.main(["schedule", "--help"])
+
+    assert "[default: (UTC)]" in " ".join(capsys.readouterr().out.split())
+
+
 def test_cli_reports_local_doctor_failure_with_exit_code_one(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -289,6 +300,16 @@ def test_cli_prints_native_shell_completion(
     completion_script = capsys.readouterr().out
     assert "_LUNCHMONEY_APP_COMPLETE=bash_complete" in completion_script
     assert "complete -o nosort" in completion_script
+
+
+def test_cli_rejects_unsupported_powershell_completion() -> None:
+    """Do not advertise completion that the supported Click versions lack."""
+    import lunchmoney_app.cli as cli
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(["--print-completion", "powershell"])
+
+    assert error.value.code == 2
 
 
 def test_cli_rejects_shell_completion_with_a_runtime_command() -> None:

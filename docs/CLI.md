@@ -62,7 +62,7 @@ The `schedule` and `sync` commands are stateful-only.
 ## Shell completion
 
 Generate Click's native completion script for the installed executable, then
-source it in the current shell. Bash, Zsh, Fish, and PowerShell are supported:
+source it in the current shell. Bash, Zsh, and Fish are supported:
 
 ```bash
 # Bash

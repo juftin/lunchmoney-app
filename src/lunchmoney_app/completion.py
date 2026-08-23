@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-CompletionShell = Literal["bash", "zsh", "fish", "powershell"]
+CompletionShell = Literal["bash", "zsh", "fish"]
 """Shells supported by Click's built-in completion system."""
 
 

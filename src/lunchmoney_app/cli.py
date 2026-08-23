@@ -110,9 +110,12 @@ def _settings_options(
             environment_name = _environment_name(field_name, field)
             description = field.description or field_name.replace("_", " ").capitalize()
             help_text = f"{description}. Environment: {environment_name}."
-            show_default = (
-                str(field.default).lower() if field.default is not None else None
-            )
+            if isinstance(field.default, bool):
+                show_default = str(field.default).lower()
+            elif field.default is not None:
+                show_default = str(field.default)
+            else:
+                show_default = None
             if isinstance(field.default, bool) or field.annotation is bool:
                 decorated = click.option(
                     f"--{option_name}/--no-{option_name}",
@@ -181,7 +184,7 @@ def _render_click_completion(shell: str) -> str:
 @click.group(invoke_without_command=True)
 @click.option(
     "--print-completion",
-    type=click.Choice(("bash", "zsh", "fish", "powershell"), case_sensitive=False),
+    type=click.Choice(("bash", "zsh", "fish"), case_sensitive=False),
     metavar="SHELL",
     help="Print a shell completion script and exit.",
 )
