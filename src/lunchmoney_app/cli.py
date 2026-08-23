@@ -1,30 +1,36 @@
-"""Command-line entrypoint for the MCP, FastAPI, and scheduler runtimes."""
+"""Click command-line interface for application runtimes and configuration."""
 
 from __future__ import annotations
 
 import argparse
 import asyncio
 import sys
-from typing import cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
+import click
 import uvicorn
+from click.core import ParameterSource
+from click.shell_completion import get_completion_class
 from pydantic import ValidationError
+from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings
 
 from lunchmoney_app.__about__ import __application__, __version__
 from lunchmoney_app.app.dependencies import get_lunchmoney_app, get_shared_database
-from lunchmoney_app.config import get_settings
 from lunchmoney_app.config import (
     McpCliSettings,
+    RuntimeSettings,
     ScheduleCliSettings,
+    SecretSettings,
     ServeCliSettings,
     SyncCliSettings,
     configure_runtime_mode,
     configure_runtime_settings,
-    get_secret_settings,
     export_runtime_settings,
-    parse_cli_settings,
+    get_secret_settings,
+    get_settings,
 )
-from lunchmoney_app.completion import CompletionShell, render_completion
 from lunchmoney_app.doctor import build_doctor_report
 from lunchmoney_app.logging_config import LOG_CONFIG
 from lunchmoney_app.mcp import server as mcp_server
@@ -32,125 +38,232 @@ from lunchmoney_app.scheduler import run_schedule_process
 from lunchmoney_app.services import execute_sync
 from lunchmoney_app.services.operations import data_operation
 
+SettingsType = TypeVar("SettingsType", bound=BaseSettings)
+"""Concrete Pydantic Settings model resolved for one command."""
 
-def main(argv: list[str] | None = None) -> None:
-    """Dispatch one dedicated MCP, FastAPI, scheduler, or operator command.
+CommandCallback = Callable[..., Any]
+"""Click callback decorated with settings-derived options."""
 
-    Parameters
-    ----------
-    argv : list[str] | None
-        Optional command arguments without the executable name. Defaults to sys.argv.
-    """
-    arguments = list(sys.argv[1:] if argv is None else argv)
-    parser = argparse.ArgumentParser(description="Lunch Money MCP runtime commands.")
-    parser.add_argument(
-        "--print-completion",
-        choices=("bash", "zsh"),
-        metavar="SHELL",
-        help="Print a Bash or Zsh completion script and exit.",
-    )
-    commands = parser.add_subparsers(dest="command")
-    commands.add_parser(
-        "mcp",
-        help="Run the standalone MCP server.",
-        add_help=False,
-    )
-    commands.add_parser(
-        "schedule",
-        help="Run the opt-in scheduler using Pydantic settings CLI flags.",
-        add_help=False,
-    )
-    commands.add_parser(
-        "serve",
-        help="Run local FastAPI using Pydantic settings CLI flags.",
-        add_help=False,
-    )
-    commands.add_parser(
-        "sync",
-        help="Run one foreground synchronization.",
-        add_help=False,
-    )
-    commands.add_parser(
-        "doctor",
-        help="Check local configuration without external network requests.",
-        add_help=False,
-    )
-    commands.add_parser(
-        "version",
-        help="Print the installed package version.",
-        add_help=False,
-    )
-    parsed, runtime_arguments = parser.parse_known_args(arguments)
-    if parsed.print_completion is not None:
-        if parsed.command is not None or runtime_arguments:
-            parser.error("--print-completion does not accept a runtime command")
-        print(render_completion(cast(CompletionShell, parsed.print_completion)))
-        return
-    if parsed.command is None:
-        parser.error("the following arguments are required: command")
-    if parsed.command == "mcp":
-        mcp_parser = mcp_server.create_argument_parser()
-        settings = parse_cli_settings(
-            runtime_arguments,
-            McpCliSettings,
-            root_parser=mcp_parser,
+
+def _environment_name(field_name: str, field: FieldInfo) -> str:
+    """Return the environment variable used by a settings field."""
+    if isinstance(field.validation_alias, str):
+        return field.validation_alias
+    return f"LUNCHMONEY_{field_name.upper()}"
+
+
+def _field_click_type(field: FieldInfo) -> click.ParamType[Any]:
+    """Map a Pydantic field's primitive type and bounds to a Click type."""
+    default = field.default
+    annotation = field.annotation
+    if isinstance(default, bool) or annotation is bool:
+        return click.BOOL
+    minimum: int | float | None = None
+    maximum: int | float | None = None
+    minimum_open = False
+    maximum_open = False
+    for constraint in field.metadata:
+        if getattr(constraint, "ge", None) is not None:
+            minimum = constraint.ge
+        if getattr(constraint, "gt", None) is not None:
+            minimum = constraint.gt
+            minimum_open = True
+        if getattr(constraint, "le", None) is not None:
+            maximum = constraint.le
+        if getattr(constraint, "lt", None) is not None:
+            maximum = constraint.lt
+            maximum_open = True
+    if isinstance(default, int) or annotation is int:
+        if minimum is None and maximum is None:
+            return click.INT
+        return click.IntRange(
+            min=cast(int | None, minimum),
+            max=cast(int | None, maximum),
+            min_open=minimum_open,
+            max_open=maximum_open,
         )
-        mcp_arguments = mcp_parser.parse_args(runtime_arguments)
-        settings = mcp_server.apply_transport_defaults(settings, mcp_arguments)
-        configure_runtime_settings(settings)
-        configure_runtime_mode("mcp")
-        mcp_server.configure_auth(settings)
-        mcp_server.run_from_args(
-            mcp_parser,
-            mcp_arguments,
-            settings,
+    if isinstance(default, float) or annotation is float:
+        if minimum is None and maximum is None:
+            return click.FLOAT
+        return click.FloatRange(
+            min=minimum,
+            max=maximum,
+            min_open=minimum_open,
+            max_open=maximum_open,
         )
-        return
-    if parsed.command == "schedule":
-        settings = parse_cli_settings(runtime_arguments, ScheduleCliSettings)
-        configure_runtime_settings(settings)
-        configure_runtime_mode("schedule")
-        asyncio.run(run_schedule_process(settings=settings))
-        return
-    if parsed.command == "sync":
-        sync_parser = _create_sync_parser()
-        settings = parse_cli_settings(
-            runtime_arguments,
-            SyncCliSettings,
-            root_parser=sync_parser,
-        )
-        configure_runtime_settings(settings)
-        configure_runtime_mode("sync")
-        sync_arguments = sync_parser.parse_args(runtime_arguments)
-        asyncio.run(
-            _run_sync(
-                days=sync_arguments.days,
-                incremental=sync_arguments.incremental,
-                safety_margin_minutes=settings.sync_safety_margin_minutes,
+    return click.STRING
+
+
+def _settings_options(
+    settings_type: type[BaseSettings],
+) -> Callable[[CommandCallback], CommandCallback]:
+    """Decorate a Click callback with every safe field in a settings model."""
+
+    def decorator(callback: CommandCallback) -> CommandCallback:
+        decorated = callback
+        for field_name, field in reversed(settings_type.model_fields.items()):
+            option_name = field_name.replace("_", "-")
+            environment_name = _environment_name(field_name, field)
+            description = field.description or field_name.replace("_", " ").capitalize()
+            help_text = f"{description}. Environment: {environment_name}."
+            show_default = (
+                str(field.default).lower() if field.default is not None else None
             )
-        )
-        return
-    if parsed.command == "doctor":
-        doctor_parser = _create_doctor_parser()
-        doctor_parser.parse_args(runtime_arguments)
-        try:
-            settings = parse_cli_settings([], ServeCliSettings)
-        except ValidationError:
-            doctor_parser.error("invalid local configuration")
-        report = build_doctor_report(
-            settings=settings,
-            secret_settings=get_secret_settings(),
-        )
-        print(report.render())
-        if not report.is_healthy:
-            raise SystemExit(1)
-        return
-    if parsed.command == "version":
-        _create_version_parser().parse_args(runtime_arguments)
-        print(f"{__application__} {__version__}")
-        return
+            if isinstance(field.default, bool) or field.annotation is bool:
+                decorated = click.option(
+                    f"--{option_name}/--no-{option_name}",
+                    field_name,
+                    default=None,
+                    help=help_text,
+                    show_default=show_default,
+                )(decorated)
+            else:
+                decorated = click.option(
+                    f"--{option_name}",
+                    field_name,
+                    default=None,
+                    type=_field_click_type(field),
+                    help=help_text,
+                    show_default=show_default,
+                )(decorated)
+        return decorated
 
-    settings = parse_cli_settings(runtime_arguments, ServeCliSettings)
+    return decorator
+
+
+def _format_validation_error(error: ValidationError) -> str:
+    """Render Pydantic validation failures as concise terminal messages."""
+    messages = []
+    for item in error.errors(include_url=False):
+        location = ".".join(str(part) for part in item["loc"]) or "configuration"
+        messages.append(f"{location}: {item['msg']}")
+    return "Invalid configuration:\n  " + "\n  ".join(messages)
+
+
+def _resolve_settings(
+    ctx: click.Context,
+    settings_type: type[SettingsType],
+    values: dict[str, Any],
+) -> RuntimeSettings:
+    """Resolve explicit Click overrides through Pydantic Settings."""
+    overrides = {
+        name: value
+        for name, value in values.items()
+        if ctx.get_parameter_source(name) is ParameterSource.COMMANDLINE
+    }
+    try:
+        command_settings = settings_type(**overrides)
+        return RuntimeSettings.model_validate(
+            command_settings.model_dump(exclude_unset=True)
+        )
+    except ValidationError as error:
+        raise click.UsageError(_format_validation_error(error), ctx=ctx) from error
+
+
+def _render_click_completion(shell: str) -> str:
+    """Render Click's native completion source for an installed shell."""
+    completion_type = get_completion_class(shell)
+    if completion_type is None:  # pragma: no cover - guarded by Click Choice
+        raise click.ClickException(f"Unsupported shell: {shell}")
+    completion = completion_type(
+        cli,
+        {},
+        __application__,
+        f"_{__application__.replace('-', '_').upper()}_COMPLETE",
+    )
+    return completion.source()
+
+
+@click.group(invoke_without_command=True)
+@click.option(
+    "--print-completion",
+    type=click.Choice(("bash", "zsh", "fish", "powershell"), case_sensitive=False),
+    metavar="SHELL",
+    help="Print a shell completion script and exit.",
+)
+@click.pass_context
+def cli(ctx: click.Context, print_completion: str | None) -> None:
+    """Run Lunch Money services and operator commands."""
+    if print_completion is not None:
+        if ctx.invoked_subcommand is not None:
+            raise click.UsageError(
+                "--print-completion does not accept a runtime command", ctx=ctx
+            )
+        click.echo(_render_click_completion(print_completion))
+        return
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@cli.command("mcp")
+@click.option(
+    "--transport",
+    type=click.Choice(("stdio", "sse", "http", "streamable-http")),
+    default=None,
+    help="MCP transport. The default is stdio with ephemeral data handling.",
+)
+@click.option("--stdio", is_flag=True, help="Use stdio.")
+@click.option("--sse", is_flag=True, help="Use SSE.")
+@click.option("--http", is_flag=True, help="Use HTTP.")
+@click.option(
+    "--streamable-http",
+    is_flag=True,
+    help="Use Streamable HTTP.",
+)
+@_settings_options(McpCliSettings)
+@click.pass_context
+def mcp_command(
+    ctx: click.Context,
+    transport: str | None,
+    stdio: bool,
+    sse: bool,
+    http: bool,
+    streamable_http: bool,
+    **values: Any,
+) -> None:
+    """Run the standalone MCP server."""
+    transport_flags = {
+        "stdio": stdio,
+        "sse": sse,
+        "http": http,
+        "streamable-http": streamable_http,
+    }
+    selected_flags = [name for name, selected in transport_flags.items() if selected]
+    if len(selected_flags) + (transport is not None) > 1:
+        raise click.UsageError("MCP transport options are mutually exclusive.")
+    selected_transport = selected_flags[0] if selected_flags else transport or "stdio"
+    explicit_bind_options = any(
+        ctx.get_parameter_source(name) is ParameterSource.COMMANDLINE
+        for name in ("host", "port")
+    )
+    if selected_transport == "stdio" and explicit_bind_options:
+        raise click.UsageError("--host and --port require an HTTP transport.")
+    settings = _resolve_settings(ctx, McpCliSettings, values)
+    arguments = argparse.Namespace(transport=selected_transport)
+    settings = mcp_server.apply_transport_defaults(settings, arguments)
+    configure_runtime_settings(settings)
+    configure_runtime_mode("mcp")
+    mcp_server.configure_auth(settings)
+    mcp_server.run_from_args(mcp_server.create_argument_parser(), arguments, settings)
+
+
+@cli.command("schedule")
+@_settings_options(ScheduleCliSettings)
+@click.pass_context
+def schedule_command(ctx: click.Context, **values: Any) -> None:
+    """Run the opt-in synchronization scheduler."""
+    settings = _resolve_settings(ctx, ScheduleCliSettings, values)
+    configure_runtime_settings(settings)
+    configure_runtime_mode("schedule")
+    asyncio.run(run_schedule_process(settings=settings))
+
+
+@cli.command("serve")
+@_settings_options(ServeCliSettings)
+@click.pass_context
+def serve_command(ctx: click.Context, **values: Any) -> None:
+    """Run the local FastAPI application."""
+    settings = _resolve_settings(ctx, ServeCliSettings, values)
     configure_runtime_settings(settings)
     configure_runtime_mode("serve")
     export_runtime_settings(settings)
@@ -163,41 +276,115 @@ def main(argv: list[str] | None = None) -> None:
     )
 
 
-def _create_sync_parser() -> argparse.ArgumentParser:
-    """Create the command-specific parser for a single foreground sync.
-
-    Returns
-    -------
-    argparse.ArgumentParser
-        Parser defining operation-specific, non-secret sync arguments.
-    """
-    parser = argparse.ArgumentParser(description="Synchronize Lunch Money data once.")
-    parser.add_argument(
-        "--days",
-        type=int,
-        default=30,
-        choices=range(1, 367),
-        metavar="DAYS",
-        help="Rolling transaction window for the initial synchronization (default: 30).",
+@cli.command("sync")
+@click.option(
+    "--days",
+    type=click.IntRange(1, 366),
+    default=30,
+    show_default=True,
+    help="Rolling transaction window for the initial synchronization.",
+)
+@click.option(
+    "--incremental/--no-incremental",
+    default=False,
+    show_default=True,
+    help="Resume transaction synchronization from its saved watermark.",
+)
+@_settings_options(SyncCliSettings)
+@click.pass_context
+def sync_command(
+    ctx: click.Context,
+    days: int,
+    incremental: bool,
+    **values: Any,
+) -> None:
+    """Run one foreground synchronization."""
+    settings = _resolve_settings(ctx, SyncCliSettings, values)
+    configure_runtime_settings(settings)
+    configure_runtime_mode("sync")
+    asyncio.run(
+        _run_sync(
+            days=days,
+            incremental=incremental,
+            safety_margin_minutes=settings.sync_safety_margin_minutes,
+        )
     )
-    parser.add_argument(
-        "--incremental",
-        action="store_true",
-        help="Resume transaction synchronization from its saved watermark.",
+
+
+@cli.command("doctor")
+def doctor_command() -> None:
+    """Check local configuration without external network requests."""
+    try:
+        settings = RuntimeSettings()
+        secrets = get_secret_settings()
+    except ValidationError as error:
+        raise click.UsageError(_format_validation_error(error)) from error
+    report = build_doctor_report(settings=settings, secret_settings=secrets)
+    click.echo(report.render())
+    if not report.is_healthy:
+        raise click.exceptions.Exit(1)
+
+
+@cli.command("version")
+def version_command() -> None:
+    """Print the installed package version."""
+    click.echo(f"{__application__} {__version__}")
+
+
+@cli.group("config")
+def config_group() -> None:
+    """Inspect and validate configuration and environment alternatives."""
+
+
+def _configuration_rows() -> list[tuple[str, FieldInfo, bool]]:
+    """Return every runtime and secret setting once in display order."""
+    rows = [
+        (name, field, False) for name, field in RuntimeSettings.model_fields.items()
+    ]
+    rows.extend(
+        (name, field, True)
+        for name, field in SecretSettings.model_fields.items()
+        if name not in RuntimeSettings.model_fields
     )
-    return parser
+    return rows
 
 
-def _create_doctor_parser() -> argparse.ArgumentParser:
-    """Create the command-specific parser for local diagnostics."""
-    return argparse.ArgumentParser(
-        description="Check local configuration without network requests."
-    )
+@config_group.command("list")
+def config_list_command() -> None:
+    """List every setting, environment variable, and default."""
+    click.echo(f"{'SETTING':<32} {'ENVIRONMENT':<46} DEFAULT")
+    for name, field, secret in _configuration_rows():
+        default = "[environment only]" if secret else str(field.default)
+        click.echo(f"{name:<32} {_environment_name(name, field):<46} {default}")
 
 
-def _create_version_parser() -> argparse.ArgumentParser:
-    """Create the command-specific parser for package version output."""
-    return argparse.ArgumentParser(description="Print the installed package version.")
+@config_group.command("show")
+def config_show_command() -> None:
+    """Show resolved configuration with all sensitive values redacted."""
+    try:
+        runtime = RuntimeSettings()
+        secrets = SecretSettings()
+    except ValidationError as error:
+        raise click.ClickException(_format_validation_error(error)) from error
+    values = runtime.model_dump()
+    values.update(secrets.model_dump())
+    click.echo(f"{'SETTING':<32} {'ENVIRONMENT':<46} VALUE")
+    for name, field, secret in _configuration_rows():
+        value = (
+            "********" if secret and values.get(name) is not None else values.get(name)
+        )
+        click.echo(f"{name:<32} {_environment_name(name, field):<46} {value}")
+
+
+@config_group.command("validate")
+def config_validate_command() -> None:
+    """Validate runtime and secret configuration without starting a service."""
+    try:
+        RuntimeSettings()
+        SecretSettings()
+    except ValidationError as error:
+        raise click.ClickException(_format_validation_error(error)) from error
+    click.echo("Configuration is valid.")
 
 
 async def _run_sync(
@@ -205,17 +392,7 @@ async def _run_sync(
     incremental: bool,
     safety_margin_minutes: int,
 ) -> None:
-    """Execute one sync and print its concise result.
-
-    Parameters
-    ----------
-    days : int
-        Initial rolling transaction window.
-    incremental : bool
-        Whether transaction refresh uses the existing watermark.
-    safety_margin_minutes : int
-        Overlap applied to an incremental transaction refresh.
-    """
+    """Execute one sync and print its concise result."""
     client = get_lunchmoney_app()
     async with data_operation(
         client=client,
@@ -230,7 +407,23 @@ async def _run_sync(
             incremental=incremental,
             safety_margin_minutes=safety_margin_minutes,
         )
-    print(response.model_dump_json())
+    click.echo(response.model_dump_json())
 
 
-__all__ = ["main"]
+def main(argv: list[str] | None = None) -> None:
+    """Run the Click CLI while preserving console-script exit semantics."""
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    try:
+        result = cli.main(
+            args=arguments,
+            prog_name=__application__,
+            standalone_mode=False,
+        )
+        if isinstance(result, int) and result != 0:
+            raise SystemExit(result)
+    except click.ClickException as error:
+        error.show()
+        raise SystemExit(error.exit_code) from error
+
+
+__all__ = ["cli", "main"]

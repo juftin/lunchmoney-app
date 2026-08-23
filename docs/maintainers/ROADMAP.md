@@ -340,6 +340,10 @@ features.
 - [x] Provide config precedence and validation (`CLI > environment > .env >
 defaults`), redacted `doctor` diagnostics, meaningful exit codes, and no
       secret values in output.
+- [x] Use Click for the public command tree and native shell completion while
+      retaining Pydantic Settings as the typed configuration resolver; expose
+      every environment alternative through `config list`, `config show`, and
+      `config validate`, with environment-only values redacted.
 - [x] Publish Docker Compose as the first-class deployment path, with
       API-only, MCP-only, combined, and dedicated-scheduler examples; add
       release/versioning and upgrade documentation.
