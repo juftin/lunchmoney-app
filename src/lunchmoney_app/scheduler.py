@@ -10,6 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from lunchmoney_app.app.dependencies import get_lunchmoney_app, get_shared_database
+from lunchmoney_app.app.sync import SyncScope
 from lunchmoney_app.config import RuntimeSettings, get_settings
 from lunchmoney_app.services.operations import StatefulOperationContextFactory
 from lunchmoney_app.services import run_scheduled_sync as execute_scheduled_sync
@@ -182,9 +183,31 @@ def _create_scheduler(
 ) -> AsyncIOScheduler:
     """Create a scheduler and register its stable, coalescing synchronization jobs."""
     resolved_timezone = timezone or settings.schedule_timezone
-    txn_cron_str = _normalize_cron(
-        cron or settings.schedule_transactions_cron or settings.schedule_cron
+    legacy_cron_str = _normalize_cron(cron or settings.schedule_cron)
+    split_configured = bool(
+        settings.schedule_transactions_cron or settings.schedule_metadata_cron
     )
+    if legacy_cron_str is not None and (cron is not None or not split_configured):
+        scheduler = build_scheduler(settings, timezone=resolved_timezone)
+        try:
+            trigger = CronTrigger.from_crontab(
+                legacy_cron_str, timezone=resolved_timezone
+            )
+            scheduler.add_job(
+                run_scheduled_sync,
+                trigger=trigger,
+                id=SCHEDULE_ID,
+                coalesce=True,
+                max_instances=1,
+                replace_existing=True,
+                kwargs={"scope": SyncScope.ALL},
+            )
+        except (TypeError, ValueError) as error:
+            msg = f"Invalid scheduler cron or timezone: {error}"
+            raise SchedulerConfigurationError(msg) from error
+        return scheduler
+
+    txn_cron_str = _normalize_cron(settings.schedule_transactions_cron)
     meta_cron_str = _normalize_cron(settings.schedule_metadata_cron)
 
     if cron is not None or settings.embed_scheduler:
@@ -206,6 +229,7 @@ def _create_scheduler(
                 coalesce=True,
                 max_instances=1,
                 replace_existing=True,
+                kwargs={"scope": SyncScope.TRANSACTIONS},
             )
         except (TypeError, ValueError) as error:
             msg = f"Invalid scheduler cron or timezone: {error}"
@@ -223,6 +247,7 @@ def _create_scheduler(
                 coalesce=True,
                 max_instances=1,
                 replace_existing=True,
+                kwargs={"scope": SyncScope.METADATA},
             )
         except (TypeError, ValueError) as error:
             msg = f"Invalid scheduler cron or timezone: {error}"
@@ -261,8 +286,8 @@ def _configured_worker_count() -> int:
     return 1
 
 
-async def run_scheduled_sync() -> None:
-    """Execute the configured scheduled sync using process-local dependencies."""
+async def run_scheduled_sync(scope: SyncScope = SyncScope.ALL) -> None:
+    """Execute one configured scheduled workload using process-local dependencies."""
     task = asyncio.current_task()
     if task is not None:
         _active_sync_tasks.add(task)
@@ -279,6 +304,7 @@ async def run_scheduled_sync() -> None:
                 db=context.database,
                 client=client,
                 days=settings.schedule_days,
+                scope=scope,
             )
         log_method = logger.info if result.status == "success" else logger.warning
         log_method(

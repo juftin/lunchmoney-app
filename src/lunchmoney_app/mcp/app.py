@@ -35,7 +35,7 @@ async def mcp_lifespan(_: FastMCP[None]) -> AsyncIterator[dict[str, object]]:
         lock = get_migration_lock()
         try:
             with lock:
-                await run_migrations()
+                await run_migrations(database_url=database.database_url)
         except LockTimeoutError:
             pass
     try:

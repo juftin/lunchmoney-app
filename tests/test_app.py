@@ -2,9 +2,11 @@
 
 from pathlib import Path
 from collections.abc import AsyncIterator
+import asyncio
+import threading
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
-from unittest.mock import ANY, AsyncMock, create_autospec
+from unittest.mock import ANY, AsyncMock, MagicMock, create_autospec
 
 import sys
 import pytest
@@ -52,6 +54,32 @@ def test_app_initializes_instance_cache(monkeypatch: pytest.MonkeyPatch) -> None
     app = create_app(monkeypatch, cache=False)
 
     assert app.cache is False
+
+
+def test_app_preserves_explicit_empty_model_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Allow callers to intentionally disable default refresh models and kwargs."""
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+
+    app = app_module.LunchMoneyApp(
+        access_token="token",
+        lunchable_models=[],
+        lunchable_models_kwargs={},
+    )
+
+    assert list(app._lunchable_models) == []
+    assert app._lunchable_models_kwargs == {}
+
+
+def test_app_rejects_nonpositive_transaction_pagination(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject pagination settings that cannot advance an upstream query."""
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+
+    with pytest.raises(ValueError, match="greater than zero"):
+        app_module.LunchMoneyApp(access_token="token", transaction_pagination=0)
 
 
 @pytest.mark.asyncio
@@ -446,6 +474,7 @@ def test_fastapi_sync_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
         days: int = 30,
         incremental: bool = False,
         safety_margin_minutes: int | None = None,
+        scope: Any = None,
     ) -> app_module.SyncSummary:
         assert incremental is False
         assert safety_margin_minutes is None
@@ -508,6 +537,64 @@ def test_fastapi_sync_endpoint_forwards_incremental_options(
     )
 
 
+@pytest.mark.parametrize(
+    "query",
+    ["days=0", "days=-1", "safety_margin_minutes=-1"],
+)
+def test_fastapi_sync_endpoint_rejects_invalid_windows(
+    monkeypatch: pytest.MonkeyPatch,
+    query: str,
+) -> None:
+    """Reject sync windows that could omit or invert upstream data."""
+    from starlette.testclient import TestClient
+
+    sync_router_module = sys.modules["lunchmoney_app.app.routers.sync"]
+    mock_execute_sync = AsyncMock()
+    monkeypatch.setattr(sync_router_module, "execute_sync", mock_execute_sync)
+    monkeypatch.setattr(app_module, "LunchableClient", lambda **kwargs: object())
+    monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "mock-token")
+
+    with TestClient(fastapi_app, base_url="http://localhost") as client:
+        response = client.post(f"/api/sync?{query}")
+
+    assert response.status_code == 422
+    mock_execute_sync.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("days", "safety_margin_minutes", "message"),
+    [
+        (0, None, "days"),
+        (30, -1, "safety_margin_minutes"),
+    ],
+)
+async def test_execute_sync_rejects_invalid_windows_before_side_effects(
+    monkeypatch: pytest.MonkeyPatch,
+    days: int,
+    safety_margin_minutes: int | None,
+    message: str,
+) -> None:
+    """Enforce sync window invariants for every non-HTTP caller."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    migrations = AsyncMock()
+    sync_database_mock = AsyncMock()
+    monkeypatch.setattr(sync_service_module, "run_migrations", migrations)
+    monkeypatch.setattr(sync_service_module, "sync_database", sync_database_mock)
+
+    with pytest.raises(ValueError, match=message):
+        await sync_service_module.execute_sync(
+            db=MagicMock(database_url="sqlite+aiosqlite:///stateful.db"),
+            client=MagicMock(),
+            days=days,
+            safety_margin_minutes=safety_margin_minutes,
+        )
+
+    migrations.assert_not_awaited()
+    sync_database_mock.assert_not_awaited()
+
+
 @pytest.mark.asyncio
 async def test_execute_sync_forwards_incremental_options(
     monkeypatch: pytest.MonkeyPatch,
@@ -521,7 +608,8 @@ async def test_execute_sync_forwards_incremental_options(
     database.database_url = "sqlite+aiosqlite:///stateful.db"
     client = create_autospec(LunchMoneyApp, instance=True)
     sync_database_mock = AsyncMock(return_value=SyncSummary())
-    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    migrations = AsyncMock()
+    monkeypatch.setattr(sync_service_module, "run_migrations", migrations)
     monkeypatch.setattr(sync_service_module, "sync_database", sync_database_mock)
 
     await sync_service_module.execute_sync(
@@ -538,7 +626,197 @@ async def test_execute_sync_forwards_incremental_options(
         days=45,
         incremental=True,
         safety_margin_minutes=7,
+        scope=sync_service_module.SyncScope.ALL,
     )
+    migrations.assert_awaited_once_with(database_url=database.database_url)
+
+
+@pytest.mark.asyncio
+async def test_execute_sync_does_not_block_event_loop_while_waiting_for_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Let an owning sync progress while a concurrent caller waits for its lock."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    acquire_started = threading.Event()
+    allow_acquire = threading.Event()
+
+    class WaitingLock:
+        """Block acquisition in a worker thread until the test releases it."""
+
+        renewal_interval = None
+
+        def __init__(self, timeout: float | int = -1) -> None:
+            """Accept the lock factory's configured timeout."""
+            del timeout
+
+        def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
+            """Wait for the simulated owner to finish."""
+            del blocking, timeout
+            acquire_started.set()
+            return allow_acquire.wait(timeout=2)
+
+        def release(self) -> None:
+            """Release the acquired test lock."""
+
+    monkeypatch.setattr(sync_service_module, "get_migration_lock", WaitingLock)
+    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    monkeypatch.setattr(
+        sync_service_module,
+        "sync_database",
+        AsyncMock(return_value=sync_service_module.SyncSummary()),
+    )
+    database = MagicMock(database_url="sqlite+aiosqlite:///stateful.db")
+    database.delete_cached_responses = AsyncMock()
+
+    sync_task = asyncio.create_task(
+        sync_service_module.execute_sync(db=database, client=MagicMock())
+    )
+    assert await asyncio.to_thread(acquire_started.wait, 1)
+    event_loop_progressed = asyncio.Event()
+    asyncio.get_running_loop().call_soon(event_loop_progressed.set)
+    await asyncio.wait_for(event_loop_progressed.wait(), timeout=0.2)
+    allow_acquire.set()
+    await sync_task
+
+
+@pytest.mark.asyncio
+async def test_execute_sync_releases_lock_acquired_after_cancellation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Release ownership if cancellation races with blocking acquisition."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    acquire_started = threading.Event()
+    allow_acquire = threading.Event()
+    released = threading.Event()
+
+    class CancelledWaitingLock:
+        """Acquire after cancellation so cleanup ownership can be asserted."""
+
+        renewal_interval = None
+
+        def __init__(self, timeout: float | int = -1) -> None:
+            """Accept the lock factory's configured timeout."""
+            del timeout
+
+        def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
+            """Wait until the cancellation race is deliberately completed."""
+            del blocking, timeout
+            acquire_started.set()
+            return allow_acquire.wait(timeout=2)
+
+        def release(self) -> None:
+            """Record cleanup of ownership acquired by the worker thread."""
+            released.set()
+
+    monkeypatch.setattr(sync_service_module, "get_migration_lock", CancelledWaitingLock)
+    sync_task = asyncio.create_task(
+        sync_service_module.execute_sync(db=MagicMock(), client=MagicMock())
+    )
+    assert await asyncio.to_thread(acquire_started.wait, 1)
+    sync_task.cancel()
+    allow_acquire.set()
+
+    with pytest.raises(asyncio.CancelledError):
+        await sync_task
+
+    assert released.is_set()
+
+
+@pytest.mark.asyncio
+async def test_execute_sync_stops_when_redis_lease_is_lost(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cancel projection work instead of overlapping after lease renewal fails."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    class LostLeaseLock:
+        """Model an acquired lease that is rejected at its first renewal."""
+
+        renewal_interval = 0.01
+
+        def __init__(self, timeout: float | int = -1) -> None:
+            """Accept the lock factory's configured timeout."""
+            del timeout
+
+        def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
+            """Acquire the initial lease."""
+            del blocking, timeout
+            return True
+
+        def renew(self) -> bool:
+            """Report that another worker can no longer be excluded."""
+            return False
+
+        def release(self) -> None:
+            """Release any remaining owned state."""
+
+    async def blocked_sync(**kwargs: object) -> None:
+        """Represent projection work that must be cancelled on ownership loss."""
+        del kwargs
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(sync_service_module, "get_migration_lock", LostLeaseLock)
+    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    monkeypatch.setattr(sync_service_module, "sync_database", blocked_sync)
+    database = MagicMock(database_url="sqlite+aiosqlite:///stateful.db")
+
+    with pytest.raises(sync_service_module.LockOwnershipLostError):
+        await asyncio.wait_for(
+            sync_service_module.execute_sync(db=database, client=MagicMock()),
+            timeout=0.5,
+        )
+
+
+@pytest.mark.asyncio
+async def test_execute_sync_stops_and_releases_when_renewal_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Treat a Redis renewal backend error as immediate ownership loss."""
+    import lunchmoney_app.services.sync as sync_service_module
+
+    released = threading.Event()
+
+    class FailedRenewalLock:
+        """Model a lease whose Redis renewal request raises."""
+
+        renewal_interval = 0.01
+
+        def __init__(self, timeout: float | int = -1) -> None:
+            """Accept the lock factory's configured timeout."""
+            del timeout
+
+        def acquire(self, blocking: bool = True, timeout: float | int = -1) -> bool:
+            """Acquire the initial lease."""
+            del blocking, timeout
+            return True
+
+        def renew(self) -> bool:
+            """Raise the backend failure that makes ownership unverifiable."""
+            raise ConnectionError("Redis unavailable")
+
+        def release(self) -> None:
+            """Record the best-effort cleanup attempt."""
+            released.set()
+
+    async def blocked_sync(**kwargs: object) -> None:
+        """Represent projection work cancelled after renewal failure."""
+        del kwargs
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(sync_service_module, "get_migration_lock", FailedRenewalLock)
+    monkeypatch.setattr(sync_service_module, "run_migrations", AsyncMock())
+    monkeypatch.setattr(sync_service_module, "sync_database", blocked_sync)
+    database = MagicMock(database_url="sqlite+aiosqlite:///stateful.db")
+
+    with pytest.raises(sync_service_module.LockOwnershipLostError):
+        await asyncio.wait_for(
+            sync_service_module.execute_sync(db=database, client=MagicMock()),
+            timeout=0.5,
+        )
+
+    assert released.is_set()
 
 
 @pytest.mark.asyncio

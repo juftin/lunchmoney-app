@@ -214,8 +214,8 @@ async def test_attachment_operations_reconcile_known_cached_transaction() -> Non
     )
     database = create_autospec(LunchMoneyDatabase, instance=True)
     database.get = AsyncMock(return_value=transaction)
-    database.list = AsyncMock(return_value=[transaction])
     database.upsert = AsyncMock(side_effect=lambda record: record)
+    database.delete_transaction_attachment = AsyncMock(return_value=True)
 
     async with StatefulOperationContextFactory(client, database).operation() as context:
         uploaded = await upload_transaction_attachment(
@@ -236,8 +236,8 @@ async def test_attachment_operations_reconcile_known_cached_transaction() -> Non
     )
     get_url.assert_awaited_once_with(file_id=attachment.id)
     delete.assert_awaited_once_with(file_id=attachment.id)
-    assert transaction.attachments == []
-    assert database.upsert.await_count == 2
+    database.delete_transaction_attachment.assert_awaited_once_with(attachment.id)
+    assert database.upsert.await_count == 1
 
 
 def test_transaction_mutation_routes_are_registered() -> None:

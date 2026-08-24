@@ -4,20 +4,21 @@
 
 With no configuration, `LunchMoneyDatabase` uses the persistent SQLite file
 `sqlite+aiosqlite:///lunchmoney.db` in the current working directory. The
-`mcp` command instead defaults to per-operation ephemeral storage when using
-stdio; select `--no-ephemeral` to use this persistent default. Pass a URL to
-the constructor or set `LUNCHMONEY_DATABASE_URL`; an explicit constructor URL
-takes precedence.
+`mcp` command instead defaults to database-free ephemeral operation when using
+stdio; select `--persistence-mode stateful` to use the persistent default. Pass
+a URL to the constructor or set `LUNCHMONEY_DATABASE_URL`; an explicit
+constructor URL takes precedence.
 
 ```text
 sqlite+aiosqlite:////absolute/path/to/lunchmoney.db
 postgresql+asyncpg://user:password@host/database
 ```
 
-Create or update the schema before using the database. Runtime database
-construction does not call `create_all()` or run migrations automatically.
-The installed `lunchmoney-app serve` command applies its bundled migrations at
-startup, so it does not require a source checkout.
+Constructing `LunchMoneyDatabase` directly does not create or migrate its
+schema. Stateful application runtimes (`serve`, `schedule`, and `sync`) run
+Alembic migrations during startup before accessing the database, using bundled
+migrations when installed so they do not require a source checkout. For direct
+library use or an explicit operator migration, run:
 
 ```bash
 export LUNCHMONEY_DATABASE_URL=sqlite+aiosqlite:///lunchmoney.db

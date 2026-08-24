@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.utilities.lifespan import combine_lifespans
+from lunchmoney.exceptions import ApiException
 
 from lunchmoney_app.app.auth import verify_api_key
 from lunchmoney_app.app.dependencies import get_lunchmoney_app, get_shared_database
@@ -115,7 +116,26 @@ async def observe_request(
             status_code=status_code,
             content={"detail": error.as_dict()},
         )
+    except ApiException as error:
+        upstream_status = error.status if isinstance(error.status, int) else 502
+        status_code = upstream_status if 400 <= upstream_status < 600 else 502
+        metrics.record_upstream_failure(error)
+        logger.warning(
+            "Upstream request failure path=%s request_id=%s status=%s",
+            request.url.path,
+            request_id,
+            status_code,
+        )
+        response = JSONResponse(
+            status_code=status_code,
+            content={"detail": "Lunch Money upstream request failed"},
+        )
     except Exception:
+        logger.exception(
+            "Unhandled request failure path=%s request_id=%s",
+            request.url.path,
+            request_id,
+        )
         response = JSONResponse(
             status_code=status_code,
             content={"detail": "Internal server error"},

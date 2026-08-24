@@ -2,8 +2,9 @@
 
 import asyncio
 import os
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator, Iterable, Mapping
 from contextlib import asynccontextmanager
+from datetime import date
 from heapq import heappop, heappush
 from pathlib import Path
 from types import TracebackType
@@ -14,7 +15,7 @@ from typing_extensions import Self
 from alembic import command
 from alembic.config import Config
 
-from sqlalchemy import delete, event, update
+from sqlalchemy import delete, event, true, update
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
@@ -579,27 +580,103 @@ async def _load_record(
     return result.one_or_none()
 
 
-async def _upsert_record(session: AsyncSession, record: SQLModel) -> None:
+async def _prefetch_graph_records(
+    session: AsyncSession, records: Iterable[SQLModel]
+) -> dict[tuple[type[SQLModel], int], SQLModel]:
+    """Load existing category and transaction graphs once per model batch."""
+    ids_by_model: dict[type[SQLModel], set[int]] = {Category: set(), Transaction: set()}
+
+    def collect(record: SQLModel) -> None:
+        """Collect identifiers from one incoming owned graph."""
+        if type(record) is Category:
+            ids_by_model[Category].add(record.id)
+            for category_child in record.children:
+                collect(category_child)
+        elif type(record) is Transaction:
+            ids_by_model[Transaction].add(record.id)
+            for transaction_child in [
+                *record.split_children,
+                *record.group_children,
+            ]:
+                collect(transaction_child)
+
+    for record in records:
+        collect(record)
+
+    prefetched: dict[tuple[type[SQLModel], int], SQLModel] = {}
+    for model, ids in ids_by_model.items():
+        if not ids:
+            continue
+        statement = (
+            select(model)
+            .where(_primary_key_attribute(model).in_(ids))
+            .options(*_eager_options(model))
+        )
+        for stored in (await session.exec(statement)).all():
+            prefetched[(model, _record_primary_key(stored))] = stored
+    return prefetched
+
+
+async def _upsert_record(
+    session: AsyncSession,
+    record: SQLModel,
+    prefetched: dict[tuple[type[SQLModel], int], SQLModel] | None = None,
+) -> None:
     """Insert or update one supported record without committing its session."""
     record_type = type(record)
     primary_key = _record_primary_key(record)
     if record_type is Category:
         category = cast(Category, record)
-        existing_category = await _load_record(session, Category, primary_key)
+        existing_category = cast(
+            Category | None,
+            prefetched.get((Category, primary_key)) if prefetched is not None else None,
+        )
+        if existing_category is None and prefetched is None:
+            existing_category = await _load_record(session, Category, primary_key)
         if existing_category is None:
             existing_category = _clone_category_record(category)
             session.add(existing_category)
             await session.flush()
+            if prefetched is not None:
+                prefetched[(Category, primary_key)] = existing_category
         await _update_category_graph(session, existing_category, category)
+        if prefetched is not None:
+            for child in existing_category.children:
+                prefetched[(Category, child.id)] = child
         return
     if record_type is Transaction:
         transaction = cast(Transaction, record)
-        existing_transaction = await _load_record(session, Transaction, primary_key)
+        existing_transaction = cast(
+            Transaction | None,
+            prefetched.get((Transaction, primary_key))
+            if prefetched is not None
+            else None,
+        )
+        if existing_transaction is None and prefetched is None:
+            existing_transaction = await _load_record(session, Transaction, primary_key)
         if existing_transaction is None:
             existing_transaction = _clone_transaction_record(transaction)
             session.add(existing_transaction)
             await session.flush()
+            if prefetched is not None:
+                prefetched[(Transaction, primary_key)] = existing_transaction
         await _update_transaction_graph(session, existing_transaction, transaction)
+        if prefetched is not None:
+            pending = [
+                *existing_transaction.split_children,
+                *existing_transaction.group_children,
+            ]
+            while pending:
+                transaction_descendant = pending.pop()
+                prefetched[(Transaction, transaction_descendant.id)] = (
+                    transaction_descendant
+                )
+                pending.extend(
+                    [
+                        *transaction_descendant.split_children,
+                        *transaction_descendant.group_children,
+                    ]
+                )
         return
 
     existing = await session.get(record_type, primary_key)
@@ -786,6 +863,129 @@ class LunchMoneyDatabase:
                     stored_by_index[index] = stored
         return [stored_by_index[index] for index in range(len(requested))]
 
+    async def upsert_many_without_reload(
+        self,
+        records: Iterable[SQLModel],
+    ) -> None:
+        """Atomically persist a batch without rebuilding graphs for the caller.
+
+        Synchronization only needs a durable projection, so avoiding the final eager
+        reload saves several relationship queries per record while retaining the
+        same graph-upsert semantics as :meth:`upsert_many`.
+        """
+        requested = list(records)
+        for record in requested:
+            _ensure_supported_record(record)
+        if not requested:
+            return
+
+        ordered = _dependency_order(requested)
+        async with self.session_factory() as session:
+            async with session.begin():
+                await _detach_claimed_children(session, requested)
+                prefetched = await _prefetch_graph_records(session, requested)
+                for _, ordered_record in ordered:
+                    await _upsert_record(session, ordered_record, prefetched)
+
+    async def reconcile_sync_projection(
+        self,
+        *,
+        records: Iterable[SQLModel] = (),
+        authoritative_ids: dict[type[SQLModel], set[int]],
+        transaction_window: tuple[date, date] | None = None,
+        cached_responses: Mapping[str, dict[str, Any]] | None = None,
+        sync_metadata: Iterable[SyncMetadata] = (),
+    ) -> None:
+        """Atomically upsert a projection and remove rows absent upstream.
+
+        Metadata collections are complete snapshots. Transaction collections are
+        authoritative only for an explicitly queried date window; incremental
+        updated-since responses therefore omit ``transaction_window`` and never
+        prune unrelated rows.
+        """
+        requested = list(records)
+        for record in requested:
+            _ensure_supported_record(record)
+        ordered = _dependency_order(requested)
+        async with self.session_factory() as session:
+            async with session.begin():
+                await _detach_claimed_children(session, requested)
+                prefetched = await _prefetch_graph_records(session, requested)
+                for _, ordered_record in ordered:
+                    await _upsert_record(session, ordered_record, prefetched)
+                for model, ids in authoritative_ids.items():
+                    _ensure_supported_model(model)
+                    if model is Transaction:
+                        continue
+                    id_column = _primary_key_attribute(model)
+                    absent = id_column.not_in(ids) if ids else true()
+                    if model is Tag:
+                        await session.exec(
+                            delete(TransactionTagLink).where(
+                                cast(Any, TransactionTagLink.tag_id).not_in(ids)
+                                if ids
+                                else true()
+                            )
+                        )
+                    elif model is Category:
+                        await session.exec(
+                            update(Transaction)
+                            .where(
+                                cast(Any, Transaction.category_id).not_in(ids)
+                                if ids
+                                else cast(Any, Transaction.category_id).is_not(None)
+                            )
+                            .values(category_id=None)
+                        )
+                    elif model is PlaidAccount:
+                        await session.exec(
+                            update(Transaction)
+                            .where(
+                                cast(Any, Transaction.plaid_account_id).not_in(ids)
+                                if ids
+                                else cast(Any, Transaction.plaid_account_id).is_not(
+                                    None
+                                )
+                            )
+                            .values(plaid_account_id=None)
+                        )
+                    elif model is ManualAccount:
+                        await session.exec(
+                            update(Transaction)
+                            .where(
+                                cast(Any, Transaction.manual_account_id).not_in(ids)
+                                if ids
+                                else cast(Any, Transaction.manual_account_id).is_not(
+                                    None
+                                )
+                            )
+                            .values(manual_account_id=None)
+                        )
+                    await session.exec(delete(model).where(absent))
+
+                if transaction_window is not None:
+                    start_date, end_date = transaction_window
+                    transaction_ids = authoritative_ids.get(Transaction, set())
+                    condition = cast(Any, Transaction.var_date).between(
+                        start_date, end_date
+                    )
+                    if transaction_ids:
+                        condition &= cast(Any, Transaction.id).not_in(transaction_ids)
+                    await session.exec(delete(Transaction).where(condition))
+
+                for key, payload in (cached_responses or {}).items():
+                    cached = await session.get(CachedApiResponse, key)
+                    if cached is None:
+                        session.add(CachedApiResponse(key=key, payload=payload))
+                    else:
+                        cached.payload = payload
+                for metadata in sync_metadata:
+                    stored = await session.get(SyncMetadata, metadata.domain)
+                    if stored is None:
+                        session.add(metadata)
+                    else:
+                        stored.sqlmodel_update(metadata)
+
     async def get(
         self,
         model: type[RecordT],
@@ -825,6 +1025,21 @@ class LunchMoneyDatabase:
                 if record is None:
                     return False
                 await session.delete(record)
+            return True
+
+    async def delete_transaction_attachment(self, file_id: int) -> bool:
+        """Delete an attachment directly by its upstream identifier."""
+        async with self.session_factory() as session:
+            async with session.begin():
+                result = await session.exec(
+                    select(TransactionAttachment).where(
+                        TransactionAttachment.api_id == file_id
+                    )
+                )
+                attachment = result.first()
+                if attachment is None:
+                    return False
+                await session.delete(attachment)
             return True
 
     async def __aenter__(self) -> Self:

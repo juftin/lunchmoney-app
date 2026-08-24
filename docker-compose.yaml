@@ -7,7 +7,7 @@ services:
         ports:
             - "127.0.0.1:8000:8000"
         environment:
-            ENVIRONMENT: production
+            LUNCHMONEY_ENVIRONMENT: production
             LUNCHMONEY_DATABASE_URL: ${LUNCHMONEY_DATABASE_URL:?Set LUNCHMONEY_DATABASE_URL}
             LUNCHMONEY_REDIS_URL: redis://redis:6379/0
             LUNCHMONEY_ACCESS_TOKEN: ${LUNCHMONEY_ACCESS_TOKEN:?Set LUNCHMONEY_ACCESS_TOKEN}
@@ -55,7 +55,7 @@ services:
         command: ["lunchmoney-app", "schedule"]
         profiles: ["scheduler"]
         environment:
-            ENVIRONMENT: production
+            LUNCHMONEY_ENVIRONMENT: production
             LUNCHMONEY_DATABASE_URL: ${LUNCHMONEY_DATABASE_URL:?Set LUNCHMONEY_DATABASE_URL}
             LUNCHMONEY_REDIS_URL: redis://redis:6379/0
             LUNCHMONEY_ACCESS_TOKEN: ${LUNCHMONEY_ACCESS_TOKEN:?Set LUNCHMONEY_ACCESS_TOKEN}

@@ -37,6 +37,8 @@ def test_compose_keeps_data_services_private_and_hardens_app_processes() -> None
     assert "LUNCHMONEY_ALLOWED_HOSTS" in compose
     assert "LUNCHMONEY_TRUSTED_PROXY_IPS" in compose
     assert "LUNCHMONEY_CORS_ALLOWED_ORIGINS" in compose
+    assert compose.count("LUNCHMONEY_ENVIRONMENT: production") == 2
+    assert "\n            ENVIRONMENT:" not in compose
 
 
 def test_ci_scans_release_artifacts_and_smoke_tests_compose() -> None:
@@ -98,3 +100,6 @@ def test_production_server_dependencies_are_declared() -> None:
 
     assert '"gunicorn>=23.0.0,<24"' in pyproject
     assert '"uvicorn-worker>=0.4.0,<1"' in pyproject
+    assert '"uvicorn>=0.41.0,<1"' in pyproject
+    assert '"pydantic>=2.12.5,<3"' in pyproject
+    assert '"pydantic-settings>=2.13.1,<3"' in pyproject

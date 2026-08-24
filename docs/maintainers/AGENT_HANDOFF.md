@@ -117,7 +117,7 @@ Completed: `/health` exposes liveness and `/ready` reports database and embedded
 
 ### Sprint 11: Server-Rendered Financial Dashboard
 
-Planned: a single-user, single–Lunch Money-account, authenticated and accessible FastAPI HTML dashboard using server-rendered templates and existing services. It must not become a separate JavaScript application or duplicate service-layer analytics.
+Completed: a single-user, single–Lunch Money-account, authenticated and accessible FastAPI HTML dashboard uses server-rendered templates and existing services. Spending is grouped into an accessible parent/child category tree and the local mascot provides the brand mark without introducing a separate JavaScript application or duplicating service-layer analytics.
 
 ### Sprint 12: CLI, Packaging & Operator Experience
 

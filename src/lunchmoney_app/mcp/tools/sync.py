@@ -1,5 +1,9 @@
 """FastMCP tools for database synchronization operations."""
 
+from typing import Annotated
+
+from pydantic import Field
+
 from lunchmoney_app.mcp.app import mcp
 from lunchmoney_app.schemas import ScheduledSyncStatus, SyncResult
 from lunchmoney_app.services import execute_mcp_sync, get_scheduled_sync_status
@@ -9,9 +13,9 @@ from lunchmoney_app.services.operations import get_stateful_operation_context
 
 @mcp.tool()
 async def sync_data(
-    days: int = 30,
+    days: Annotated[int, Field(ge=1)] = 30,
     incremental: bool = False,
-    safety_margin_minutes: int | None = None,
+    safety_margin_minutes: Annotated[int | None, Field(ge=0)] = None,
 ) -> SyncResult:
     """Synchronize transactions, accounts, categories, and tags from Lunch Money API.
 

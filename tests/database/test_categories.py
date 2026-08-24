@@ -172,6 +172,7 @@ def test_category_relationship_persists_order_and_deletes_orphans() -> None:
         session.commit()
 
         assert session.get(Category, orphan.id) is None
+    engine.dispose()
 
 
 def test_category_relationship_orders_null_positions_by_name() -> None:
@@ -201,3 +202,4 @@ def test_category_relationship_orders_null_positions_by_name() -> None:
 
         assert reloaded is not None
         assert [child.id for child in reloaded.children] == [12, 11, 13]
+    engine.dispose()

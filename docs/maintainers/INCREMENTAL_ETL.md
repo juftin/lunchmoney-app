@@ -12,7 +12,7 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > **1. Incremental Transaction Sync is Opt-In**:
 >
 > - Default behavior for `POST /api/sync` and `sync_data` FastMCP tool: `incremental: bool = False`.
-> - When `incremental=False`, transactions use the standard rolling date window from `days: int = 30` (or explicit service-layer `start_date` / `end_date`) and no watermark is written.
+> - When `incremental=False`, transactions use the standard rolling date window from `days: int = 30` (or explicit service-layer `start_date` / `end_date`) and replace the projection only inside that authoritative window. Historical rows outside it are preserved.
 > - When `incremental=True`, only transactions consult `SyncMetadata(domain="transactions")`. An existing watermark produces `updated_since = last_synced_at - timedelta(minutes=safety_margin)`; a missing watermark falls back to the standard date window.
 > - User, Plaid account, manual account, category, and tag refreshes are full refreshes in both modes.
 
@@ -25,8 +25,13 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > [!IMPORTANT]
 > **3. Watermarks Advance Only After Successful Persistence**:
 >
-> - Incremental execution captures a UTC start time, refreshes upstream data, and persists the record graph before writing the transaction watermark.
-> - An upstream or record-persistence failure leaves an absent watermark absent and preserves an existing watermark at its exact prior timestamp.
+> - Incremental execution captures a UTC start time and commits the normalized graph, response snapshots, and watermarks in one database transaction. Any persistence failure rolls all three back.
+> - Complete metadata snapshots reconcile deletions for users, accounts, categories, and tags. Date-bounded recurring responses update returned definitions without deleting definitions that may fall outside the requested window.
+> - Incremental transaction responses never delete absent rows because an `updated_since` response is not a complete collection. Scheduled transaction work performs an authoritative rolling-window refresh at least daily and uses incremental refreshes between those reconciliations.
+> - Synchronization batch-prefetches existing category and transaction graphs, avoiding one eager graph query per incoming record.
+> - Every interactive and scheduled synchronization acquires the shared migration/sync lock in the service layer without blocking the asyncio event loop. Scheduled work uses nonblocking acquisition and records a skipped result when another worker owns the lock.
+> - Redis-backed synchronization locks renew their lease throughout long-running work, so a sync that exceeds the initial TTL remains exclusive. File locks remain owned until explicit release.
+> - Cancellation that races with lock acquisition releases any ownership obtained by the worker thread. A renewal rejection or backend error stops synchronization immediately, attempts cleanup, and records the scheduled run as failed.
 
 > [!NOTE]
 > **4. Synchronization Requires Stateful Mode**:
@@ -41,6 +46,7 @@ This document describes the delivered Sprint 0 **opt-in incremental transaction 
 > - Recurring definitions are persisted by ID, and each synchronization window retains its complete upstream match payload under a period-specific cache key.
 > - The same payload is retained as the latest snapshot for recurring reads without an explicit period.
 > - This preserves expected, found, and missing occurrence details, while preventing one synchronization window from being reused for another.
+> - A period snapshot is not treated as a globally authoritative recurring-definition list; definitions absent from one bounded window remain available for other windows.
 
 ---
 
@@ -67,9 +73,8 @@ sequenceDiagram
     end
 
     API-->>Service: Return synchronized objects
-    Service->>DB: Upsert complete record graph
-    DB-->>Service: Persistence succeeds
-    Service->>DB: Upsert SyncMetadata("transactions", sync_started_at)
+    Service->>DB: Atomically reconcile graph, snapshots, and watermarks
+    DB-->>Service: Transaction commits
     Service-->>Client: Return synchronized record counts
 ```
 

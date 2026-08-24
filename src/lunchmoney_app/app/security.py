@@ -100,6 +100,7 @@ class RequestBodyLimitMiddleware:
                 return
 
         received_bytes = 0
+        response_started = False
 
         async def limited_receive() -> dict[str, Any]:
             """Count streamed body chunks before the downstream application reads them."""
@@ -111,9 +112,18 @@ class RequestBodyLimitMiddleware:
                     raise RequestBodyTooLargeError
             return message
 
+        async def tracked_send(message: dict[str, Any]) -> None:
+            """Track whether the downstream response can still be replaced."""
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
         try:
-            await self.app(scope, limited_receive, send)
+            await self.app(scope, limited_receive, tracked_send)
         except RequestBodyTooLargeError:
+            if response_started:
+                raise
             await _send_json_error(
                 send,
                 status_code=413,
