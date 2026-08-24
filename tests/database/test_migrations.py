@@ -45,7 +45,9 @@ def migration_database_url(request: pytest.FixtureRequest, tmp_path: Path) -> st
 def _migration_config(database_url: str | None = None) -> Config:
     """Build a repository Alembic configuration with an optional explicit URL."""
     config = Config(str(PROJECT_ROOT / "alembic.ini"))
-    config.set_main_option("script_location", str(PROJECT_ROOT / "alembic"))
+    config.set_main_option(
+        "script_location", str(PROJECT_ROOT / "src/lunchmoney_app/database/migrations")
+    )
     if database_url is not None:
         config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
     return config

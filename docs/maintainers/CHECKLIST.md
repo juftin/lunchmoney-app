@@ -184,6 +184,9 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-ex
       end-user MCP setup and move CLI and database reference material into
       dedicated guides; exclude engineering plans and handoff documents from
       the published documentation site.
+- [x] **Packaged Alembic Migrations**: Bundle migration scripts in wheel
+      distributions so `lunchmoney-app serve` can initialize a database when
+      installed with `uvx`.
 
 ### 🫥 Persistence Modes: Database-Free Ephemeral Runtime
 

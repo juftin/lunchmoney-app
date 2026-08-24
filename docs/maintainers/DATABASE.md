@@ -16,6 +16,8 @@ postgresql+asyncpg://user:password@host/database
 
 Create or update the schema before using the database. Runtime database
 construction does not call `create_all()` or run migrations automatically.
+The installed `lunchmoney-app serve` command applies its bundled migrations at
+startup, so it does not require a source checkout.
 
 ```bash
 export LUNCHMONEY_DATABASE_URL=sqlite+aiosqlite:///lunchmoney.db
