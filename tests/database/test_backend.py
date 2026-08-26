@@ -3,7 +3,9 @@
 from pathlib import Path
 
 import pytest
+from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -72,7 +74,8 @@ def test_default_database_url_is_persistent_sqlite(
     """Use the persistent SQLite URL when no override exists."""
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     assert resolve_database_url() == DEFAULT_DATABASE_URL
-    assert DEFAULT_DATABASE_URL == "sqlite+aiosqlite:///lunchmoney.db"
+    assert DEFAULT_DATABASE_URL.startswith("sqlite+aiosqlite:///")
+    assert DEFAULT_DATABASE_URL.endswith("/lunchmoney-app/lunchmoney.db")
 
 
 def test_migration_scripts_are_packaged_with_database_backend() -> None:
@@ -100,6 +103,49 @@ def test_database_uses_environment_url_without_explicit_argument(
     database = LunchMoneyDatabase()
 
     assert str(database.engine.url) == database_url
+
+
+def test_database_creates_parent_directory_for_file_backed_sqlite(
+    tmp_path: Path,
+) -> None:
+    """Support the platform data directory before SQLite first opens its file."""
+    database_path = tmp_path / "application-data" / "lunchmoney.db"
+
+    LunchMoneyDatabase(f"sqlite+aiosqlite:///{database_path}")
+
+    assert database_path.parent.is_dir()
+
+
+@pytest.mark.asyncio
+async def test_drop_all_tables_removes_schema_and_migration_state(
+    tmp_path: Path,
+) -> None:
+    """Allow a later migration to rebuild a fully deleted database schema."""
+    database_url = f"sqlite+aiosqlite:///{tmp_path / 'reset.db'}"
+    await backend.run_migrations(database_url)
+
+    await backend.drop_all_tables(database_url)
+
+    engine = create_async_engine(database_url)
+    try:
+        async with engine.connect() as connection:
+            table_names = await connection.run_sync(
+                lambda sync_connection: inspect(sync_connection).get_table_names()
+            )
+    finally:
+        await engine.dispose()
+    assert table_names == []
+
+    await backend.run_migrations(database_url)
+    engine = create_async_engine(database_url)
+    try:
+        async with engine.connect() as connection:
+            table_names = await connection.run_sync(
+                lambda sync_connection: inspect(sync_connection).get_table_names()
+            )
+    finally:
+        await engine.dispose()
+    assert {"alembic_version", "users", "transactions"} <= set(table_names)
 
 
 @pytest.mark.asyncio

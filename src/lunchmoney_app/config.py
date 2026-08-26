@@ -3,12 +3,19 @@
 from functools import cache
 from ipaddress import ip_address
 import os
+from pathlib import Path
 from typing import Any, Literal, cast
 
+from platformdirs import user_data_path
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, CliSettingsSource, SettingsConfigDict
 
-DEFAULT_DATABASE_URL: str = "sqlite+aiosqlite:///lunchmoney.db"
+from lunchmoney_app.__about__ import __application__
+
+DEFAULT_DATABASE_PATH: Path = user_data_path(__application__) / "lunchmoney.db"
+"""Default persistent SQLite file in the current user's data directory."""
+
+DEFAULT_DATABASE_URL: str = f"sqlite+aiosqlite:///{DEFAULT_DATABASE_PATH}"
 """Default persistent SQLite connection URL used when omitted."""
 
 

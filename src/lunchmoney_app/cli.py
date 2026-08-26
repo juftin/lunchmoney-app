@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from pathlib import Path
 import sys
 from collections.abc import Callable
 from typing import Any, Literal, TypeVar, cast, get_args, get_origin
@@ -16,6 +17,7 @@ from click.shell_completion import get_completion_class
 from pydantic import ValidationError
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
+from sqlalchemy.engine import make_url
 
 from lunchmoney_app.__about__ import __application__, __version__
 from lunchmoney_app.app.dependencies import get_lunchmoney_app, get_shared_database
@@ -33,6 +35,12 @@ from lunchmoney_app.config import (
     get_settings,
 )
 from lunchmoney_app.doctor import build_doctor_report
+from lunchmoney_app.database import (
+    drop_all_tables,
+    resolve_database_url,
+    run_migrations,
+)
+from lunchmoney_app.locks import LockTimeoutError, get_migration_lock
 from lunchmoney_app.logging_config import LOG_CONFIG
 from lunchmoney_app.mcp import server as mcp_server
 from lunchmoney_app.scheduler import run_schedule_process
@@ -341,6 +349,76 @@ def doctor_command() -> None:
 def version_command() -> None:
     """Print the installed package version."""
     click.echo(f"{__application__} {__version__}")
+
+
+@cli.group("db")
+def db_group() -> None:
+    """Inspect, migrate, or delete the configured application database."""
+
+
+def _database_info() -> dict[str, object]:
+    """Return safe JSON-serializable details for the configured database."""
+    secret_settings = get_secret_settings()
+    database_url = resolve_database_url()
+    parsed_url = make_url(database_url)
+    database_path: str | None = None
+    exists: bool | None = None
+    if parsed_url.get_backend_name() == "sqlite" and parsed_url.database is not None:
+        database_path = str(Path(parsed_url.database).expanduser().resolve())
+        exists = Path(database_path).is_file()
+    return {
+        "database_url": parsed_url.render_as_string(hide_password=True),
+        "database_url_is_explicit": secret_settings.database_url_is_explicit,
+        "dialect": parsed_url.get_backend_name(),
+        "driver": parsed_url.get_driver_name(),
+        "path": database_path,
+        "exists": exists,
+    }
+
+
+def _with_migration_lock(callback: Callable[[], None]) -> None:
+    """Run an exclusive database operation or report a concurrent runtime."""
+    try:
+        with get_migration_lock():
+            callback()
+    except LockTimeoutError as error:
+        raise click.ClickException(
+            "Database operation could not acquire the migration lock."
+        ) from error
+
+
+@db_group.command("info")
+def db_info_command() -> None:
+    """Print safe configured-database details as JSON."""
+    click.echo(json.dumps(_database_info(), sort_keys=True))
+
+
+@db_group.command("migrate")
+def db_migrate_command() -> None:
+    """Apply all pending database migrations."""
+    database_url = resolve_database_url()
+    _with_migration_lock(lambda: asyncio.run(run_migrations(database_url)))
+    click.echo("Database migrations applied.")
+
+
+@db_group.command("delete")
+@click.option(
+    "--yes",
+    is_flag=True,
+    help="Confirm dropping every Lunch Money application table.",
+)
+def db_delete_command(yes: bool) -> None:
+    """Drop every Lunch Money application table from the configured database."""
+    database_url = resolve_database_url()
+    safe_url = make_url(database_url).render_as_string(hide_password=True)
+    if not yes and not click.confirm(
+        f"Drop every Lunch Money table in {safe_url}?",
+        default=False,
+    ):
+        click.echo("Aborted.")
+        return
+    _with_migration_lock(lambda: asyncio.run(drop_all_tables(database_url)))
+    click.echo("Database tables deleted.")
 
 
 def _exit_stateful_mode_required() -> None:

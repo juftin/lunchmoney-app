@@ -188,6 +188,9 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-ex
 - [x] **Packaged Alembic Migrations**: Bundle migration scripts in wheel
       distributions so `lunchmoney-app serve` can initialize a database when
       installed with `uvx`.
+- [x] **Database Operator Commands**: Store the default SQLite database in the
+      platform user-data directory and provide safe `db info`, `db migrate`,
+      and confirmation-gated `db delete` commands.
 
 ### 🫥 Persistence Modes: Database-Free Ephemeral Runtime
 

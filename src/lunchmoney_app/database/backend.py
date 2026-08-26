@@ -15,8 +15,8 @@ from typing_extensions import Self
 from alembic import command
 from alembic.config import Config
 
-from sqlalchemy import delete, event, true, update
-from sqlalchemy.engine import make_url
+from sqlalchemy import delete, event, inspect, text, true, update
+from sqlalchemy.engine import Connection, make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlalchemy.pool import StaticPool
@@ -65,9 +65,31 @@ def _is_memory_sqlite_url(database_url: str) -> bool:
     )
 
 
+def _ensure_sqlite_database_directory(database_url: str) -> None:
+    """Create the parent directory for a file-backed SQLite database.
+
+    Parameters
+    ----------
+    database_url : str
+        SQLAlchemy database URL that may select a SQLite file.
+    """
+    parsed_url = make_url(database_url)
+    if (
+        parsed_url.get_backend_name() != "sqlite"
+        or parsed_url.database is None
+        or _is_memory_sqlite_url(database_url)
+    ):
+        return
+    Path(parsed_url.database).expanduser().resolve().parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+
 __all__ = [
     "DEFAULT_DATABASE_URL",
     "LunchMoneyDatabase",
+    "drop_all_tables",
     "resolve_database_url",
     "run_migrations",
 ]
@@ -93,12 +115,39 @@ async def run_migrations(
 
     def _sync_upgrade() -> None:
         resolved_url = resolve_database_url(database_url)
+        _ensure_sqlite_database_directory(resolved_url)
         config = Config()
         config.set_main_option("script_location", str(MIGRATIONS_DIRECTORY))
         config.set_main_option("sqlalchemy.url", resolved_url.replace("%", "%%"))
         command.upgrade(config, revision)
 
     await asyncio.to_thread(_sync_upgrade)
+
+
+async def drop_all_tables(database_url: str | None = None) -> None:
+    """Drop every Lunch Money table and its Alembic revision state.
+
+    Parameters
+    ----------
+    database_url : str | None
+        Explicit database URL, if different from configured storage.
+    """
+
+    resolved_url = resolve_database_url(database_url)
+    _ensure_sqlite_database_directory(resolved_url)
+    engine = create_async_engine(resolved_url)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(_drop_sqlmodel_tables)
+    finally:
+        await engine.dispose()
+
+
+def _drop_sqlmodel_tables(connection: Connection) -> None:
+    """Drop modeled tables and the Alembic version table on one connection."""
+    SQLModel.metadata.drop_all(connection)
+    if inspect(connection).has_table("alembic_version"):
+        connection.execute(text("DROP TABLE alembic_version"))
 
 
 def _enable_sqlite_foreign_keys(
@@ -697,6 +746,7 @@ class LunchMoneyDatabase:
     def __init__(self, database_url: str | None = None) -> None:
         """Create database resources for the resolved connection URL."""
         resolved_url = resolve_database_url(database_url)
+        _ensure_sqlite_database_directory(resolved_url)
         self.database_url = resolved_url
         """Resolved backend URL used to construct the engine."""
         engine_kwargs: dict[str, Any] = {}

@@ -1,7 +1,8 @@
 """Tests for the Click command-line process dispatcher."""
 
 from collections.abc import Iterator
-from unittest.mock import AsyncMock, Mock
+import json
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -18,6 +19,7 @@ def reset_runtime_configuration() -> Iterator[None]:
     config._runtime_settings = None
     config._runtime_mode = None
     config.get_settings.cache_clear()
+    config.get_secret_settings.cache_clear()
 
 
 def test_cli_runs_standalone_mcp_without_persistent_storage(
@@ -287,6 +289,72 @@ def test_cli_prints_installed_version(capsys: pytest.CaptureFixture[str]) -> Non
     cli.main(["version"])
 
     assert capsys.readouterr().out == f"{cli.__application__} {cli.__version__}\n"
+
+
+def test_db_info_prints_safe_json_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Expose safe configured-database details for scripts and operators."""
+    import lunchmoney_app.cli as cli
+
+    monkeypatch.setenv(
+        "LUNCHMONEY_DATABASE_URL",
+        "postgresql+asyncpg://user:synthetic-secret@localhost/lunchmoney",
+    )
+
+    cli.main(["db", "info"])
+
+    output = json.loads(capsys.readouterr().out)
+    assert (
+        output["database_url"] == "postgresql+asyncpg://user:***@localhost/lunchmoney"
+    )
+    assert output["database_url_is_explicit"] is True
+    assert output["dialect"] == "postgresql"
+    assert output["path"] is None
+    assert output["exists"] is None
+
+
+def test_db_migrate_uses_the_configured_database_and_lock(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Apply the configured database's pending migrations exclusively."""
+    import lunchmoney_app.cli as cli
+
+    database_url = "sqlite+aiosqlite:////tmp/lunchmoney.db"
+    lock = MagicMock()
+    run_migrations = AsyncMock()
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", database_url)
+    monkeypatch.setattr(cli, "get_migration_lock", Mock(return_value=lock))
+    monkeypatch.setattr(cli, "run_migrations", run_migrations)
+
+    cli.main(["db", "migrate"])
+
+    run_migrations.assert_awaited_once_with(database_url)
+    assert lock.__enter__.called
+    assert lock.__exit__.called
+    assert capsys.readouterr().out == "Database migrations applied.\n"
+
+
+def test_db_delete_downgrades_every_database_backend(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Delete tables through migrations instead of removing a SQLite file."""
+    import lunchmoney_app.cli as cli
+
+    database_url = "postgresql+asyncpg://localhost/lunchmoney"
+    lock = MagicMock()
+    drop_all_tables = AsyncMock()
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", database_url)
+    monkeypatch.setattr(cli, "get_migration_lock", Mock(return_value=lock))
+    monkeypatch.setattr(cli, "drop_all_tables", drop_all_tables)
+
+    cli.main(["db", "delete", "--yes"])
+
+    drop_all_tables.assert_awaited_once_with(database_url)
+    assert capsys.readouterr().out == "Database tables deleted.\n"
 
 
 def test_cli_prints_native_shell_completion(

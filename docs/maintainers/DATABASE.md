@@ -3,7 +3,8 @@
 ## Configuration
 
 With no configuration, `LunchMoneyDatabase` uses the persistent SQLite file
-`sqlite+aiosqlite:///lunchmoney.db` in the current working directory. The
+`lunchmoney.db` in the platform-specific user data directory reported by
+`platformdirs` (for example, `$XDG_DATA_HOME/lunchmoney-app` on Linux). The
 `mcp` command instead defaults to database-free ephemeral operation when using
 stdio; select `--persistence-mode stateful` to use the persistent default. Pass
 a URL to the constructor or set `LUNCHMONEY_DATABASE_URL`; an explicit
@@ -27,6 +28,17 @@ uv run alembic upgrade head
 
 The same command works with a `postgresql+asyncpg` URL. To reverse all
 migrations, run `uv run alembic downgrade base`.
+
+The CLI provides equivalent operator commands. `info` is safe for scripts and
+redacts database passwords; `delete` uses SQLModel metadata to drop every
+application table on SQLite and PostgreSQL alike, including Alembic's revision
+state so a later migration recreates the schema.
+
+```bash
+lunchmoney-app db info
+lunchmoney-app db migrate
+lunchmoney-app db delete --yes
+```
 
 ## Convenience API
 

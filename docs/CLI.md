@@ -3,7 +3,7 @@
 ## Commands
 
 The Click command-line interface provides `mcp`, `serve`, `schedule`, `sync`,
-`doctor`, `version`, and `config`. Use command help to see every option
+`doctor`, `version`, `config`, and `db`. Use command help to see every option
 applicable to one runtime, including its Pydantic default and environment
 variable alternative:
 
@@ -15,6 +15,12 @@ lunchmoney-app mcp --help
 `doctor` validates local configuration and prerequisites without calling Lunch
 Money. `sync` performs one foreground synchronization, and `version` prints the
 installed package version.
+
+Use `db info` to print safe database configuration JSON, `db migrate` to apply
+pending migrations, and `db delete --yes` to drop every Lunch Money application
+table in the configured SQLite or PostgreSQL database. Database URLs are still
+configured only through `LUNCHMONEY_DATABASE_URL` or `.env`; `db info` redacts
+any password.
 
 Use the configuration commands to discover every runtime and environment-only
 setting, inspect safely redacted resolved values, or validate configuration
