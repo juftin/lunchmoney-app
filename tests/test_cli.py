@@ -305,7 +305,9 @@ def test_db_info_prints_safe_json_configuration(
 
     cli.main(["db", "info"])
 
-    output = json.loads(capsys.readouterr().out)
+    rendered_output = capsys.readouterr().out
+    output = json.loads(rendered_output)
+    assert rendered_output.startswith("{\n  ")
     assert (
         output["database_url"] == "postgresql+asyncpg://user:***@localhost/lunchmoney"
     )

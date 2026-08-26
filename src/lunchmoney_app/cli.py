@@ -390,7 +390,7 @@ def _with_migration_lock(callback: Callable[[], None]) -> None:
 @db_group.command("info")
 def db_info_command() -> None:
     """Print safe configured-database details as JSON."""
-    click.echo(json.dumps(_database_info(), sort_keys=True))
+    click.echo(json.dumps(_database_info(), indent=2, sort_keys=True))
 
 
 @db_group.command("migrate")
