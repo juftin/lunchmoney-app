@@ -657,6 +657,8 @@ def test_dashboard_renders_syncing_component(
     assert "Engine & Storage" in response.text
     assert "Database URL" in response.text
     assert "sqlite+aiosqlite:///lunchmoney.db" in response.text
+    assert 'class="sync-summary__database-url"' in response.text
+    assert 'class="sync-code sync-code--scrollable"' in response.text
     assert "Local DB Inventory" in response.text
     assert "Transactions Workload" in response.text
     assert "Metadata Workload" in response.text

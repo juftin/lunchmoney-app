@@ -336,11 +336,12 @@ dashboard.unavailable_sections %}
                     >
                 </dd>
             </div>
-            <div>
+            <div class="sync-summary__database-url">
                 <dt>Database URL</dt>
                 <dd>
                     <code
-                        class="sync-code"
+                        class="sync-code sync-code--scrollable"
+                        tabindex="0"
                         title="{{ dashboard.sync_status.db_url }}"
                         >{{ dashboard.sync_status.db_url }}</code
                     >
