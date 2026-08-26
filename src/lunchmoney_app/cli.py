@@ -268,9 +268,24 @@ def schedule_command(ctx: click.Context, **values: Any) -> None:
 
 
 @cli.command("serve")
+@click.option(
+    "--debug/--no-debug",
+    default=False,
+    help="Enable Uvicorn debug logging.",
+)
+@click.option(
+    "--reload/--no-reload",
+    default=False,
+    help="Restart Uvicorn when application files change.",
+)
 @_settings_options(ServeCliSettings)
 @click.pass_context
-def serve_command(ctx: click.Context, **values: Any) -> None:
+def serve_command(
+    ctx: click.Context,
+    debug: bool,
+    reload: bool,
+    **values: Any,
+) -> None:
     """Run the local FastAPI application."""
     settings = _resolve_settings(ctx, ServeCliSettings, values)
     configure_runtime_settings(settings)
@@ -280,8 +295,9 @@ def serve_command(ctx: click.Context, **values: Any) -> None:
         "lunchmoney_app.app.main:app",
         host=settings.host,
         port=settings.port,
-        reload=True,
+        reload=reload,
         log_config=LOG_CONFIG,
+        log_level="debug" if debug else None,
     )
 
 

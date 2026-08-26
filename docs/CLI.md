@@ -110,10 +110,12 @@ through the `get_sync_status` MCP tool. To include it with Docker Compose, run:
 docker compose --profile scheduler up --build
 ```
 
-For local, single-process FastAPI development, enable the optional scheduler in
-the `serve` command:
+The `serve` command disables debug logging and file reloads by default. Enable
+both with `--debug --reload`, or use `task dev`, which passes those flags for
+local development. To enable the optional scheduler in that development task:
 
 ```bash
+lunchmoney-app serve --embed-scheduler --schedule-cron "0 * * * *"
 task dev -- --embed-scheduler --schedule-cron "0 * * * *"
 ```
 

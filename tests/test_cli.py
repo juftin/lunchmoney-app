@@ -133,9 +133,25 @@ def test_cli_runs_fastapi_with_pydantic_runtime_options(
         "lunchmoney_app.app.main:app",
         host="0.0.0.0",
         port=9000,
-        reload=True,
+        reload=False,
         log_config=cli.LOG_CONFIG,
+        log_level=None,
     )
+
+
+def test_cli_enables_uvicorn_debug_and_reload_on_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pass explicit development flags through to Uvicorn."""
+    import lunchmoney_app.cli as cli
+
+    run = Mock()
+    monkeypatch.setattr(cli.uvicorn, "run", run)
+
+    cli.main(["serve", "--debug", "--reload"])
+
+    assert run.call_args.kwargs["reload"] is True
+    assert run.call_args.kwargs["log_level"] == "debug"
 
 
 def test_cli_runs_one_foreground_sync(monkeypatch: pytest.MonkeyPatch) -> None:
