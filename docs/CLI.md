@@ -18,9 +18,9 @@ installed package version.
 
 Use `db info` to print safe database configuration JSON, `db migrate` to apply
 pending migrations, and `db delete --yes` to drop every Lunch Money application
-table in the configured SQLite or PostgreSQL database. Database URLs are still
-configured only through `LUNCHMONEY_DATABASE_URL` or `.env`; `db info` redacts
-any password.
+table in a configured PostgreSQL database or delete a configured SQLite file.
+Database URLs are still configured only through `LUNCHMONEY_DATABASE_URL` or
+`.env`; `db info` redacts any password.
 
 Use the configuration commands to discover every runtime and environment-only
 setting, inspect safely redacted resolved values, or validate configuration

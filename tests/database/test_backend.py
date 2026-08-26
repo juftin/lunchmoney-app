@@ -149,6 +149,25 @@ async def test_drop_all_tables_removes_schema_and_migration_state(
 
 
 @pytest.mark.asyncio
+async def test_delete_database_removes_sqlite_file_and_sidecars(
+    tmp_path: Path,
+) -> None:
+    """Remove every file that preserves a deleted SQLite database state."""
+    database_path = tmp_path / "lunchmoney.db"
+    database_url = f"sqlite+aiosqlite:///{database_path}"
+    sidecars = (
+        database_path.with_name("lunchmoney.db-journal"),
+        database_path.with_name("lunchmoney.db-shm"),
+        database_path.with_name("lunchmoney.db-wal"),
+    )
+    for path in (database_path, *sidecars):
+        path.touch()
+
+    assert await backend.delete_database(database_url) is True
+    assert not any(path.exists() for path in (database_path, *sidecars))
+
+
+@pytest.mark.asyncio
 async def test_database_exposes_native_async_session(tmp_path: Path) -> None:
     """Yield SQLModel's native async session and dispose cleanly."""
     url = f"sqlite+aiosqlite:///{tmp_path / 'database.db'}"

@@ -339,7 +339,7 @@ def test_db_migrate_uses_the_configured_database_and_lock(
     assert capsys.readouterr().out == "Database migrations applied.\n"
 
 
-def test_db_delete_downgrades_every_database_backend(
+def test_db_delete_drops_tables_for_nonfile_database_backends(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -348,14 +348,14 @@ def test_db_delete_downgrades_every_database_backend(
 
     database_url = "postgresql+asyncpg://localhost/lunchmoney"
     lock = MagicMock()
-    drop_all_tables = AsyncMock()
+    delete_database = AsyncMock(return_value=False)
     monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", database_url)
     monkeypatch.setattr(cli, "get_migration_lock", Mock(return_value=lock))
-    monkeypatch.setattr(cli, "drop_all_tables", drop_all_tables)
+    monkeypatch.setattr(cli, "delete_database", delete_database)
 
     cli.main(["db", "delete", "--yes"])
 
-    drop_all_tables.assert_awaited_once_with(database_url)
+    delete_database.assert_awaited_once_with(database_url)
     assert capsys.readouterr().out == "Database tables deleted.\n"
 
 

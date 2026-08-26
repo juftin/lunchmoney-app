@@ -89,6 +89,7 @@ def _ensure_sqlite_database_directory(database_url: str) -> None:
 __all__ = [
     "DEFAULT_DATABASE_URL",
     "LunchMoneyDatabase",
+    "delete_database",
     "drop_all_tables",
     "resolve_database_url",
     "run_migrations",
@@ -143,11 +144,58 @@ async def drop_all_tables(database_url: str | None = None) -> None:
         await engine.dispose()
 
 
+async def delete_database(database_url: str | None = None) -> bool:
+    """Delete a SQLite database file or drop tables from another backend.
+
+    Parameters
+    ----------
+    database_url : str | None
+        Explicit database URL, if different from configured storage.
+
+    Returns
+    -------
+    bool
+        ``True`` when a SQLite database file was removed; ``False`` when a
+        non-file backend had its application tables dropped.
+    """
+    resolved_url = resolve_database_url(database_url)
+    database_path = _sqlite_database_path(resolved_url)
+    if database_path is None:
+        await drop_all_tables(resolved_url)
+        return False
+    await asyncio.to_thread(_delete_sqlite_database_files, database_path)
+    return True
+
+
 def _drop_sqlmodel_tables(connection: Connection) -> None:
     """Drop modeled tables and the Alembic version table on one connection."""
     SQLModel.metadata.drop_all(connection)
     if inspect(connection).has_table("alembic_version"):
         connection.execute(text("DROP TABLE alembic_version"))
+
+
+def _sqlite_database_path(database_url: str) -> Path | None:
+    """Return the resolved path for a conventional file-backed SQLite URL."""
+    parsed_url = make_url(database_url)
+    if (
+        parsed_url.get_backend_name() != "sqlite"
+        or parsed_url.database is None
+        or _is_memory_sqlite_url(database_url)
+        or parsed_url.query.get("uri") == "true"
+    ):
+        return None
+    return Path(parsed_url.database).expanduser().resolve()
+
+
+def _delete_sqlite_database_files(database_path: Path) -> None:
+    """Remove a SQLite database and transient sidecar files when present."""
+    for path in (
+        database_path,
+        database_path.with_name(f"{database_path.name}-journal"),
+        database_path.with_name(f"{database_path.name}-shm"),
+        database_path.with_name(f"{database_path.name}-wal"),
+    ):
+        path.unlink(missing_ok=True)
 
 
 def _enable_sqlite_foreign_keys(

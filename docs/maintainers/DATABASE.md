@@ -30,9 +30,9 @@ The same command works with a `postgresql+asyncpg` URL. To reverse all
 migrations, run `uv run alembic downgrade base`.
 
 The CLI provides equivalent operator commands. `info` is safe for scripts and
-redacts database passwords; `delete` uses SQLModel metadata to drop every
-application table on SQLite and PostgreSQL alike, including Alembic's revision
-state so a later migration recreates the schema.
+redacts database passwords. `delete` removes a file-backed SQLite database and
+its SQLite journal files; it drops every application table and Alembic revision
+state for non-file backends such as PostgreSQL.
 
 ```bash
 lunchmoney-app db info

@@ -36,7 +36,7 @@ from lunchmoney_app.config import (
 )
 from lunchmoney_app.doctor import build_doctor_report
 from lunchmoney_app.database import (
-    drop_all_tables,
+    delete_database,
     resolve_database_url,
     run_migrations,
 )
@@ -408,7 +408,7 @@ def db_migrate_command() -> None:
     help="Confirm dropping every Lunch Money application table.",
 )
 def db_delete_command(yes: bool) -> None:
-    """Drop every Lunch Money application table from the configured database."""
+    """Delete the configured SQLite file or drop application tables remotely."""
     database_url = resolve_database_url()
     safe_url = make_url(database_url).render_as_string(hide_password=True)
     if not yes and not click.confirm(
@@ -417,8 +417,18 @@ def db_delete_command(yes: bool) -> None:
     ):
         click.echo("Aborted.")
         return
-    _with_migration_lock(lambda: asyncio.run(drop_all_tables(database_url)))
-    click.echo("Database tables deleted.")
+    database_file_deleted = False
+
+    def delete() -> None:
+        """Delete storage while preserving the result for terminal output."""
+        nonlocal database_file_deleted
+        database_file_deleted = asyncio.run(delete_database(database_url))
+
+    _with_migration_lock(delete)
+    if database_file_deleted:
+        click.echo("SQLite database file deleted.")
+    else:
+        click.echo("Database tables deleted.")
 
 
 def _exit_stateful_mode_required() -> None:
