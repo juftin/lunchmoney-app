@@ -112,7 +112,8 @@ docker compose --profile scheduler up --build
 
 The `serve` command disables debug logging and file reloads by default. Enable
 both with `--debug --reload`, or use `task dev`, which passes those flags for
-local development. To enable the optional scheduler in that development task:
+local development. Reloading watches only the application package directory.
+To enable the optional scheduler in that development task:
 
 ```bash
 lunchmoney-app serve --embed-scheduler --schedule-cron "0 * * * *"

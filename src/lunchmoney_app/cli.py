@@ -7,6 +7,7 @@ import asyncio
 import json
 import sys
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Literal, TypeVar, cast, get_args, get_origin
 
 import click
@@ -296,6 +297,7 @@ def serve_command(
         host=settings.host,
         port=settings.port,
         reload=reload,
+        reload_dirs=[str(Path(__file__).parent)] if reload else None,
         log_config=LOG_CONFIG,
         log_level="debug" if debug else None,
     )
