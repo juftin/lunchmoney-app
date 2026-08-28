@@ -5,6 +5,43 @@ service, PostgreSQL, Redis, and optionally one scheduler. It intentionally
 keeps financial data and credentials out of logs, command history, and CI
 output.
 
+## Cloudflare Workers
+
+Cloudflare Workers run only the Streamable HTTP MCP ASGI application at
+`/mcp`; they do not mount the REST API, dashboard, health endpoints, or static
+assets. This deployment always uses `ephemeral` persistence: the Worker reads
+and writes through the Lunch Money API but does not retain a database. Use
+Docker Compose when stateful features or the REST/dashboard application are
+required.
+
+The deployment requires Cloudflare's Python 3.14 Worker runtime, `uv` 0.12.3+,
+Node.js 22.x, and a Cloudflare
+account. `pywrangler` is Cloudflare's Python-aware wrapper for Wrangler; the
+project provides it through the `workers` dependency group. Authenticate, then
+add the Lunch Money credential without placing it in `wrangler.jsonc` or shell
+history:
+
+```bash
+uv run --group workers -- pywrangler login
+uv run --group workers -- pywrangler secret put LUNCHMONEY_ACCESS_TOKEN
+```
+
+Run the Worker locally with `task worker:dev`. Deploy it with
+`task worker:deploy`; it delegates to `pywrangler deploy`, which bundles the
+Python dependencies and calls Wrangler. Connect remote MCP clients to the
+published `/mcp` endpoint. This minimal Worker deployment does not enable the
+application's optional OAuth proxy.
+
+For a local runtime smoke test, send an MCP `initialize` request to `/mcp` and
+expect a JSON-RPC response with `serverInfo.name` set to `Lunch Money MCP`.
+Requests to `/api` should return `404`, confirming that the FastAPI REST
+application is not mounted.
+
+The current bundle is 12.7 MB gzip in a Wrangler dry run. This exceeds the
+standard 10 MB paid-plan Worker limit, so deployment requires either a bundle
+limit increase or further dependency pruning before `task worker:deploy` can
+succeed.
+
 ## Deploy safely
 
 1. Terminate TLS at an ingress or reverse proxy and forward only to the web

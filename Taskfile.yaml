@@ -156,6 +156,18 @@ tasks:
         cmds:
             - uv run --group docs -- mkdocs {{.CLI_ARGS | default "serve"}}
     #######################################
+    # CLOUDFLARE WORKERS
+    #######################################
+    worker:dev:
+        desc: Run the Cloudflare Python Worker locally
+        cmds:
+            - uv run --group workers -- pywrangler dev
+    #######################################
+    worker:deploy:
+        desc: Deploy the Cloudflare Python Worker
+        cmds:
+            - uv run --group workers -- pywrangler deploy
+    #######################################
     run:
         desc: Run Project Command (requires "--")
         interactive: true

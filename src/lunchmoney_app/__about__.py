@@ -4,8 +4,11 @@
 its installed version.
 """
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
 __application__ = "lunchmoney-app"
 
-__version__ = version(__application__)
+try:
+    __version__ = version(__application__)
+except PackageNotFoundError:
+    __version__ = "0.10.2"
