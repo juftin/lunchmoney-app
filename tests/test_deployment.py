@@ -98,8 +98,8 @@ def test_production_server_dependencies_are_declared() -> None:
     """Install the Gunicorn runtime and maintained worker package in releases."""
     pyproject = (PROJECT_ROOT / "pyproject.toml").read_text()
 
-    assert '"gunicorn>=23.0.0,<24"' in pyproject
-    assert '"uvicorn-worker>=0.4.0,<1"' in pyproject
+    assert "\"gunicorn>=23.0.0,<24 ; sys_platform != 'emscripten'\"" in pyproject
+    assert "\"uvicorn-worker>=0.4.0,<1 ; sys_platform != 'emscripten'\"" in pyproject
     assert '"uvicorn>=0.41.0,<1"' in pyproject
     assert '"pydantic>=2.12.5,<3"' in pyproject
     assert '"pydantic-settings>=2.13.1,<3"' in pyproject

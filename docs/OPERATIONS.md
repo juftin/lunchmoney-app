@@ -37,10 +37,16 @@ expect a JSON-RPC response with `serverInfo.name` set to `Lunch Money MCP`.
 Requests to `/api` should return `404`, confirming that the FastAPI REST
 application is not mounted.
 
-The current bundle is 12.7 MB gzip in a Wrangler dry run. This exceeds the
+The current bundle is 12.5 MB gzip in a Wrangler dry run. This exceeds the
 standard 10 MB paid-plan Worker limit, so deployment requires either a bundle
 limit increase or further dependency pruning before `task worker:deploy` can
 succeed.
+
+The Worker uses `fastmcp-slim[mcp]` plus the FastMCP server imports required by
+the Streamable HTTP app: `griffelib`, `jsonref`, `py-key-value-aio[memory]`,
+`packaging`, `uncalled-for`, and `uvicorn`. Do not replace that set with
+`fastmcp-slim[server]`: its optional `watchfiles` dependency has no compatible
+Pyodide wheel. Validate the complete dependency tree with `task worker:dev`.
 
 ## Deploy safely
 

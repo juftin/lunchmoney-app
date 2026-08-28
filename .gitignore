@@ -20,6 +20,7 @@ coverage.xml
 pytest.xml
 htmlcov/
 .cache/
+.wrangler/
 .superpowers/
 .worktrees/
 .idea/
@@ -31,6 +32,8 @@ build/
 dist/
 *.egg-info/
 site/
+python_modules/
+pylock.toml
 
 # Application runtime databases & lockfiles
 *.db
