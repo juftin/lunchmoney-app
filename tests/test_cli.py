@@ -1,6 +1,7 @@
 """Tests for the Click command-line process dispatcher."""
 
 from collections.abc import Iterator
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -133,9 +134,27 @@ def test_cli_runs_fastapi_with_pydantic_runtime_options(
         "lunchmoney_app.app.main:app",
         host="0.0.0.0",
         port=9000,
-        reload=True,
+        reload=False,
+        reload_dirs=None,
         log_config=cli.LOG_CONFIG,
+        log_level=None,
     )
+
+
+def test_cli_enables_uvicorn_debug_and_reload_on_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pass explicit development flags through to Uvicorn."""
+    import lunchmoney_app.cli as cli
+
+    run = Mock()
+    monkeypatch.setattr(cli.uvicorn, "run", run)
+
+    cli.main(["serve", "--debug", "--reload"])
+
+    assert run.call_args.kwargs["reload"] is True
+    assert run.call_args.kwargs["reload_dirs"] == [str(Path(cli.__file__).parent)]
+    assert run.call_args.kwargs["log_level"] == "debug"
 
 
 def test_cli_runs_one_foreground_sync(monkeypatch: pytest.MonkeyPatch) -> None:
