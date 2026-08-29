@@ -642,6 +642,23 @@ body {
     color: var(--gold);
     border: 1px solid rgba(239, 178, 14, 0.2);
 }
+.sync-summary__database-url {
+    min-width: 0;
+}
+.sync-summary__database-url dd {
+    flex: 1;
+    min-width: 0;
+}
+.sync-code--scrollable {
+    display: block;
+    box-sizing: border-box;
+    max-width: 100%;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: thin;
+}
 .sync-tz {
     font-size: 0.72rem;
     color: var(--muted);

@@ -3,6 +3,8 @@
 from lunchmoney_app.database.backend import (
     DEFAULT_DATABASE_URL,
     LunchMoneyDatabase,
+    delete_database,
+    drop_all_tables,
     eager_options,
     resolve_database_url,
     run_migrations,
@@ -42,6 +44,8 @@ __all__ = [
     "TransactionTagLink",
     "User",
     "eager_options",
+    "delete_database",
+    "drop_all_tables",
     "resolve_database_url",
     "run_migrations",
 ]

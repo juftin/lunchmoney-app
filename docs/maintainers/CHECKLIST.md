@@ -167,6 +167,7 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-financial-
 - [x] **HTML Dashboard**: Add authenticated, accessible single-user, single-account server-rendered summary, spending, budget, transaction, and sync-status views without a separate JavaScript application.
 - [x] **Service Reuse**: Keep dashboard routes as thin delegators to existing services and test authorized, empty, and error rendering.
 - [x] **Interactive Category Tree**: Group dashboard spending by parent category with accessible child disclosure and a local mascot brand mark.
+- [x] **Long Database URL Containment**: Keep sanitized database URLs within the sync panel and make only the URL value horizontally scrollable.
 
 ### 🧰 Sprint 12: CLI, Packaging & Operator Experience
 
@@ -188,6 +189,9 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-ex
 - [x] **Packaged Alembic Migrations**: Bundle migration scripts in wheel
       distributions so `lunchmoney-app serve` can initialize a database when
       installed with `uvx`.
+- [x] **Database Operator Commands**: Store the default SQLite database in the
+      platform user-data directory and provide safe `db info`, `db migrate`,
+      and confirmation-gated `db delete` commands.
 
 ### 🫥 Persistence Modes: Database-Free Ephemeral Runtime
 

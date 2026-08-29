@@ -3,6 +3,7 @@
 import datetime
 import importlib
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
 from unittest.mock import ANY, AsyncMock, create_autospec
@@ -657,6 +658,8 @@ def test_dashboard_renders_syncing_component(
     assert "Engine & Storage" in response.text
     assert "Database URL" in response.text
     assert "sqlite+aiosqlite:///lunchmoney.db" in response.text
+    assert 'class="sync-summary__database-url"' in response.text
+    assert 'class="sync-code sync-code--scrollable"' in response.text
     assert "Local DB Inventory" in response.text
     assert "Transactions Workload" in response.text
     assert "Metadata Workload" in response.text
@@ -664,6 +667,22 @@ def test_dashboard_renders_syncing_component(
     assert "*/10 * * * *" in response.text
     assert "0 * * * *" in response.text
     assert 'class="js-local-time"' in response.text
+
+
+def test_dashboard_database_url_styles_constrain_the_scroll_area() -> None:
+    """Keep a long database URL inside the sync panel's scrollable width."""
+    stylesheet = (
+        Path(__file__).parents[1] / "src/lunchmoney_app/app/static/dashboard.css"
+    ).read_text()
+    database_url_row = stylesheet.partition(".sync-summary__database-url {")[
+        2
+    ].partition("}")[0]
+    scrollable_code = stylesheet.partition(".sync-code--scrollable {")[2].partition(
+        "}"
+    )[0]
+
+    assert "min-width: 0;" in database_url_row
+    assert "max-width: 100%;" in scrollable_code
 
 
 def test_humanize_time_ago() -> None:
