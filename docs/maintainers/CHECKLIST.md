@@ -213,6 +213,10 @@ _Reference Spec_: [`DESIGN_EPHEMERAL_STATEFUL.md`](DESIGN_EPHEMERAL_STATEFUL.md)
 
 ### 🧹 Follow-Up Hardening
 
+- [x] **Cloudflare Workers MCP Deployment**: Configure the Python Worker
+      entrypoint for Streamable HTTP MCP only, Wrangler deployment commands,
+      ephemeral persistence, and operator instructions.
+
 - [x] **Authoritative Sync Reconciliation**: Serialize all synchronization,
       migrate the injected database, reconcile complete metadata deletions, and
       prune transactions only inside authoritative date windows.

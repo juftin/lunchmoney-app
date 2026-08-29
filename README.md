@@ -52,3 +52,5 @@ Try asking:
 - [MCP guide](docs/MCP_GUIDE.md): client configuration, remote connections, and OAuth.
 - [CLI guide](docs/CLI.md): commands, data handling, scheduling, and shell completion.
 - [Operations runbook](docs/OPERATIONS.md): self-hosting, Docker Compose, security, and backups.
+- [Cloudflare Workers deployment](docs/OPERATIONS.md#cloudflare-workers): deploy the
+  database-free MCP runtime at Cloudflare's edge.

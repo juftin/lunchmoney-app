@@ -1,0 +1,17 @@
+{
+    "$schema": "./node_modules/wrangler/config-schema.json",
+    "name": "lunchmoney-app",
+    "main": "src/cloudflare_worker.py",
+    "compatibility_date": "2026-08-26",
+    "compatibility_flags": ["python_workers", "python_workers_20260610"],
+    "observability": {
+        "enabled": true,
+    },
+    "vars": {
+        "LUNCHMONEY_ENVIRONMENT": "production",
+        "LUNCHMONEY_PERSISTENCE_MODE": "ephemeral",
+    },
+    "python_modules": {
+        "excludes": ["**/*.pyc", "**/__pycache__"],
+    },
+}
