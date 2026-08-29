@@ -304,6 +304,8 @@ features.
       rendered empty/error states.
 - [x] Establish Tabler as the locally served dashboard UI foundation, with a
       custom financial visual system layered over server-rendered templates.
+- [x] Keep long sanitized database URLs within the sync panel, with horizontal
+      scrolling limited to the URL value.
 
 ### Sprint 12: CLI, Packaging & Operator Experience
 
