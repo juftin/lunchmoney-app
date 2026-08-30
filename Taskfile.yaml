@@ -115,6 +115,36 @@ tasks:
             - cmd: rm -rf {{.ROOT_DIR}}/dist
             - cmd: uv build
     #######################################
+    mcpb:
+        desc: Build the Claude Desktop MCP Bundle
+        cmds:
+            - cmd: rm -rf {{.ROOT_DIR}}/dist/mcpb
+            - cmd: mkdir -p {{.ROOT_DIR}}/dist/mcpb
+            - cmd: cp {{.ROOT_DIR}}/pyproject.toml {{.ROOT_DIR}}/uv.lock {{.ROOT_DIR}}/README.md {{.ROOT_DIR}}/LICENSE {{.ROOT_DIR}}/dist/mcpb/
+            - cmd: git -C {{.ROOT_DIR}} archive --format=tar HEAD src | tar -xf - -C {{.ROOT_DIR}}/dist/mcpb
+            - cmd: cp {{.ROOT_DIR}}/mcpb/manifest.json {{.ROOT_DIR}}/dist/mcpb/manifest.json
+            - cmd: npx --yes @anthropic-ai/mcpb@2.1.2 pack {{.ROOT_DIR}}/dist/mcpb {{.ROOT_DIR}}/dist/lunchmoney-app.mcpb
+    #######################################
+    mcp:verify:
+        desc: Validate installable MCP bundles and registry metadata
+        cmds:
+            - cmd: npx --yes @anthropic-ai/claude-code@2.1.206 plugin validate {{.ROOT_DIR}} --strict
+            - cmd: npx --yes @google/gemini-cli@0.46.0 extensions validate {{.ROOT_DIR}}
+            - task: mcpb
+            - cmd: uv run --locked --no-dev --directory {{.ROOT_DIR}}/dist/mcpb lunchmoney-app version
+            - |
+                VERIFY_VERSION="$(uv version --short)"
+                task registry:manifest VERSION="$VERIFY_VERSION" MCPB={{.ROOT_DIR}}/dist/lunchmoney-app.mcpb MCPB_URL=https://example.com/lunchmoney-app.mcpb OUTPUT={{.ROOT_DIR}}/dist/mcp-registry/server.json
+                bash {{.ROOT_DIR}}/scripts/mcp_publisher.sh validate {{.ROOT_DIR}}/mcp-registry/server.json
+                bash {{.ROOT_DIR}}/scripts/mcp_publisher.sh validate {{.ROOT_DIR}}/dist/mcp-registry/server.json
+    #######################################
+    registry:manifest:
+        desc: Render MCP Registry metadata for a built MCPB release artifact
+        cmds:
+            - uv run -- python scripts/render_mcp_registry_manifest.py --version {{.VERSION}} --mcpb {{.MCPB}} --mcpb-url {{.MCPB_URL}} --output {{.OUTPUT}}
+        requires:
+            vars: [VERSION, MCPB, MCPB_URL, OUTPUT]
+    #######################################
     docker:
         desc: Build Docker Image
         cmd: |

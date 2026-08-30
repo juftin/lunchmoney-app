@@ -1,0 +1,13 @@
+{
+    "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+    "name": "lunchmoney-mcp",
+    "version": "0.12.0",
+    "description": "Use Lunch Money data through a local MCP server.",
+    "author": {
+        "name": "Justin Flannery"
+    },
+    "homepage": "https://juftin.github.io/lunchmoney-app",
+    "repository": "https://github.com/juftin/lunchmoney-app",
+    "license": "MIT",
+    "mcpServers": "./.mcp.json"
+}

@@ -1,0 +1,58 @@
+{
+    "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
+    "manifest_version": "0.4",
+    "name": "lunchmoney-app",
+    "display_name": "Lunch Money MCP",
+    "version": "0.12.0",
+    "description": "MCP-first access to your Lunch Money data.",
+    "author": {
+        "name": "Justin Flannery",
+        "email": "juftin@juftin.com",
+        "url": "https://github.com/juftin"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/juftin/lunchmoney-app.git"
+    },
+    "homepage": "https://juftin.github.io/lunchmoney-app",
+    "documentation": "https://juftin.github.io/lunchmoney-app/MCP_GUIDE/",
+    "support": "https://github.com/juftin/lunchmoney-app/issues",
+    "icon": "src/lunchmoney_app/app/static/mascot.png",
+    "server": {
+        "type": "uv",
+        "entry_point": "src/lunchmoney_app/cli.py",
+        "mcp_config": {
+            "command": "uv",
+            "args": [
+                "run",
+                "--locked",
+                "--no-dev",
+                "--directory",
+                "${__dirname}",
+                "lunchmoney-app",
+                "mcp"
+            ],
+            "env": {
+                "LUNCHMONEY_ACCESS_TOKEN": "${user_config.lunchmoney_access_token}"
+            }
+        }
+    },
+    "compatibility": {
+        "platforms": ["darwin", "win32", "linux"],
+        "runtimes": {
+            "python": ">=3.10"
+        }
+    },
+    "user_config": {
+        "lunchmoney_access_token": {
+            "type": "string",
+            "title": "Lunch Money access token",
+            "description": "Personal access token used to query your Lunch Money account.",
+            "sensitive": true,
+            "required": true
+        }
+    },
+    "keywords": ["finance", "lunch-money", "mcp", "personal-finance"],
+    "license": "MIT",
+    "privacy_policies": ["https://lunchmoney.app/privacy"]
+}

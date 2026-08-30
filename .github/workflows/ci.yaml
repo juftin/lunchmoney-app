@@ -66,6 +66,9 @@ jobs:
                     - name: pre-commit
                       task: install
                       install: true
+                    - name: MCP bundles
+                      task: mcp:verify
+                      install: true
         steps:
             - name: ${{ matrix.name }}
               if: github.event_name == 'pull_request' || matrix.run_on_push
