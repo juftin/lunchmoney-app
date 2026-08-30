@@ -3,7 +3,7 @@
     "manifest_version": "0.4",
     "name": "lunchmoney-app",
     "display_name": "Lunch Money MCP",
-    "version": "0.12.0",
+    "version": "0.13.0",
     "description": "MCP-first access to your Lunch Money data.",
     "author": {
         "name": "Justin Flannery",
@@ -38,7 +38,11 @@
         }
     },
     "compatibility": {
-        "platforms": ["darwin", "win32", "linux"],
+        "platforms": [
+            "darwin",
+            "win32",
+            "linux"
+        ],
         "runtimes": {
             "python": ">=3.10"
         }
@@ -52,7 +56,14 @@
             "required": true
         }
     },
-    "keywords": ["finance", "lunch-money", "mcp", "personal-finance"],
+    "keywords": [
+        "finance",
+        "lunch-money",
+        "mcp",
+        "personal-finance"
+    ],
     "license": "MIT",
-    "privacy_policies": ["https://lunchmoney.app/privacy"]
+    "privacy_policies": [
+        "https://lunchmoney.app/privacy"
+    ]
 }
