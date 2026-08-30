@@ -13,7 +13,7 @@
         "developerName": "Justin Flannery",
         "category": "Productivity",
         "capabilities": ["MCP"],
-        "defaultPrompt": "How much did I spend on dining this month?"
+        "defaultPrompt": ["How much did I spend on dining this month?"]
     },
     "mcpServers": "./.mcp.json"
 }

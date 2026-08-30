@@ -19,7 +19,7 @@
         [
             "@semantic-release/exec",
             {
-                "prepareCmd": "uv version ${nextRelease.version} && python3 scripts/sync_bundle_versions.py ${nextRelease.version} && task dist && task mcpb && task registry:manifest VERSION=${nextRelease.version} MCPB=dist/lunchmoney-app.mcpb MCPB_URL=https://github.com/juftin/lunchmoney-app/releases/download/${nextRelease.gitTag}/lunchmoney-app.mcpb OUTPUT=dist/mcp-registry/server.json"
+                "prepareCmd": "uv version ${nextRelease.version} && PACKAGE_VERSION=$(uv version --short) && python3 scripts/sync_bundle_versions.py ${nextRelease.version} --package-version $PACKAGE_VERSION && task dist && task mcpb && task registry:manifest VERSION=${nextRelease.version} MCPB=dist/lunchmoney-app.mcpb MCPB_URL=https://github.com/juftin/lunchmoney-app/releases/download/${nextRelease.gitTag}/lunchmoney-app.mcpb OUTPUT=dist/mcp-registry/server.json"
             }
         ],
         [
@@ -34,7 +34,8 @@
                     "mcp-registry/server.json",
                     "mcpb/manifest.json",
                     "plugins/lunchmoney-mcp/.claude-plugin/plugin.json",
-                    "plugins/lunchmoney-mcp/.codex-plugin/plugin.json"
+                    "plugins/lunchmoney-mcp/.codex-plugin/plugin.json",
+                    "plugins/lunchmoney-mcp/.mcp.json"
                 ],
                 "message": "🔖 lunchmoney-app ${nextRelease.version}\n\n${nextRelease.notes}\n[skip ci]"
             }
@@ -61,7 +62,7 @@
         [
             "@semantic-release/exec",
             {
-                "publishCmd": "curl --fail --location https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz | tar xz mcp-publisher && ./mcp-publisher login github-oidc && ./mcp-publisher publish dist/mcp-registry/server.json"
+                "publishCmd": "PUBLISHER_ARCHIVE=mcp-publisher_linux_amd64.tar.gz && curl --fail --location --output $PUBLISHER_ARCHIVE https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/$PUBLISHER_ARCHIVE && echo 'a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  mcp-publisher_linux_amd64.tar.gz' | sha256sum --check --status && tar xzf $PUBLISHER_ARCHIVE mcp-publisher && ./mcp-publisher login github-oidc && ./mcp-publisher publish dist/mcp-registry/server.json"
             }
         ]
     ]

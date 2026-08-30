@@ -6,9 +6,10 @@ needed.
 
 ## Install with agent frameworks
 
-All local bundles use the same `uvx lunchmoney-app mcp` command. Install
-[uv](https://docs.astral.sh/uv/getting-started/installation/) first. The server
-needs a Lunch Money access token; never commit that token to a project config.
+Claude Code, Codex, and Gemini CLI install the version-pinned package with
+`uvx`; install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+first. Claude Desktop manages the MCPB runtime itself. The server needs a Lunch
+Money access token; never commit that token to a project config.
 
 ### Claude Code marketplace
 
@@ -40,8 +41,8 @@ task mcpb
 ```
 
 Open `dist/lunchmoney-app.mcpb` in Claude Desktop, then complete the
-installation prompt. Release automation should attach that file to the matching
-GitHub release.
+installation prompt. Release automation attaches that file to the matching
+[GitHub release](https://github.com/juftin/lunchmoney-app/releases).
 
 ### Codex marketplace
 
@@ -56,10 +57,11 @@ codex plugin add lunchmoney-mcp@lunchmoney-app
 
 The plugin bundle is available at `.agents/plugins/marketplace.json`; add a
 local checkout with `codex plugin marketplace add .` while developing it. To
-persist a standalone server configuration instead, run:
+persist a standalone server configuration, configure the token in the
+environment Codex inherits, then run:
 
 ```bash
-codex mcp add lunchmoney --env LUNCHMONEY_ACCESS_TOKEN=your-lunch-money-token -- uvx lunchmoney-app mcp
+codex mcp add lunchmoney -- uvx lunchmoney-app mcp
 ```
 
 ### Gemini CLI extension

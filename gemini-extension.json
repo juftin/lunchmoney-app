@@ -13,7 +13,12 @@
     "mcpServers": {
         "lunchmoney": {
             "command": "uvx",
-            "args": ["lunchmoney-app", "mcp"]
+            "args": [
+                "--from",
+                "lunchmoney-app==0.12.0",
+                "lunchmoney-app",
+                "mcp"
+            ]
         }
     }
 }

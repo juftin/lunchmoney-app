@@ -25,6 +25,8 @@
             "command": "uv",
             "args": [
                 "run",
+                "--locked",
+                "--no-dev",
                 "--directory",
                 "${__dirname}",
                 "lunchmoney-app",

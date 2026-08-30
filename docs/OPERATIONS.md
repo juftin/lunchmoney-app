@@ -97,12 +97,12 @@ those release-image and repository checks.
 
 Releases are created from the configured release branches by semantic-release.
 Its prepare step updates the package and every versioned agent-bundle manifest
-in one commit, builds the Python distributions and MCPB, and renders the
+in one commit, builds the Python distributions and MCPB, and renders
 release-specific MCP Registry metadata. Its GitHub plugin attaches every
-artifact to the GitHub release, then its publish hook publishes the resulting
-metadata to the official MCP Registry. The pre-existing `publish.yaml` workflow
-publishes the Python distributions to PyPI. Treat GitHub release notes as the
-authoritative compatibility and migration record.
+artifact to the GitHub release, then its publish hook publishes the immutable
+MCPB metadata to the official MCP Registry. The pre-existing `publish.yaml`
+workflow publishes the Python distributions to PyPI independently. Treat GitHub
+release notes as the authoritative compatibility and migration record.
 
 Before enabling the first release, configure PyPI Trusted Publishing for the
 `juftin/lunchmoney-app` repository, workflow `publish.yaml`, and the protected

@@ -50,10 +50,10 @@ Try asking:
 <details>
 <summary>Install in Claude Code, Codex, Gemini CLI, or Claude Desktop</summary>
 
-All local options use the published package through `uvx`; install
-[uv](https://docs.astral.sh/uv/getting-started/installation/) first. Provide
-your Lunch Money access token through `LUNCHMONEY_ACCESS_TOKEN` unless the
-client prompts for it.
+Claude Code, Codex, and Gemini CLI use the published package through `uvx`; install
+[uv](https://docs.astral.sh/uv/getting-started/installation/) first. Claude Desktop
+manages the MCPB runtime itself. Provide your Lunch Money access token through
+`LUNCHMONEY_ACCESS_TOKEN` unless the client prompts for it.
 
 | Client         | Install                                                                                                      |
 | :------------- | :----------------------------------------------------------------------------------------------------------- |

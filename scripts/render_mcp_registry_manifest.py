@@ -58,12 +58,12 @@ def render_manifest(
     mcpb_path: Path,
     mcpb_url: str,
 ) -> dict[str, Any]:
-    """Render registry metadata pointing to one PyPI and MCPB release.
+    """Render registry metadata pointing to one immutable MCPB release.
 
     Parameters
     ----------
     version : str
-        Semantic version shared by the project, PyPI distribution, and release.
+        Semantic version shared by the MCPB and GitHub release.
     mcpb_path : pathlib.Path
         Locally built MCPB artifact to checksum.
     mcpb_url : str
@@ -81,15 +81,14 @@ def render_manifest(
     """
     manifest = json.loads(SOURCE_MANIFEST.read_text(encoding="utf-8"))
     manifest["version"] = version
-    manifest["packages"][0]["version"] = version
-    manifest["packages"].append(
+    manifest["packages"] = [
         {
             "registryType": "mcpb",
             "identifier": mcpb_url,
             "fileSha256": _sha256(mcpb_path),
             "transport": {"type": "stdio"},
         }
-    )
+    ]
     return manifest
 
 
@@ -103,7 +102,7 @@ def main() -> None:
     )
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(
-        json.dumps(manifest, indent=2) + "\n",
+        json.dumps(manifest, indent=4) + "\n",
         encoding="utf-8",
     )
 

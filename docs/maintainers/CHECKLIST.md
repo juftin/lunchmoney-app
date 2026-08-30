@@ -190,8 +190,9 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-ex
       marketplace, and Gemini CLI extension manifests for the MCP server.
 - [x] **Claude Desktop MCP Bundle**: Build a `.mcpb` release artifact with a
       secure Lunch Money token prompt and the cross-platform UV runtime.
-- [x] **Release and Registry Publishing**: Publish PyPI, MCPB, and official MCP
-      Registry artifacts from the established GitHub release publishing workflow.
+- [x] **Release and Registry Publishing**: Publish PyPI from the established
+      GitHub release workflow, and publish MCPB plus official MCP Registry
+      metadata from Semantic Release.
 - [x] **Packaged Alembic Migrations**: Bundle migration scripts in wheel
       distributions so `lunchmoney-app serve` can initialize a database when
       installed with `uvx`.

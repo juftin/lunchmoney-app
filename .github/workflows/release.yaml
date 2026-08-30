@@ -6,6 +6,10 @@ on:
     push:
         branches: [main, next, beta, alpha, "*.x"]
 
+concurrency:
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
+
 jobs:
     release:
         name: release
@@ -23,14 +27,10 @@ jobs:
                   persist-credentials: false
             - name: setup-uv
               uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
-            - name: setup-node
-              uses: actions/setup-node@v5
-              with:
-                  node-version: lts/*
             - name: setup-task
-              uses: go-task/setup-task@v2
+              uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2
             - name: Semantic Release
-              uses: juftin/actions/semantic-release@v1
+              uses: juftin/actions/semantic-release@5a54b64fe07d8de40f92676cae6b56c565ec28b2 # v1
               with:
                   github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
