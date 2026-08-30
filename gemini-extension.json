@@ -1,0 +1,19 @@
+{
+    "name": "lunchmoney-app",
+    "version": "0.12.0",
+    "description": "MCP-first access to your Lunch Money data.",
+    "settings": [
+        {
+            "name": "Lunch Money access token",
+            "description": "Personal access token used to query your Lunch Money account.",
+            "envVar": "LUNCHMONEY_ACCESS_TOKEN",
+            "sensitive": true
+        }
+    ],
+    "mcpServers": {
+        "lunchmoney": {
+            "command": "uvx",
+            "args": ["lunchmoney-app", "mcp"]
+        }
+    }
+}

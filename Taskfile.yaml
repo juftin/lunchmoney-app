@@ -115,6 +115,23 @@ tasks:
             - cmd: rm -rf {{.ROOT_DIR}}/dist
             - cmd: uv build
     #######################################
+    mcpb:
+        desc: Build the Claude Desktop MCP Bundle
+        cmds:
+            - cmd: rm -rf {{.ROOT_DIR}}/dist/mcpb
+            - cmd: mkdir -p {{.ROOT_DIR}}/dist/mcpb
+            - cmd: cp {{.ROOT_DIR}}/pyproject.toml {{.ROOT_DIR}}/uv.lock {{.ROOT_DIR}}/README.md {{.ROOT_DIR}}/LICENSE {{.ROOT_DIR}}/dist/mcpb/
+            - cmd: cp -R {{.ROOT_DIR}}/src {{.ROOT_DIR}}/dist/mcpb/src
+            - cmd: cp {{.ROOT_DIR}}/mcpb/manifest.json {{.ROOT_DIR}}/dist/mcpb/manifest.json
+            - cmd: npx --yes @anthropic-ai/mcpb@2.1.2 pack {{.ROOT_DIR}}/dist/mcpb {{.ROOT_DIR}}/dist/lunchmoney-app.mcpb
+    #######################################
+    registry:manifest:
+        desc: Render MCP Registry metadata for a built MCPB release artifact
+        cmds:
+            - uv run -- python scripts/render_mcp_registry_manifest.py --version {{.VERSION}} --mcpb {{.MCPB}} --mcpb-url {{.MCPB_URL}} --output {{.OUTPUT}}
+        requires:
+            vars: [VERSION, MCPB, MCPB_URL, OUTPUT]
+    #######################################
     docker:
         desc: Build Docker Image
         cmd: |

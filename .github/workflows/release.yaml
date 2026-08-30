@@ -13,6 +13,7 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: write
+            id-token: write
             issues: write
             pull-requests: write
         steps:
@@ -22,6 +23,12 @@ jobs:
                   persist-credentials: false
             - name: setup-uv
               uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca # v6.0.1
+            - name: setup-node
+              uses: actions/setup-node@v5
+              with:
+                  node-version: lts/*
+            - name: setup-task
+              uses: go-task/setup-task@v2
             - name: Semantic Release
               uses: juftin/actions/semantic-release@v1
               with:

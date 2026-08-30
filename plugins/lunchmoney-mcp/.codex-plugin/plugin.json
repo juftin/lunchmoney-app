@@ -1,0 +1,19 @@
+{
+    "name": "lunchmoney-mcp",
+    "version": "0.12.0",
+    "description": "Use Lunch Money data through a local MCP server.",
+    "author": {
+        "name": "Justin Flannery",
+        "url": "https://github.com/juftin"
+    },
+    "interface": {
+        "displayName": "Lunch Money MCP",
+        "shortDescription": "Ask Codex about your Lunch Money finances.",
+        "longDescription": "Connects Codex to your Lunch Money account through the Lunch Money MCP server.",
+        "developerName": "Justin Flannery",
+        "category": "Productivity",
+        "capabilities": ["MCP"],
+        "defaultPrompt": "How much did I spend on dining this month?"
+    },
+    "mcpServers": "./.mcp.json"
+}
