@@ -260,8 +260,15 @@ def test_semantic_release_builds_and_publishes_mcp_artifacts() -> None:
         for options in plugin_options
         if "assets" in options and "pyproject.toml" in options["assets"]
     )
-    assert "mcp-publisher login github-oidc" in publish_command
-    assert "mcp-publisher publish dist/mcp-registry/server.json" in publish_command
-    assert "releases/latest" not in publish_command
-    assert "v1.8.1" in publish_command
-    assert "sha256sum --check --status" in publish_command
+    assert "mcp_publisher.sh login github-oidc" in publish_command
+    assert "mcp_publisher.sh publish dist/mcp-registry/server.json" in publish_command
+
+
+def test_mcp_publisher_helper_pins_and_verifies_the_registry_cli() -> None:
+    """Keep Registry validation and publishing on a verified publisher release."""
+    publisher_helper = (ROOT / "scripts/mcp_publisher.sh").read_text(encoding="utf-8")
+
+    assert 'PUBLISHER_VERSION="1.8.1"' in publisher_helper
+    assert "PUBLISHER_SHA256" in publisher_helper
+    assert "shasum -a 256 --check --status" in publisher_helper
+    assert "releases/latest" not in publisher_helper

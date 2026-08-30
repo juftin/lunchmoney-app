@@ -62,7 +62,7 @@
         [
             "@semantic-release/exec",
             {
-                "publishCmd": "PUBLISHER_ARCHIVE=mcp-publisher_linux_amd64.tar.gz && curl --fail --location --output $PUBLISHER_ARCHIVE https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/$PUBLISHER_ARCHIVE && echo 'a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  mcp-publisher_linux_amd64.tar.gz' | sha256sum --check --status && tar xzf $PUBLISHER_ARCHIVE mcp-publisher && ./mcp-publisher login github-oidc && ./mcp-publisher publish dist/mcp-registry/server.json"
+                "publishCmd": "bash scripts/mcp_publisher.sh login github-oidc && bash scripts/mcp_publisher.sh publish dist/mcp-registry/server.json"
             }
         ]
     ]
