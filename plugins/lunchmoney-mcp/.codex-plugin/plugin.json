@@ -11,7 +11,7 @@
         "shortDescription": "Ask Codex about your Lunch Money finances.",
         "longDescription": "Connects Codex to your Lunch Money account through the Lunch Money MCP server.",
         "developerName": "Justin Flannery",
-        "category": "Productivity",
+        "category": "Personal Finance",
         "capabilities": ["MCP"],
         "defaultPrompt": ["How much did I spend on dining this month?"]
     },

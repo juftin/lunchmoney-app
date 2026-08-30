@@ -52,9 +52,11 @@ def test_agent_bundles_use_the_published_stdio_server() -> None:
     ]
     assert server["args"] == expected_arguments
     assert claude_marketplace["plugins"][0]["source"] == "./plugins/lunchmoney-mcp"
+    assert claude_marketplace["plugins"][0]["category"] == "finance"
     assert codex_marketplace["plugins"][0]["source"]["path"] == (
         "./plugins/lunchmoney-mcp"
     )
+    assert codex_marketplace["plugins"][0]["category"] == "Personal Finance"
     assert gemini_extension["mcpServers"]["lunchmoney"] == {
         "command": "uvx",
         "args": expected_arguments,
@@ -149,6 +151,7 @@ def test_codex_plugin_uses_supported_starter_prompt_shape() -> None:
     assert plugin_manifest["interface"]["defaultPrompt"] == [
         "How much did I spend on dining this month?"
     ]
+    assert plugin_manifest["interface"]["category"] == "Personal Finance"
 
 
 def test_versioned_manifests_match_the_project_version() -> None:
