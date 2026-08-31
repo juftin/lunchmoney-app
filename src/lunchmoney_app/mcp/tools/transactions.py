@@ -18,7 +18,12 @@ from lunchmoney.models import (
 from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_app.config import get_settings
 from lunchmoney_app.mcp.app import mcp
-from lunchmoney_app.schemas import TransactionAttachmentUploadRequest, TransactionQuery
+from lunchmoney_app.schemas import (
+    ReviewTransactionsQuery,
+    ReviewTransactionsResponse,
+    TransactionAttachmentUploadRequest,
+    TransactionQuery,
+)
 from lunchmoney_app.services import (
     bulk_delete_transactions as bulk_delete_transactions_service,
     bulk_update_transactions as bulk_update_transactions_service,
@@ -30,6 +35,7 @@ from lunchmoney_app.services import (
     fetch_transaction_by_id,
     group_transactions as group_transactions_service,
     split_transaction as split_transaction_service,
+    review_transactions as review_transactions_service,
     ungroup_transactions as ungroup_transactions_service,
     unsplit_transaction as unsplit_transaction_service,
     update_transaction as update_transaction_service,
@@ -51,6 +57,21 @@ async def list_transactions(
         client=client,
         db=db,
         query=query or TransactionQuery(),
+        live=get_settings().stateless,
+    )
+
+
+@mcp.tool()
+async def review_transactions(
+    query: ReviewTransactionsQuery | None = None,
+) -> ReviewTransactionsResponse:
+    """Return one metadata-complete workspace for unreviewed transaction review."""
+    client: LunchMoneyApp = get_lunchmoney_app()
+    db: LunchMoneyDatabase = get_database()
+    return await review_transactions_service(
+        client=client,
+        db=db,
+        query=query or ReviewTransactionsQuery(),
         live=get_settings().stateless,
     )
 
@@ -207,6 +228,7 @@ __all__ = [
     "delete_attachment",
     "delete_transaction",
     "get_attachment",
+    "review_transactions",
     "list_transactions",
     "get_transaction",
     "group_transactions",

@@ -183,6 +183,15 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-ex
 
 ---
 
+### 🧾 Uncleared Transaction Review Workflow
+
+- [x] **MCP Review and Categorization**: Add the confirmation-gated
+      `unreviewed_transactions_review` prompt and first-class
+      `review_transactions` MCP/REST workspace, including linked Plaid metadata,
+      categories, accounts, user documentation, and regression coverage.
+
+---
+
 ### 🧹 Follow-Up Hardening
 
 - [ ] **Plaid Fetch Summary Invalidation**: Invalidate cached summary snapshots after a successful Plaid fetch trigger, so imported transactions cannot leave stale summary data before the next synchronization.

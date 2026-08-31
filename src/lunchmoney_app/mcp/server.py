@@ -115,6 +115,26 @@ def uncategorized_transactions_audit() -> str:
     )
 
 
+@mcp.prompt(
+    name="unreviewed_transactions_review",
+    description="Review unreviewed transactions and apply confirmed corrections.",
+)
+def unreviewed_transactions_review() -> str:
+    """Provide a repeatable workflow for reviewing unreviewed transactions."""
+    return (
+        "Default to the previous 45 days, unless the user supplies a different "
+        "period. Call review_transactions to retrieve the unreviewed transaction "
+        "queue with Plaid metadata, category choices, and account context. Inspect "
+        "each transaction's plaid_metadata alongside its payee, original_name, "
+        "amount, date, category, and linked account. Recommend a category, "
+        "corrected payee when needed, and useful notes for each transaction. Do "
+        "not make changes until the user confirms the exact transaction IDs and "
+        "values. For each confirmed transaction, call bulk_update_transactions "
+        "with only its confirmed category_id, notes, and payee changes plus "
+        "status='reviewed'. Report the returned transactions."
+    )
+
+
 def create_argument_parser() -> argparse.ArgumentParser:
     """Create the transport parser used by the standalone MCP command."""
     parser = argparse.ArgumentParser(

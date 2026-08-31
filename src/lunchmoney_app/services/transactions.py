@@ -1,5 +1,6 @@
 """Service logic for transaction queries and upstream-first mutations."""
 
+import asyncio
 import datetime
 
 from sqlalchemy.engine.result import ScalarResult
@@ -8,6 +9,7 @@ from sqlmodel.sql._expression_select_cls import SelectOfScalar
 
 from lunchmoney_app.database import LunchMoneyDatabase, eager_options
 from lunchmoney.models import (
+    CategoryObject,
     ChildTransactionObject,
     CreateNewTransactionsRequest,
     DeleteTransactionsRequest,
@@ -28,7 +30,15 @@ from lunchmoney_app.database.models import (
     TransactionAttachment,
     TransactionKind,
 )
-from lunchmoney_app.schemas import TransactionQuery
+from lunchmoney_app.schemas import (
+    CategoryQuery,
+    ReviewTransactionItem,
+    ReviewTransactionsQuery,
+    ReviewTransactionsResponse,
+    TransactionQuery,
+)
+from lunchmoney_app.services.accounts import fetch_accounts
+from lunchmoney_app.services.categories import fetch_categories
 
 
 async def _store_transactions(
@@ -185,11 +195,12 @@ async def fetch_transactions(
 ) -> list[TransactionObject]:
     """Return every matching transaction from the configured source.
 
-    Stateless servers retrieve every upstream page before responding. Persistent
-    servers apply the same filters to the synchronized cache. Both modes return
-    every match in one flat collection.
+    Stateless servers, and metadata requests, retrieve every upstream page
+    before responding. Other persistent-server requests apply the same filters
+    to the synchronized cache. Both modes return every match in one flat
+    collection.
     """
-    if live:
+    if live or query.include_metadata is True:
         filters = query.model_dump(exclude_none=True)
         transactions = list(
             (
@@ -203,6 +214,95 @@ async def fetch_transactions(
         transactions = await _fetch_persisted_transactions(db=db, query=query)
 
     return transactions
+
+
+async def review_transactions(
+    client: LunchMoneyApp,
+    db: LunchMoneyDatabase,
+    query: ReviewTransactionsQuery,
+    live: bool,
+) -> ReviewTransactionsResponse:
+    """Assemble all context needed to review unreviewed transactions.
+
+    Transaction metadata is requested from Lunch Money so the returned queue
+    includes Plaid's original merchant and classification details. Categories
+    and accounts are included both as full collections and as linked objects on
+    each transaction, avoiding client-side identifier joins.
+
+    Parameters
+    ----------
+    client : LunchMoneyApp
+        Configured Lunch Money client.
+    db : LunchMoneyDatabase
+        Database manager instance.
+    query : ReviewTransactionsQuery
+        Date-range and account controls for the review workspace.
+    live : bool
+        Whether categories should be obtained from Lunch Money instead of the
+        synchronized cache. Transactions always use a live request because their
+        Plaid metadata is required.
+
+    Returns
+    -------
+    ReviewTransactionsResponse
+        Bounded unreviewed queue, category choices, and account context.
+    """
+    end_date = query.end_date or datetime.date.today()
+    start_date = query.start_date or end_date - datetime.timedelta(days=query.days)
+    transactions, categories, accounts = await asyncio.gather(
+        fetch_transactions(
+            client=client,
+            db=db,
+            query=TransactionQuery(
+                start_date=start_date,
+                end_date=end_date,
+                manual_account_id=query.manual_account_id,
+                plaid_account_id=query.plaid_account_id,
+                status="unreviewed",
+                include_metadata=True,
+            ),
+            live=True,
+        ),
+        fetch_categories(
+            client=client,
+            db=db,
+            query=CategoryQuery(format="flattened"),
+            live=live,
+        ),
+        fetch_accounts(db=db),
+    )
+    category_by_id: dict[int, CategoryObject] = {
+        category.id: category for category in categories
+    }
+    plaid_accounts = {account.id: account for account in accounts.plaid_accounts}
+    manual_accounts = {account.id: account for account in accounts.manual_accounts}
+    return ReviewTransactionsResponse(
+        start_date=start_date,
+        end_date=end_date,
+        transactions=[
+            ReviewTransactionItem(
+                transaction=transaction,
+                category=(
+                    category_by_id.get(transaction.category_id)
+                    if transaction.category_id is not None
+                    else None
+                ),
+                plaid_account=(
+                    plaid_accounts.get(transaction.plaid_account_id)
+                    if transaction.plaid_account_id is not None
+                    else None
+                ),
+                manual_account=(
+                    manual_accounts.get(transaction.manual_account_id)
+                    if transaction.manual_account_id is not None
+                    else None
+                ),
+            )
+            for transaction in transactions
+        ],
+        categories=categories,
+        accounts=accounts,
+    )
 
 
 async def fetch_recent_transactions(

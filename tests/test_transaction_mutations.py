@@ -263,6 +263,7 @@ def test_transaction_mutation_routes_are_registered() -> None:
     paths = fastapi_app.openapi()["paths"]
 
     assert {"post", "put", "delete"} <= set(paths["/api/transactions"])
+    assert {"get"} <= set(paths["/api/transactions/review"])
     assert {"put", "delete"} <= set(paths["/api/transactions/{transaction_id}"])
     assert {"post"} <= set(paths["/api/transactions/group"])
     assert {"delete"} <= set(paths["/api/transactions/group/{transaction_id}"])

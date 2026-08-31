@@ -20,7 +20,12 @@ from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_app.client import LunchMoneyApp
 from lunchmoney_app.config import get_settings
 from lunchmoney_app.database import LunchMoneyDatabase
-from lunchmoney_app.schemas import TransactionAttachmentUploadRequest, TransactionQuery
+from lunchmoney_app.schemas import (
+    ReviewTransactionsQuery,
+    ReviewTransactionsResponse,
+    TransactionAttachmentUploadRequest,
+    TransactionQuery,
+)
 from lunchmoney_app.services import (
     bulk_delete_transactions,
     bulk_update_transactions,
@@ -32,6 +37,7 @@ from lunchmoney_app.services import (
     fetch_transaction_by_id,
     group_transactions,
     split_transaction,
+    review_transactions,
     ungroup_transactions,
     unsplit_transaction,
     update_transaction,
@@ -54,6 +60,25 @@ async def list_transactions(
 ) -> list[TransactionObject]:
     """List filtered transactions from the configured live or persisted source."""
     return await fetch_transactions(
+        client=client,
+        db=db,
+        query=query,
+        live=get_settings().stateless,
+    )
+
+
+@router.get(
+    path="/transactions/review",
+    response_model=ReviewTransactionsResponse,
+    operation_id="review_transactions",
+)
+async def review_transactions_route(
+    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    query: Annotated[ReviewTransactionsQuery, Depends()],
+) -> ReviewTransactionsResponse:
+    """Return the metadata, categories, and accounts for transaction review."""
+    return await review_transactions(
         client=client,
         db=db,
         query=query,
