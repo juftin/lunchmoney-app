@@ -3,19 +3,44 @@
 from pathlib import Path
 
 import pytest
+from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import lunchmoney_app.database as database_package
+from lunchmoney_app.database import backend
 from lunchmoney_app.database import (
     DEFAULT_DATABASE_URL,
-    IN_MEMORY_DATABASE_URL,
     LunchMoneyDatabase,
     RecurringItem,
     User,
 )
-from lunchmoney_app.database.backend import resolve_database_url
+from lunchmoney_app.database.backend import _is_memory_sqlite_url, resolve_database_url
+
+MEMORY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+"""Explicit stateful in-memory SQLite backend used by database unit tests."""
+
+
+@pytest.mark.parametrize(
+    ("database_url", "expected"),
+    [
+        (MEMORY_DATABASE_URL, True),
+        (
+            "sqlite+aiosqlite:///file:test?mode=memory&cache=shared&uri=true",
+            True,
+        ),
+        ("sqlite+aiosqlite:///mode=memory.db", False),
+        ("postgresql+asyncpg://localhost/mode=memory", False),
+    ],
+)
+def test_memory_sqlite_detection_is_dialect_aware(
+    database_url: str,
+    expected: bool,
+) -> None:
+    """Apply StaticPool only to explicit SQLite memory connection forms."""
+    assert _is_memory_sqlite_url(database_url) is expected
 
 
 def test_database_package_exports_documented_public_api() -> None:
@@ -49,7 +74,13 @@ def test_default_database_url_is_persistent_sqlite(
     """Use the persistent SQLite URL when no override exists."""
     monkeypatch.delenv("LUNCHMONEY_DATABASE_URL", raising=False)
     assert resolve_database_url() == DEFAULT_DATABASE_URL
-    assert DEFAULT_DATABASE_URL == "sqlite+aiosqlite:///lunchmoney.db"
+    assert DEFAULT_DATABASE_URL.startswith("sqlite+aiosqlite:///")
+    assert DEFAULT_DATABASE_URL.endswith("/lunchmoney-app/lunchmoney.db")
+
+
+def test_migration_scripts_are_packaged_with_database_backend() -> None:
+    """Keep Alembic scripts alongside the database code in distributions."""
+    assert (backend.MIGRATIONS_DIRECTORY / "env.py").is_file()
 
 
 def test_explicit_database_url_precedes_environment(
@@ -74,6 +105,68 @@ def test_database_uses_environment_url_without_explicit_argument(
     assert str(database.engine.url) == database_url
 
 
+def test_database_creates_parent_directory_for_file_backed_sqlite(
+    tmp_path: Path,
+) -> None:
+    """Support the platform data directory before SQLite first opens its file."""
+    database_path = tmp_path / "application-data" / "lunchmoney.db"
+
+    LunchMoneyDatabase(f"sqlite+aiosqlite:///{database_path}")
+
+    assert database_path.parent.is_dir()
+
+
+@pytest.mark.asyncio
+async def test_drop_all_tables_removes_schema_and_migration_state(
+    tmp_path: Path,
+) -> None:
+    """Allow a later migration to rebuild a fully deleted database schema."""
+    database_url = f"sqlite+aiosqlite:///{tmp_path / 'reset.db'}"
+    await backend.run_migrations(database_url)
+
+    await backend.drop_all_tables(database_url)
+
+    engine = create_async_engine(database_url)
+    try:
+        async with engine.connect() as connection:
+            table_names = await connection.run_sync(
+                lambda sync_connection: inspect(sync_connection).get_table_names()
+            )
+    finally:
+        await engine.dispose()
+    assert table_names == []
+
+    await backend.run_migrations(database_url)
+    engine = create_async_engine(database_url)
+    try:
+        async with engine.connect() as connection:
+            table_names = await connection.run_sync(
+                lambda sync_connection: inspect(sync_connection).get_table_names()
+            )
+    finally:
+        await engine.dispose()
+    assert {"alembic_version", "users", "transactions"} <= set(table_names)
+
+
+@pytest.mark.asyncio
+async def test_delete_database_removes_sqlite_file_and_sidecars(
+    tmp_path: Path,
+) -> None:
+    """Remove every file that preserves a deleted SQLite database state."""
+    database_path = tmp_path / "lunchmoney.db"
+    database_url = f"sqlite+aiosqlite:///{database_path}"
+    sidecars = (
+        database_path.with_name("lunchmoney.db-journal"),
+        database_path.with_name("lunchmoney.db-shm"),
+        database_path.with_name("lunchmoney.db-wal"),
+    )
+    for path in (database_path, *sidecars):
+        path.touch()
+
+    assert await backend.delete_database(database_url) is True
+    assert not any(path.exists() for path in (database_path, *sidecars))
+
+
 @pytest.mark.asyncio
 async def test_database_exposes_native_async_session(tmp_path: Path) -> None:
     """Yield SQLModel's native async session and dispose cleanly."""
@@ -85,7 +178,7 @@ async def test_database_exposes_native_async_session(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_stateless_database_create_tables_persists_across_sessions() -> None:
+async def test_memory_database_create_tables_persists_across_sessions() -> None:
     """Initialize and use the shared in-memory schema across database sessions."""
     user = User(
         id=1,
@@ -97,7 +190,7 @@ async def test_stateless_database_create_tables_persists_across_sessions() -> No
         api_key_label="Synthetic key",
     )
 
-    async with LunchMoneyDatabase(IN_MEMORY_DATABASE_URL) as database:
+    async with LunchMoneyDatabase(MEMORY_DATABASE_URL) as database:
         await database.create_tables()
         await database.upsert(user)
 
@@ -112,7 +205,7 @@ async def test_database_persists_recurring_items() -> None:
         payload={"description": "Synthetic recurring item"},
     )
 
-    async with LunchMoneyDatabase(IN_MEMORY_DATABASE_URL) as database:
+    async with LunchMoneyDatabase(MEMORY_DATABASE_URL) as database:
         await database.create_tables()
         await database.upsert(recurring_item)
 
@@ -124,7 +217,7 @@ async def test_database_persists_recurring_items() -> None:
 @pytest.mark.asyncio
 async def test_database_deletes_cached_responses_by_prefix() -> None:
     """Remove every summary snapshot without affecting other cached responses."""
-    async with LunchMoneyDatabase(IN_MEMORY_DATABASE_URL) as database:
+    async with LunchMoneyDatabase(MEMORY_DATABASE_URL) as database:
         await database.create_tables()
         await database.upsert_cached_response("summary:2026-01-01:2026-01-31", {})
         await database.upsert_cached_response("budget-settings", {})

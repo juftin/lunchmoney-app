@@ -47,6 +47,28 @@ Try asking:
 - “Show my largest recent transactions.”
 - “Which transactions still need a category?”
 
+<details>
+<summary>Install in Claude Code, Codex, Gemini CLI, or Claude Desktop</summary>
+
+Claude Code, Codex, and Gemini CLI use the published package through `uvx`; install
+[uv](https://docs.astral.sh/uv/getting-started/installation/) first. Claude Desktop
+manages the MCPB runtime itself. Provide your Lunch Money access token through
+`LUNCHMONEY_ACCESS_TOKEN` unless the client prompts for it.
+
+| Client         | Install                                                                                                      |
+| :------------- | :----------------------------------------------------------------------------------------------------------- |
+| Claude Code    | `claude plugin marketplace add juftin/lunchmoney-app && claude plugin install lunchmoney-mcp@lunchmoney-app` |
+| Codex          | `codex plugin marketplace add juftin/lunchmoney-app && codex plugin add lunchmoney-mcp@lunchmoney-app`       |
+| Gemini CLI     | `gemini extensions install https://github.com/juftin/lunchmoney-app`                                         |
+| Claude Desktop | Download `lunchmoney-app.mcpb` from a release and open it.                                                   |
+
+For direct standard-MCP setup and framework-specific token configuration, see
+the [MCP guide](docs/MCP_GUIDE.md).
+
+</details>
+
+<!-- mcp-name: io.github.juftin/lunchmoney-app -->
+
 ## Learn more
 
 - [MCP guide](docs/MCP_GUIDE.md): client configuration, remote connections, and OAuth.

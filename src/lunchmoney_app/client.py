@@ -370,14 +370,22 @@ class LunchMoneyApp:
         self.client: LunchableClient = LunchableClient(access_token=access_token)
         self.data: LunchableData = LunchableData()
         self._lunchable_models: Iterable[type[BaseModel]] = (
-            lunchable_models or self.__class__.lunchable_models
+            lunchable_models
+            if lunchable_models is not None
+            else self.__class__.lunchable_models
         )
         self._lunchable_models_kwargs: dict[type[BaseModel], dict[str, Any]] = (
-            lunchable_models_kwargs or self.__class__.lunchable_models_kwargs
+            lunchable_models_kwargs
+            if lunchable_models_kwargs is not None
+            else self.__class__.lunchable_models_kwargs
         )
         self._transaction_pagination: int = (
-            transaction_pagination or self.__class__.transaction_pagination
+            transaction_pagination
+            if transaction_pagination is not None
+            else self.__class__.transaction_pagination
         )
+        if self._transaction_pagination < 1:
+            raise ValueError("transaction_pagination must be greater than zero")
         self.cache: bool = cache
 
     @cached_property

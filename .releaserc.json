@@ -19,13 +19,24 @@
         [
             "@semantic-release/exec",
             {
-                "prepareCmd": "uv version ${nextRelease.version} && uv build"
+                "prepareCmd": "uv version ${nextRelease.version} && PACKAGE_VERSION=$(uv version --short) && python3 scripts/sync_bundle_versions.py ${nextRelease.version} --package-version $PACKAGE_VERSION && task dist && task mcpb && task registry:manifest VERSION=${nextRelease.version} MCPB=dist/lunchmoney-app.mcpb MCPB_URL=https://github.com/juftin/lunchmoney-app/releases/download/${nextRelease.gitTag}/lunchmoney-app.mcpb OUTPUT=dist/mcp-registry/server.json"
             }
         ],
         [
             "@semantic-release/git",
             {
-                "assets": ["pyproject.toml", "uv.lock"],
+                "assets": [
+                    "pyproject.toml",
+                    "uv.lock",
+                    ".agents/plugins/marketplace.json",
+                    ".claude-plugin/marketplace.json",
+                    "gemini-extension.json",
+                    "mcp-registry/server.json",
+                    "mcpb/manifest.json",
+                    "plugins/lunchmoney-mcp/.claude-plugin/plugin.json",
+                    "plugins/lunchmoney-mcp/.codex-plugin/plugin.json",
+                    "plugins/lunchmoney-mcp/.mcp.json"
+                ],
                 "message": "🔖 lunchmoney-app ${nextRelease.version}\n\n${nextRelease.notes}\n[skip ci]"
             }
         ],
@@ -38,8 +49,20 @@
                     },
                     {
                         "path": "dist/*.tar.gz"
+                    },
+                    {
+                        "path": "dist/lunchmoney-app.mcpb"
+                    },
+                    {
+                        "path": "dist/mcp-registry/server.json"
                     }
                 ]
+            }
+        ],
+        [
+            "@semantic-release/exec",
+            {
+                "publishCmd": "bash scripts/mcp_publisher.sh login github-oidc && bash scripts/mcp_publisher.sh publish dist/mcp-registry/server.json"
             }
         ]
     ]

@@ -1,4 +1,4 @@
-"""FastAPI endpoints for transaction queries and mutations."""
+"""Transaction query and mutation endpoints."""
 
 from typing import Annotated
 
@@ -16,10 +16,7 @@ from lunchmoney.models import (
     UpdateTransactionsRequest,
 )
 
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_app.client import LunchMoneyApp
-from lunchmoney_app.config import get_settings
-from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.app.dependencies import OperationContext, get_operation_context
 from lunchmoney_app.schemas import (
     ReviewTransactionsQuery,
     ReviewTransactionsResponse,
@@ -45,7 +42,7 @@ from lunchmoney_app.services import (
 )
 
 router = APIRouter(tags=["Transactions"])
-"""FastAPI APIRouter for financial transaction endpoints."""
+ContextDep = Annotated[OperationContext, Depends(dependency=get_operation_context)]
 
 
 @router.get(
@@ -54,17 +51,10 @@ router = APIRouter(tags=["Transactions"])
     operation_id="list_transactions",
 )
 async def list_transactions(
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-    query: Annotated[TransactionQuery, Depends()],
+    context: ContextDep, query: Annotated[TransactionQuery, Depends()]
 ) -> list[TransactionObject]:
-    """List filtered transactions from the configured live or persisted source."""
-    return await fetch_transactions(
-        client=client,
-        db=db,
-        query=query,
-        live=get_settings().stateless,
-    )
+    """List filtered transactions."""
+    return await fetch_transactions(context, query)
 
 
 @router.get(
@@ -73,17 +63,10 @@ async def list_transactions(
     operation_id="review_transactions",
 )
 async def review_transactions_route(
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-    query: Annotated[ReviewTransactionsQuery, Depends()],
+    context: ContextDep, query: Annotated[ReviewTransactionsQuery, Depends()]
 ) -> ReviewTransactionsResponse:
-    """Return the metadata, categories, and accounts for transaction review."""
-    return await review_transactions(
-        client=client,
-        db=db,
-        query=query,
-        live=get_settings().stateless,
-    )
+    """Return an unreviewed transaction workspace with linked review context."""
+    return await review_transactions(context, query)
 
 
 @router.post(
@@ -92,12 +75,10 @@ async def review_transactions_route(
     operation_id="create_transactions",
 )
 async def create_transactions_route(
-    request: CreateNewTransactionsRequest,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    request: CreateNewTransactionsRequest, context: ContextDep
 ) -> list[TransactionObject]:
-    """Create transactions upstream and cache their canonical responses."""
-    return await create_transactions(client=client, db=db, request=request)
+    """Create transactions upstream."""
+    return await create_transactions(context, request)
 
 
 @router.put(
@@ -106,26 +87,20 @@ async def create_transactions_route(
     operation_id="bulk_update_transactions",
 )
 async def bulk_update_transactions_route(
-    request: UpdateTransactionsRequest,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    request: UpdateTransactionsRequest, context: ContextDep
 ) -> list[TransactionObject]:
-    """Apply an upstream bulk transaction update and refresh local records."""
-    return await bulk_update_transactions(client=client, db=db, request=request)
+    """Bulk-update transactions upstream."""
+    return await bulk_update_transactions(context, request)
 
 
 @router.delete(
-    path="/transactions",
-    status_code=204,
-    operation_id="bulk_delete_transactions",
+    path="/transactions", status_code=204, operation_id="bulk_delete_transactions"
 )
 async def bulk_delete_transactions_route(
-    request: DeleteTransactionsRequest,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    request: DeleteTransactionsRequest, context: ContextDep
 ) -> None:
-    """Delete multiple transactions upstream and remove their cached records."""
-    await bulk_delete_transactions(client=client, db=db, request=request)
+    """Bulk-delete transactions upstream."""
+    await bulk_delete_transactions(context, request)
 
 
 @router.post(
@@ -134,12 +109,10 @@ async def bulk_delete_transactions_route(
     operation_id="group_transactions",
 )
 async def group_transactions_route(
-    request: GroupTransactionsRequest,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    request: GroupTransactionsRequest, context: ContextDep
 ) -> TransactionObject:
-    """Create a transaction group upstream and cache its returned graph."""
-    return await group_transactions(client=client, db=db, request=request)
+    """Create a transaction group."""
+    return await group_transactions(context, request)
 
 
 @router.delete(
@@ -147,13 +120,9 @@ async def group_transactions_route(
     status_code=204,
     operation_id="ungroup_transactions",
 )
-async def ungroup_transactions_route(
-    transaction_id: int,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> None:
-    """Ungroup transactions upstream and refresh restored cached children."""
-    await ungroup_transactions(client=client, db=db, transaction_id=transaction_id)
+async def ungroup_transactions_route(transaction_id: int, context: ContextDep) -> None:
+    """Ungroup a transaction group."""
+    await ungroup_transactions(context, transaction_id)
 
 
 @router.post(
@@ -162,18 +131,10 @@ async def ungroup_transactions_route(
     operation_id="split_transaction",
 )
 async def split_transaction_route(
-    transaction_id: int,
-    request: SplitTransactionRequest,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    transaction_id: int, request: SplitTransactionRequest, context: ContextDep
 ) -> TransactionObject:
-    """Split a transaction upstream and cache the returned parent graph."""
-    return await split_transaction(
-        client=client,
-        db=db,
-        transaction_id=transaction_id,
-        request=request,
-    )
+    """Split a transaction."""
+    return await split_transaction(context, transaction_id, request)
 
 
 @router.delete(
@@ -181,13 +142,9 @@ async def split_transaction_route(
     status_code=204,
     operation_id="unsplit_transaction",
 )
-async def unsplit_transaction_route(
-    transaction_id: int,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> None:
-    """Unsplit a transaction upstream and replace its cached graph."""
-    await unsplit_transaction(client=client, db=db, transaction_id=transaction_id)
+async def unsplit_transaction_route(transaction_id: int, context: ContextDep) -> None:
+    """Unsplit a transaction."""
+    await unsplit_transaction(context, transaction_id)
 
 
 @router.post(
@@ -198,16 +155,11 @@ async def unsplit_transaction_route(
 async def upload_attachment(
     transaction_id: int,
     request: TransactionAttachmentUploadRequest,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: ContextDep,
 ) -> TransactionAttachmentObject:
-    """Upload a transaction attachment upstream and reconcile cached metadata."""
+    """Upload a transaction attachment."""
     return await upload_transaction_attachment(
-        client=client,
-        db=db,
-        transaction_id=transaction_id,
-        file=request.to_api_file(),
-        notes=request.notes,
+        context, transaction_id, request.to_api_file(), request.notes
     )
 
 
@@ -217,11 +169,10 @@ async def upload_attachment(
     operation_id="get_attachment",
 )
 async def get_attachment(
-    file_id: int,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    file_id: int, context: ContextDep
 ) -> GetTransactionAttachmentUrl200Response:
-    """Return Lunch Money's signed URL for one transaction attachment."""
-    return await fetch_attachment_by_id(client=client, file_id=file_id)
+    """Return a short-lived attachment URL."""
+    return await fetch_attachment_by_id(context, file_id)
 
 
 @router.delete(
@@ -229,13 +180,9 @@ async def get_attachment(
     status_code=204,
     operation_id="delete_attachment",
 )
-async def delete_attachment(
-    file_id: int,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> None:
-    """Delete one transaction attachment upstream and reconcile its cache."""
-    await delete_transaction_attachment(client=client, db=db, file_id=file_id)
+async def delete_attachment(file_id: int, context: ContextDep) -> None:
+    """Delete a transaction attachment."""
+    await delete_transaction_attachment(context, file_id)
 
 
 @router.get(
@@ -244,11 +191,10 @@ async def delete_attachment(
     operation_id="get_transaction",
 )
 async def get_transaction(
-    transaction_id: int,
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    transaction_id: int, context: ContextDep
 ) -> TransactionObject | ChildTransactionObject | None:
-    """Fetch one synchronized transaction from the local database."""
-    return await fetch_transaction_by_id(db=db, transaction_id=transaction_id)
+    """Return one transaction graph when available."""
+    return await fetch_transaction_by_id(context, transaction_id)
 
 
 @router.put(
@@ -259,18 +205,11 @@ async def get_transaction(
 async def update_transaction_route(
     transaction_id: int,
     request: UpdateTransactionObject,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
+    context: ContextDep,
     update_balance: bool | None = None,
 ) -> TransactionObject:
-    """Update one transaction upstream and cache Lunch Money's response."""
-    return await update_transaction(
-        client=client,
-        db=db,
-        transaction_id=transaction_id,
-        request=request,
-        update_balance=update_balance,
-    )
+    """Update one transaction."""
+    return await update_transaction(context, transaction_id, request, update_balance)
 
 
 @router.delete(
@@ -278,10 +217,6 @@ async def update_transaction_route(
     status_code=204,
     operation_id="delete_transaction",
 )
-async def delete_transaction_route(
-    transaction_id: int,
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-) -> None:
-    """Delete one transaction upstream and remove its cached record."""
-    await delete_transaction(client=client, db=db, transaction_id=transaction_id)
+async def delete_transaction_route(transaction_id: int, context: ContextDep) -> None:
+    """Delete one transaction."""
+    await delete_transaction(context, transaction_id)

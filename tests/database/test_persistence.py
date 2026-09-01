@@ -671,6 +671,26 @@ async def test_transaction_attachment_replacement_preserves_incoming_order(
     assert [attachment.id for attachment in converted.files or []] == [502, 501]
 
 
+@pytest.mark.asyncio
+async def test_delete_transaction_attachment_uses_upstream_identifier(
+    database: LunchMoneyDatabase,
+) -> None:
+    """Delete only the attachment matching the upstream file identifier."""
+    await database.upsert_many(_dependency_records())
+    transaction = _transaction_record(
+        attachment_ids=(501, 502),
+        include_child=False,
+    )
+    await database.upsert(transaction)
+
+    assert await database.delete_transaction_attachment(501) is True
+    assert await database.delete_transaction_attachment(999) is False
+
+    reloaded = await database.get(Transaction, transaction.id)
+    assert reloaded is not None
+    assert [attachment.api_id for attachment in reloaded.attachments] == [502]
+
+
 @pytest.mark.parametrize("new_parent_first", [False, True])
 @pytest.mark.asyncio
 async def test_category_child_move_is_independent_of_parent_caller_order(

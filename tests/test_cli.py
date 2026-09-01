@@ -1,76 +1,95 @@
-"""Tests for the command-line process dispatcher."""
+"""Tests for the Click command-line process dispatcher."""
 
-from unittest.mock import ANY, AsyncMock, Mock
+from collections.abc import Iterator
+import json
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from lunchmoney_app.config import (
-    McpCliSettings,
-    ScheduleCliSettings,
-    ServeCliSettings,
-    SyncCliSettings,
-)
+from lunchmoney_app.config import RuntimeSettings
+from lunchmoney_app.services.errors import StatefulModeRequired
+
+
+@pytest.fixture(autouse=True)
+def reset_runtime_configuration() -> Iterator[None]:
+    """Prevent process-local CLI settings from leaking between tests."""
+    import lunchmoney_app.config as config
+
+    yield
+    config._runtime_settings = None
+    config._runtime_mode = None
+    config.get_settings.cache_clear()
+    config.get_secret_settings.cache_clear()
 
 
 def test_cli_runs_standalone_mcp_without_persistent_storage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Dispatch explicit MCP transport arguments through its ephemeral runtime."""
+    """Dispatch a Click transport flag with Pydantic-resolved settings."""
     import lunchmoney_app.cli as cli
 
-    mcp_parser = Mock()
-    transport_arguments = Mock()
-    mcp_parser.parse_args.return_value = transport_arguments
     settings = Mock()
-    parse_cli_settings = Mock(return_value=settings)
+    resolved_settings = Mock()
+    resolve_settings = Mock(return_value=settings)
+    apply_transport_defaults = Mock(return_value=resolved_settings)
     configure_runtime_settings = Mock()
     configure_runtime_mode = Mock()
     configure_auth = Mock()
     run_from_args = Mock()
-    apply_transport_defaults = Mock(return_value=settings)
-    monkeypatch.setattr(
-        cli.mcp_server,
-        "create_argument_parser",
-        Mock(return_value=mcp_parser),
-    )
-    monkeypatch.setattr(cli.mcp_server, "run_from_args", run_from_args)
-    monkeypatch.setattr(cli, "parse_cli_settings", parse_cli_settings)
+    parser = Mock()
+    monkeypatch.setattr(cli, "_resolve_settings", resolve_settings)
     monkeypatch.setattr(cli, "configure_runtime_settings", configure_runtime_settings)
     monkeypatch.setattr(cli, "configure_runtime_mode", configure_runtime_mode)
     monkeypatch.setattr(cli.mcp_server, "configure_auth", configure_auth)
     monkeypatch.setattr(
-        cli.mcp_server,
-        "apply_transport_defaults",
-        apply_transport_defaults,
+        cli.mcp_server, "apply_transport_defaults", apply_transport_defaults
     )
+    monkeypatch.setattr(
+        cli.mcp_server, "create_argument_parser", Mock(return_value=parser)
+    )
+    monkeypatch.setattr(cli.mcp_server, "run_from_args", run_from_args)
 
     cli.main(["mcp", "--stdio"])
 
-    parse_cli_settings.assert_called_once_with(
-        ["--stdio"],
-        McpCliSettings,
-        root_parser=mcp_parser,
-    )
-    apply_transport_defaults.assert_called_once_with(settings, transport_arguments)
-    configure_runtime_settings.assert_called_once_with(settings)
+    resolve_settings.assert_called_once()
+    arguments = apply_transport_defaults.call_args.args[1]
+    assert arguments.transport == "stdio"
+    configure_runtime_settings.assert_called_once_with(resolved_settings)
     configure_runtime_mode.assert_called_once_with("mcp")
-    configure_auth.assert_called_once_with(settings)
-    mcp_parser.parse_args.assert_called_once_with(["--stdio"])
-    run_from_args.assert_called_once_with(mcp_parser, transport_arguments, settings)
+    configure_auth.assert_called_once_with(resolved_settings)
+    run_from_args.assert_called_once_with(parser, arguments, resolved_settings)
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["mcp", "--stdio", "--sse"],
+        ["mcp", "--stdio", "--host", "0.0.0.0"],
+    ],
+)
+def test_cli_rejects_ambiguous_mcp_transport_options(arguments: list[str]) -> None:
+    """Reject conflicting transports and stdio-only bind arguments."""
+    import lunchmoney_app.cli as cli
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(arguments)
+
+    assert error.value.code == 2
 
 
 def test_cli_runs_scheduler_with_pydantic_runtime_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Dispatch the scheduler while Pydantic Settings owns its runtime flags."""
+    """Pass Click overrides to the scheduler's Pydantic Settings model."""
     import lunchmoney_app.cli as cli
 
-    run_schedule_process = AsyncMock()
-    monkeypatch.setattr(cli, "run_schedule_process", run_schedule_process)
     settings = Mock()
-    parse_cli_settings = Mock(return_value=settings)
+    resolve_settings = Mock(return_value=settings)
+    run_schedule_process = AsyncMock()
     configure_runtime_settings = Mock()
-    monkeypatch.setattr(cli, "parse_cli_settings", parse_cli_settings)
+    monkeypatch.setattr(cli, "_resolve_settings", resolve_settings)
+    monkeypatch.setattr(cli, "run_schedule_process", run_schedule_process)
     monkeypatch.setattr(cli, "configure_runtime_settings", configure_runtime_settings)
 
     cli.main(
@@ -83,15 +102,9 @@ def test_cli_runs_scheduler_with_pydantic_runtime_options(
         ]
     )
 
-    parse_cli_settings.assert_called_once_with(
-        [
-            "--schedule-cron",
-            "15 4 * * 1-5",
-            "--schedule-timezone",
-            "America/Denver",
-        ],
-        ScheduleCliSettings,
-    )
+    values = resolve_settings.call_args.args[2]
+    assert values["schedule_cron"] == "15 4 * * 1-5"
+    assert values["schedule_timezone"] == "America/Denver"
     configure_runtime_settings.assert_called_once_with(settings)
     run_schedule_process.assert_awaited_once_with(settings=settings)
 
@@ -99,59 +112,69 @@ def test_cli_runs_scheduler_with_pydantic_runtime_options(
 def test_cli_runs_fastapi_with_pydantic_runtime_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Pass Pydantic Settings CLI flags to the local FastAPI runtime."""
+    """Pass Click overrides to the local FastAPI runtime."""
     import lunchmoney_app.cli as cli
 
     settings = Mock(host="0.0.0.0", port=9000)
-    parse_cli_settings = Mock(return_value=settings)
+    resolve_settings = Mock(return_value=settings)
     configure_runtime_settings = Mock()
     export_runtime_settings = Mock()
     run = Mock()
-    monkeypatch.setattr(cli, "parse_cli_settings", parse_cli_settings)
+    monkeypatch.setattr(cli, "_resolve_settings", resolve_settings)
     monkeypatch.setattr(cli, "configure_runtime_settings", configure_runtime_settings)
     monkeypatch.setattr(cli, "export_runtime_settings", export_runtime_settings)
     monkeypatch.setattr(cli.uvicorn, "run", run)
 
     cli.main(["serve", "--host", "0.0.0.0", "--port", "9000"])
 
-    parse_cli_settings.assert_called_once_with(
-        ["--host", "0.0.0.0", "--port", "9000"],
-        ServeCliSettings,
-    )
+    values = resolve_settings.call_args.args[2]
+    assert values["host"] == "0.0.0.0"
+    assert values["port"] == 9000
     configure_runtime_settings.assert_called_once_with(settings)
     export_runtime_settings.assert_called_once_with(settings)
     run.assert_called_once_with(
         "lunchmoney_app.app.main:app",
         host="0.0.0.0",
         port=9000,
-        reload=True,
+        reload=False,
+        reload_dirs=None,
         log_config=cli.LOG_CONFIG,
+        log_level=None,
     )
 
 
-def test_cli_runs_one_foreground_sync(
+def test_cli_enables_uvicorn_debug_and_reload_on_request(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Dispatch one-off sync arguments without exposing secret CLI flags."""
+    """Pass explicit development flags through to Uvicorn."""
+    import lunchmoney_app.cli as cli
+
+    run = Mock()
+    monkeypatch.setattr(cli.uvicorn, "run", run)
+
+    cli.main(["serve", "--debug", "--reload"])
+
+    assert run.call_args.kwargs["reload"] is True
+    assert run.call_args.kwargs["reload_dirs"] == [str(Path(cli.__file__).parent)]
+    assert run.call_args.kwargs["log_level"] == "debug"
+
+
+def test_cli_runs_one_foreground_sync(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Dispatch operation arguments separately from Pydantic settings."""
     import lunchmoney_app.cli as cli
 
     settings = Mock(sync_safety_margin_minutes=7)
-    parse_cli_settings = Mock(return_value=settings)
+    resolve_settings = Mock(return_value=settings)
     configure_runtime_settings = Mock()
     configure_runtime_mode = Mock()
     run_sync = AsyncMock()
-    monkeypatch.setattr(cli, "parse_cli_settings", parse_cli_settings)
+    monkeypatch.setattr(cli, "_resolve_settings", resolve_settings)
     monkeypatch.setattr(cli, "configure_runtime_settings", configure_runtime_settings)
     monkeypatch.setattr(cli, "configure_runtime_mode", configure_runtime_mode)
     monkeypatch.setattr(cli, "_run_sync", run_sync)
 
     cli.main(["sync", "--days", "14", "--incremental"])
 
-    parse_cli_settings.assert_called_once_with(
-        ["--days", "14", "--incremental"],
-        SyncCliSettings,
-        root_parser=ANY,
-    )
     configure_runtime_settings.assert_called_once_with(settings)
     configure_runtime_mode.assert_called_once_with("sync")
     run_sync.assert_awaited_once_with(
@@ -159,6 +182,88 @@ def test_cli_runs_one_foreground_sync(
         incremental=True,
         safety_margin_minutes=7,
     )
+
+
+def test_cli_maps_ephemeral_sync_to_safe_nonzero_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Return the stable mode error without exposing a traceback."""
+    import lunchmoney_app.cli as cli
+
+    settings = Mock(sync_safety_margin_minutes=5)
+    monkeypatch.setattr(cli, "_resolve_settings", Mock(return_value=settings))
+    monkeypatch.setattr(cli, "configure_runtime_settings", Mock())
+    monkeypatch.setattr(cli, "configure_runtime_mode", Mock())
+    monkeypatch.setattr(cli, "_run_sync", AsyncMock(side_effect=StatefulModeRequired()))
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(["sync"])
+
+    assert error.value.code == 1
+    stderr = capsys.readouterr().err
+    assert "stateful_mode_required" in stderr
+    assert "Traceback" not in stderr
+
+
+@pytest.mark.asyncio
+async def test_ephemeral_sync_checks_mode_before_constructing_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Raise the stable mode boundary before resolving upstream configuration."""
+    import lunchmoney_app.cli as cli
+
+    monkeypatch.setattr(
+        cli, "get_settings", lambda: RuntimeSettings(persistence_mode="ephemeral")
+    )
+    get_lunchmoney_app = Mock(side_effect=AssertionError("client accessed"))
+    monkeypatch.setattr(cli, "get_lunchmoney_app", get_lunchmoney_app)
+
+    with pytest.raises(StatefulModeRequired):
+        await cli._run_sync(days=30, incremental=False, safety_margin_minutes=5)
+
+    get_lunchmoney_app.assert_not_called()
+
+
+def test_cli_prefers_flags_then_pydantic_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Preserve CLI-over-environment precedence at the Click handoff."""
+    import lunchmoney_app.cli as cli
+
+    monkeypatch.setenv("LUNCHMONEY_PORT", "9000")
+    run = Mock()
+    monkeypatch.setattr(cli.uvicorn, "run", run)
+
+    cli.main(["serve", "--port", "8080"])
+
+    assert run.call_args.kwargs["port"] == 8080
+
+
+def test_cli_help_documents_environment_alternatives(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Show Pydantic defaults and environment names in command help."""
+    import lunchmoney_app.cli as cli
+
+    cli.main(["serve", "--help"])
+
+    output = capsys.readouterr().out
+    assert "--port INTEGER RANGE" in output
+    assert "LUNCHMONEY_PORT" in output
+    assert "8000" in output
+    assert "--access-token" not in output
+
+
+def test_cli_help_preserves_string_default_casing(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Render string defaults exactly as declared by Pydantic Settings."""
+    import lunchmoney_app.cli as cli
+
+    cli.main(["schedule", "--help"])
+
+    assert "[default: (UTC)]" in " ".join(capsys.readouterr().out.split())
 
 
 def test_cli_reports_local_doctor_failure_with_exit_code_one(
@@ -171,7 +276,7 @@ def test_cli_reports_local_doctor_failure_with_exit_code_one(
     report = Mock(is_healthy=False)
     report.render.return_value = "redacted diagnostic"
     monkeypatch.setattr(cli, "build_doctor_report", Mock(return_value=report))
-    monkeypatch.setattr(cli, "parse_cli_settings", Mock(return_value=Mock()))
+    monkeypatch.setattr(cli, "RuntimeSettings", Mock(return_value=Mock()))
     monkeypatch.setattr(cli, "get_secret_settings", Mock(return_value=Mock()))
 
     with pytest.raises(SystemExit, match="1"):
@@ -184,7 +289,7 @@ def test_cli_reports_invalid_doctor_configuration_with_exit_code_two(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Reject invalid local configuration without rendering its source values."""
+    """Reject invalid local configuration without rendering source values."""
     import lunchmoney_app.cli as cli
 
     monkeypatch.setenv("LUNCHMONEY_ALLOWED_HOSTS", "*")
@@ -193,13 +298,11 @@ def test_cli_reports_invalid_doctor_configuration_with_exit_code_two(
         cli.main(["doctor"])
 
     assert error.value.code == 2
-    assert "invalid local configuration" in capsys.readouterr().err
+    assert "Invalid configuration" in capsys.readouterr().err
 
 
-def test_cli_prints_installed_version(
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """Print the distribution name and installed version without configuration."""
+def test_cli_prints_installed_version(capsys: pytest.CaptureFixture[str]) -> None:
+    """Print the distribution name and installed version."""
     import lunchmoney_app.cli as cli
 
     cli.main(["version"])
@@ -207,17 +310,95 @@ def test_cli_prints_installed_version(
     assert capsys.readouterr().out == f"{cli.__application__} {cli.__version__}\n"
 
 
-def test_cli_prints_requested_shell_completion(
+def test_db_info_prints_safe_json_configuration(
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Generate the requested completion script without selecting a runtime."""
+    """Expose safe configured-database details for scripts and operators."""
+    import lunchmoney_app.cli as cli
+
+    monkeypatch.setenv(
+        "LUNCHMONEY_DATABASE_URL",
+        "postgresql+asyncpg://user:synthetic-secret@localhost/lunchmoney",
+    )
+
+    cli.main(["db", "info"])
+
+    rendered_output = capsys.readouterr().out
+    output = json.loads(rendered_output)
+    assert rendered_output.startswith("{\n  ")
+    assert (
+        output["database_url"] == "postgresql+asyncpg://user:***@localhost/lunchmoney"
+    )
+    assert output["database_url_is_explicit"] is True
+    assert output["dialect"] == "postgresql"
+    assert output["path"] is None
+    assert output["exists"] is None
+
+
+def test_db_migrate_uses_the_configured_database_and_lock(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Apply the configured database's pending migrations exclusively."""
+    import lunchmoney_app.cli as cli
+
+    database_url = "sqlite+aiosqlite:////tmp/lunchmoney.db"
+    lock = MagicMock()
+    run_migrations = AsyncMock()
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", database_url)
+    monkeypatch.setattr(cli, "get_migration_lock", Mock(return_value=lock))
+    monkeypatch.setattr(cli, "run_migrations", run_migrations)
+
+    cli.main(["db", "migrate"])
+
+    run_migrations.assert_awaited_once_with(database_url)
+    assert lock.__enter__.called
+    assert lock.__exit__.called
+    assert capsys.readouterr().out == "Database migrations applied.\n"
+
+
+def test_db_delete_drops_tables_for_nonfile_database_backends(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Delete tables through migrations instead of removing a SQLite file."""
+    import lunchmoney_app.cli as cli
+
+    database_url = "postgresql+asyncpg://localhost/lunchmoney"
+    lock = MagicMock()
+    delete_database = AsyncMock(return_value=False)
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", database_url)
+    monkeypatch.setattr(cli, "get_migration_lock", Mock(return_value=lock))
+    monkeypatch.setattr(cli, "delete_database", delete_database)
+
+    cli.main(["db", "delete", "--yes"])
+
+    delete_database.assert_awaited_once_with(database_url)
+    assert capsys.readouterr().out == "Database tables deleted.\n"
+
+
+def test_cli_prints_native_shell_completion(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Generate Click's native completion script."""
     import lunchmoney_app.cli as cli
 
     cli.main(["--print-completion", "bash"])
 
     completion_script = capsys.readouterr().out
-    assert "complete -F _lunchmoney_app lunchmoney-app" in completion_script
-    assert "mcp serve schedule sync doctor version" in completion_script
+    assert "_LUNCHMONEY_APP_COMPLETE=bash_complete" in completion_script
+    assert "complete -o nosort" in completion_script
+
+
+def test_cli_rejects_unsupported_powershell_completion() -> None:
+    """Do not advertise completion that the supported Click versions lack."""
+    import lunchmoney_app.cli as cli
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(["--print-completion", "powershell"])
+
+    assert error.value.code == 2
 
 
 def test_cli_rejects_shell_completion_with_a_runtime_command() -> None:
@@ -228,3 +409,43 @@ def test_cli_rejects_shell_completion_with_a_runtime_command() -> None:
         cli.main(["--print-completion", "zsh", "mcp"])
 
     assert error.value.code == 2
+
+
+def test_config_lists_all_runtime_and_secret_environment_names(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Make every setting discoverable without exposing secret flags."""
+    import lunchmoney_app.cli as cli
+
+    cli.main(["config", "list"])
+
+    output = capsys.readouterr().out
+    assert "LUNCHMONEY_PORT" in output
+    assert "LUNCHMONEY_ACCESS_TOKEN" in output
+    assert "LUNCHMONEY_APP_API_KEY" in output
+    assert "[environment only]" in output
+
+
+def test_config_show_redacts_sensitive_values(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Show resolved configuration without revealing credentials."""
+    import lunchmoney_app.cli as cli
+
+    monkeypatch.setenv("LUNCHMONEY_ACCESS_TOKEN", "synthetic-secret")
+
+    cli.main(["config", "show"])
+
+    output = capsys.readouterr().out
+    assert "********" in output
+    assert "synthetic-secret" not in output
+
+
+def test_config_validate_reports_success(capsys: pytest.CaptureFixture[str]) -> None:
+    """Validate all Pydantic Settings models without starting a runtime."""
+    import lunchmoney_app.cli as cli
+
+    cli.main(["config", "validate"])
+
+    assert capsys.readouterr().out == "Configuration is valid.\n"

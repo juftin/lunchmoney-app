@@ -4,7 +4,6 @@ import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from typing import Any
 from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
@@ -88,28 +87,55 @@ def test_unreviewed_transactions_review_defaults_to_45_days() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mcp_runtime_lifespan_creates_and_disposes_ephemeral_storage(
+async def test_mcp_runtime_lifespan_supports_explicit_stateful_memory_sqlite(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Initialize in-memory tool storage only while standalone MCP is running."""
     import lunchmoney_app.mcp.app as mcp_app_module
 
     database = Mock()
-    database.is_stateless = True
+    database.database_url = "sqlite+aiosqlite:///:memory:"
     database.create_tables = AsyncMock()
     database.dispose = AsyncMock()
-    get_database = Mock(return_value=database)
-    monkeypatch.setattr(mcp_app_module, "get_database", get_database)
+    get_shared_database = Mock(return_value=database)
+    monkeypatch.setattr(mcp_app_module, "get_shared_database", get_shared_database)
     monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
+    monkeypatch.setattr(mcp_app_module, "get_settings", RuntimeSettings)
     monkeypatch.setattr(
-        mcp_app_module, "get_settings", lambda: RuntimeSettings(ephemeral=False)
+        mcp_app_module,
+        "get_secret_settings",
+        lambda: SimpleNamespace(database_url_is_explicit=False),
     )
 
     async with mcp_app_module.mcp_lifespan(mcp):
         database.create_tables.assert_awaited_once_with()
 
     database.dispose.assert_awaited_once_with()
-    get_database.cache_clear.assert_called_once_with()
+    get_shared_database.cache_clear.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_stateful_mcp_lifespan_uses_real_shared_database_dependency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Start stateful MCP storage without requiring an operation-bound context."""
+    import lunchmoney_app.mcp.app as mcp_app_module
+    from lunchmoney_app.app.dependencies import get_shared_database
+    from lunchmoney_app.config import get_secret_settings
+    from lunchmoney_app.database.models import User
+
+    monkeypatch.setenv("LUNCHMONEY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+    get_secret_settings.cache_clear()
+    get_shared_database.cache_clear()
+    monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
+    monkeypatch.setattr(mcp_app_module, "get_settings", RuntimeSettings)
+
+    try:
+        async with mcp_app_module.mcp_lifespan(mcp):
+            assert await get_shared_database().list(User) == []
+    finally:
+        get_shared_database.cache_clear()
+        get_secret_settings.cache_clear()
 
 
 @pytest.mark.asyncio
@@ -119,22 +145,29 @@ async def test_mcp_runtime_lifespan_migrates_persistent_storage(
     """Apply migrations before serving a persistent standalone MCP endpoint."""
     import lunchmoney_app.mcp.app as mcp_app_module
 
-    database = Mock(is_stateless=False)
+    database = Mock(database_url="sqlite+aiosqlite:///stateful.db")
     database.dispose = AsyncMock()
     lock = Mock()
     lock.__enter__ = Mock(return_value=lock)
     lock.__exit__ = Mock(return_value=None)
     run_migrations = AsyncMock()
-    monkeypatch.setattr(mcp_app_module, "get_database", Mock(return_value=database))
+    monkeypatch.setattr(
+        mcp_app_module, "get_shared_database", Mock(return_value=database)
+    )
     monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
     monkeypatch.setattr(mcp_app_module, "get_settings", RuntimeSettings)
+    monkeypatch.setattr(
+        mcp_app_module,
+        "get_secret_settings",
+        lambda: SimpleNamespace(database_url_is_explicit=False),
+    )
     monkeypatch.setattr(mcp_app_module, "get_migration_lock", Mock(return_value=lock))
     monkeypatch.setattr(mcp_app_module, "run_migrations", run_migrations)
 
     async with mcp_app_module.mcp_lifespan(mcp):
         pass
 
-    run_migrations.assert_awaited_once_with()
+    run_migrations.assert_awaited_once_with(database_url=database.database_url)
     database.dispose.assert_awaited_once_with()
 
 
@@ -142,20 +175,35 @@ async def test_mcp_runtime_lifespan_migrates_persistent_storage(
 async def test_mcp_runtime_lifespan_skips_storage_in_ephemeral_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Leave private per-operation storage to the MCP operation middleware."""
+    """Construct no storage in database-free ephemeral mode."""
     import lunchmoney_app.mcp.app as mcp_app_module
 
-    get_database = Mock()
-    monkeypatch.setattr(mcp_app_module, "get_database", get_database)
+    get_shared_database = Mock()
+    monkeypatch.setattr(mcp_app_module, "get_shared_database", get_shared_database)
     monkeypatch.setattr(mcp_app_module, "get_runtime_mode", lambda: "mcp")
     monkeypatch.setattr(
-        mcp_app_module, "get_settings", lambda: RuntimeSettings(ephemeral=True)
+        mcp_app_module,
+        "get_settings",
+        lambda: RuntimeSettings.model_validate(
+            {
+                "persistence_mode": "ephemeral",
+                "schedule_transactions_cron": None,
+                "schedule_metadata_cron": None,
+                "schedule_cron": None,
+                "embed_scheduler": False,
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        mcp_app_module,
+        "get_secret_settings",
+        lambda: SimpleNamespace(database_url_is_explicit=False),
     )
 
     async with mcp_app_module.mcp_lifespan(mcp):
         pass
 
-    get_database.assert_not_called()
+    get_shared_database.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -165,22 +213,24 @@ async def test_explicit_mcp_sync_skips_automatic_refresh(
     """Let the sync tool run only its caller-requested upstream synchronization."""
     import lunchmoney_app.mcp.operations as operations_module
 
-    observed_refresh: list[bool] = []
+    operation_count = 0
 
     @asynccontextmanager
-    async def fake_data_operation(**kwargs: Any) -> AsyncIterator[object]:
-        """Record lifecycle refresh settings without creating application storage."""
-        observed_refresh.append(kwargs["refresh"])
+    async def fake_operation() -> AsyncIterator[object]:
+        """Bind a lifecycle that performs no implicit synchronization."""
+        nonlocal operation_count
+        operation_count += 1
         yield object()
 
     async def call_next(_: object) -> str:
         """Return a sentinel result from the simulated MCP tool."""
         return "synchronized"
 
-    monkeypatch.setattr(operations_module, "data_operation", fake_data_operation)
-    monkeypatch.setattr(operations_module, "get_lunchmoney_app", object)
-    monkeypatch.setattr(operations_module, "get_shared_database", object)
-    monkeypatch.setattr(operations_module, "get_settings", RuntimeSettings)
+    monkeypatch.setattr(
+        operations_module,
+        "_operation_factory",
+        lambda: SimpleNamespace(operation=fake_operation),
+    )
     context = SimpleNamespace(message=SimpleNamespace(name="sync_data"))
 
     result = await operations_module.DataOperationMiddleware().on_call_tool(
@@ -188,7 +238,42 @@ async def test_explicit_mcp_sync_skips_automatic_refresh(
     )
 
     assert result == "synchronized"
-    assert observed_refresh == [False]
+    assert operation_count == 1
+
+
+@pytest.mark.asyncio
+async def test_mcp_maps_stateful_mode_boundary_without_database_access(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Return the shared structured mode error before resolving storage."""
+    import lunchmoney_app.mcp.operations as operations_module
+
+    from lunchmoney_app.services.errors import StatefulModeRequired
+
+    settings = SimpleNamespace(persistence_mode="ephemeral")
+    get_shared_database = Mock(side_effect=AssertionError("database accessed"))
+    monkeypatch.setattr(operations_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        operations_module,
+        "get_lunchmoney_app",
+        Mock(side_effect=AssertionError("client accessed")),
+    )
+    monkeypatch.setattr(operations_module, "get_shared_database", get_shared_database)
+
+    async def call_next(_: object) -> None:
+        """Simulate one stateful-only tool boundary."""
+        raise StatefulModeRequired
+
+    result = await operations_module.DataOperationMiddleware().on_call_tool(
+        SimpleNamespace(message=SimpleNamespace(name="sync_data")), call_next
+    )
+
+    assert result.is_error is True
+    assert result.structured_content == {
+        "code": "stateful_mode_required",
+        "message": "This operation requires stateful persistence mode.",
+    }
+    get_shared_database.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -307,8 +392,12 @@ async def test_mcp_sync_tool_forwards_incremental_options(
         )
     )
     monkeypatch.setattr(sync_tool_module, "execute_mcp_sync", mock_execute_mcp_sync)
-    monkeypatch.setattr(sync_tool_module, "get_database", object)
-    monkeypatch.setattr(sync_tool_module, "get_lunchmoney_app", object)
+    operation = SimpleNamespace(database=object(), client=object())
+    monkeypatch.setattr(
+        sync_tool_module,
+        "get_stateful_operation_context",
+        lambda: operation,
+    )
 
     await mcp.call_tool(
         "sync_data",
@@ -326,6 +415,21 @@ async def test_mcp_sync_tool_forwards_incremental_options(
         incremental=True,
         safety_margin_minutes=9,
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "arguments",
+    [{"days": 0}, {"safety_margin_minutes": -1}],
+)
+async def test_mcp_sync_tool_rejects_invalid_windows(
+    arguments: dict[str, int],
+) -> None:
+    """Expose sync window constraints in the MCP tool input schema."""
+    from fastmcp.exceptions import ValidationError
+
+    with pytest.raises(ValidationError, match="greater than or equal to"):
+        await mcp.call_tool("sync_data", arguments)
 
 
 def test_pydantic_models() -> None:

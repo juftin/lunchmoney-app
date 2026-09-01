@@ -3,6 +3,7 @@ Database synchronization services for Lunch Money data.
 """
 
 import datetime
+from typing import Any
 
 from lunchmoney.models.transaction_object import TransactionObject
 from lunchmoney.models import (
@@ -12,6 +13,7 @@ from lunchmoney.models import (
 )
 from sqlmodel import SQLModel
 
+from lunchmoney_app._compat import StrEnum
 from lunchmoney_app.client import (
     CategoryObject,
     LunchMoneyApp,
@@ -35,6 +37,14 @@ from lunchmoney_app.database.models import (
 )
 
 
+class SyncScope(StrEnum):
+    """Select the independent domain workload performed by synchronization."""
+
+    ALL = "all"
+    METADATA = "metadata"
+    TRANSACTIONS = "transactions"
+
+
 async def sync_database(
     db: LunchMoneyDatabase,
     client: LunchMoneyApp,
@@ -43,6 +53,7 @@ async def sync_database(
     end_date: datetime.date | None = None,
     incremental: bool = False,
     safety_margin_minutes: int | None = None,
+    scope: SyncScope = SyncScope.ALL,
 ) -> SyncSummary:
     """
     Populate or synchronize the database for a given date range.
@@ -63,6 +74,8 @@ async def sync_database(
         Whether to resume transaction sync from its successful watermark.
     safety_margin_minutes : int | None
         Optional overlap override subtracted from an existing watermark.
+    scope : SyncScope
+        Metadata, transaction, or combined workload to refresh.
 
     Returns
     -------
@@ -76,45 +89,52 @@ async def sync_database(
         if start_date is not None
         else resolved_end_date - datetime.timedelta(days=days)
     )
-    user_obj: UserObject = await client.refresh(model=UserObject)
-    plaid_objs: dict[int, PlaidAccountObject] = await client.refresh(
-        model=PlaidAccountObject
-    )
-    manual_objs: dict[int, ManualAccountObject] = await client.refresh(
-        model=ManualAccountObject
-    )
-    category_objs: dict[int, CategoryObject] = await client.refresh(
-        model=CategoryObject
-    )
-    tag_objs: dict[int, TagObject] = await client.refresh(model=TagObject)
-    transaction_watermark = (
-        await db.get_sync_metadata("transactions") if incremental else None
-    )
-    if transaction_watermark is not None:
-        resolved_margin = (
-            safety_margin_minutes
-            if safety_margin_minutes is not None
-            else get_settings().sync_safety_margin_minutes
+    user_obj: UserObject | None = None
+    plaid_objs: dict[int, PlaidAccountObject] = {}
+    manual_objs: dict[int, ManualAccountObject] = {}
+    category_objs: dict[int, CategoryObject] = {}
+    tag_objs: dict[int, TagObject] = {}
+    transaction_objs: dict[int, TransactionObject] = {}
+    if scope in {SyncScope.ALL, SyncScope.METADATA}:
+        user_obj = await client.refresh(model=UserObject)
+        plaid_objs = await client.refresh(model=PlaidAccountObject)
+        manual_objs = await client.refresh(model=ManualAccountObject)
+        category_objs = await client.refresh(model=CategoryObject)
+        tag_objs = await client.refresh(model=TagObject)
+
+    transaction_window: tuple[datetime.date, datetime.date] | None = None
+    if scope in {SyncScope.ALL, SyncScope.TRANSACTIONS}:
+        transaction_watermark = (
+            await db.get_sync_metadata("transactions") if incremental else None
         )
-        transaction_objs: dict[
-            int, TransactionObject
-        ] = await client.refresh_transactions(
-            updated_since=transaction_watermark.last_synced_at
-            - datetime.timedelta(minutes=resolved_margin),
-            cache=False,
-        )
-    else:
-        transaction_objs = await client.refresh_transactions(
-            start_date=resolved_start_date,
-            end_date=resolved_end_date,
-            cache=False,
-        )
+        if transaction_watermark is not None:
+            resolved_margin = (
+                safety_margin_minutes
+                if safety_margin_minutes is not None
+                else get_settings().sync_safety_margin_minutes
+            )
+            transaction_objs = await client.refresh_transactions(
+                updated_since=transaction_watermark.last_synced_at
+                - datetime.timedelta(minutes=resolved_margin),
+                cache=False,
+            )
+        else:
+            transaction_objs = await client.refresh_transactions(
+                start_date=resolved_start_date,
+                end_date=resolved_end_date,
+                cache=False,
+            )
+            transaction_window = (resolved_start_date, resolved_end_date)
 
     upstream = getattr(client, "client", None)
     budget_settings: BudgetSettingsResponseObject | None = None
     summary: SummaryResponseObject | None = None
     recurring_response: GetAllRecurring200Response | None = None
-    if upstream is not None and hasattr(upstream, "budgets"):
+    if (
+        scope in {SyncScope.ALL, SyncScope.METADATA}
+        and upstream is not None
+        and hasattr(upstream, "budgets")
+    ):
         budget_settings = await upstream.budgets.get_budget_settings()
         summary = await upstream.summary.get_budget_summary(
             start_date=resolved_start_date,
@@ -132,7 +152,8 @@ async def sync_database(
         )
 
     records: list[SQLModel] = []
-    records.append(User.from_api(model=user_obj))
+    if user_obj is not None:
+        records.append(User.from_api(model=user_obj))
     for plaid in plaid_objs.values():
         records.append(PlaidAccount.from_api(model=plaid))
     for manual in manual_objs.values():
@@ -144,15 +165,37 @@ async def sync_database(
     for txn in transaction_objs.values():
         records.append(Transaction.from_api(model=txn))
 
-    await db.upsert_many(records)
+    authoritative_ids: dict[type[SQLModel], set[int]] = {}
+    if scope in {SyncScope.ALL, SyncScope.METADATA}:
+        authoritative_ids = {
+            User: {user_obj.id} if user_obj is not None else set(),
+            PlaidAccount: set(plaid_objs),
+            ManualAccount: set(manual_objs),
+            Category: {
+                category.id
+                for record in records
+                if isinstance(record, Category)
+                for category in (record, *record.children)
+            },
+            Tag: set(tag_objs),
+        }
+    if scope in {SyncScope.ALL, SyncScope.TRANSACTIONS}:
+        authoritative_ids[Transaction] = {
+            transaction.id
+            for record in records
+            if isinstance(record, Transaction)
+            for transaction in (
+                record,
+                *record.split_children,
+                *record.group_children,
+            )
+        }
+    cached_responses: dict[str, dict[str, Any]] = {}
     if budget_settings is not None:
-        await db.upsert_cached_response(
-            "budget-settings", budget_settings.model_dump(mode="json")
-        )
+        cached_responses["budget-settings"] = budget_settings.model_dump(mode="json")
     if summary is not None:
-        await db.upsert_cached_response(
-            f"summary:{resolved_start_date}:{resolved_end_date}",
-            summary.model_dump(mode="json"),
+        cached_responses[f"summary:{resolved_start_date}:{resolved_end_date}"] = (
+            summary.model_dump(mode="json")
         )
     if recurring_response is not None:
         recurring_payload = {
@@ -161,34 +204,45 @@ async def sync_database(
                 for item in recurring_response.recurring_items or []
             ]
         }
-        await db.upsert_cached_response(
-            f"recurring:{resolved_start_date}:{resolved_end_date}", recurring_payload
+        cached_responses[f"recurring:{resolved_start_date}:{resolved_end_date}"] = (
+            recurring_payload
         )
-        await db.upsert_cached_response("recurring:latest", recurring_payload)
-        await db.upsert_many(
-            [
-                RecurringItem(
-                    id=item.id,
-                    payload={**item.model_dump(mode="json"), "matches": None},
+        cached_responses["recurring:latest"] = recurring_payload
+        records.extend(
+            RecurringItem(
+                id=item.id,
+                payload={**item.model_dump(mode="json"), "matches": None},
+            )
+            for item in recurring_response.recurring_items or []
+        )
+        # A date-bounded recurring response is not a complete definition list.
+        # Persist returned definitions, but never infer global deletions from absence.
+    sync_metadata: list[SyncMetadata] = []
+    if scope in {SyncScope.ALL, SyncScope.METADATA}:
+        sync_metadata.append(
+            SyncMetadata(domain="metadata", last_synced_at=sync_started_at)
+        )
+    if scope in {SyncScope.ALL, SyncScope.TRANSACTIONS}:
+        sync_metadata.append(
+            SyncMetadata(domain="transactions", last_synced_at=sync_started_at)
+        )
+        if transaction_window is not None:
+            sync_metadata.append(
+                SyncMetadata(
+                    domain="transactions:authoritative",
+                    last_synced_at=sync_started_at,
                 )
-                for item in recurring_response.recurring_items or []
-            ]
-        )
-    await db.upsert_sync_metadata(
-        SyncMetadata(
-            domain="metadata",
-            last_synced_at=sync_started_at,
-        )
-    )
-    await db.upsert_sync_metadata(
-        SyncMetadata(
-            domain="transactions",
-            last_synced_at=sync_started_at,
-        )
+            )
+    await db.reconcile_sync_projection(
+        records=records,
+        authoritative_ids=authoritative_ids,
+        transaction_window=transaction_window,
+        cached_responses=cached_responses,
+        sync_metadata=sync_metadata,
     )
 
     return SyncSummary(
-        user=1 if user_obj else 0,
+        user=1 if user_obj is not None else 0,
         plaid_accounts=len(plaid_objs),
         manual_accounts=len(manual_objs),
         categories=len(category_objs),
@@ -197,4 +251,4 @@ async def sync_database(
     )
 
 
-__all__ = ["sync_database"]
+__all__ = ["SyncScope", "sync_database"]

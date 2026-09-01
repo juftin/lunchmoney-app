@@ -202,6 +202,7 @@ def test_persisted_split_children_retain_reverse_api_order() -> None:
         assert reloaded.to_api().model_dump(mode="json") == api_transaction.model_dump(
             mode="json"
         )
+    engine.dispose()
 
 
 def test_mixed_children_retain_group_before_split_api_order() -> None:
@@ -242,6 +243,7 @@ def test_mixed_children_retain_group_before_split_api_order() -> None:
         assert reloaded.to_api().model_dump(mode="json") == api_transaction.model_dump(
             mode="json"
         )
+    engine.dispose()
 
 
 @pytest.mark.parametrize(
@@ -507,6 +509,7 @@ def test_persisted_tag_ids_retain_api_order() -> None:
         assert reloaded is not None
         assert [tag.id for tag in reloaded.tags] == api_transaction.tag_ids
         assert reloaded.to_api().tag_ids == api_transaction.tag_ids
+    engine.dispose()
 
 
 @pytest.mark.parametrize(
@@ -569,6 +572,7 @@ def test_persisted_timestamps_round_trip_exact_source_shape(
         assert reloaded.to_api().model_dump(mode="json") == api_transaction.model_dump(
             mode="json"
         )
+    engine.dispose()
 
 
 def test_transaction_tables_compile_for_postgresql() -> None:
@@ -629,3 +633,4 @@ def test_persisted_transaction_graph_round_trips_and_cascades() -> None:
         assert session.exec(select(TransactionTagLink)).all() == []
         assert session.get(Transaction, child.id) is None
         assert session.get(Tag, tag.id) is not None
+    engine.dispose()

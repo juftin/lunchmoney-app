@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.utilities.lifespan import combine_lifespans
+from lunchmoney.exceptions import ApiException
 
 from lunchmoney_app.app.auth import verify_api_key
 from lunchmoney_app.app.dependencies import get_lunchmoney_app, get_shared_database
@@ -35,14 +36,17 @@ from lunchmoney_app.logging_config import apply_logging_config
 from lunchmoney_app.mcp import mcp
 from lunchmoney_app.observability import log_event, metrics
 from lunchmoney_app.schemas import RootResponse
-from lunchmoney_app.services.operations import data_operation
+from lunchmoney_app.services.operations import (
+    EphemeralOperationContextFactory,
+    OperationContext,
+    OperationContextFactory,
+    StatefulOperationContextFactory,
+)
+from lunchmoney_app.services.errors import StatefulModeRequired
 
 apply_logging_config()
 
 logger: logging.Logger = logging.getLogger(__name__)
-
-_EXPLICIT_SYNC_PATHS: frozenset[str] = frozenset({"/api/sync", "/api/sync/status"})
-"""REST operations that establish storage but perform their own refresh."""
 
 fastapi_app = FastAPI(
     title="Lunch Money MCP",
@@ -71,12 +75,24 @@ async def bind_data_operation(
     operational_paths = {"/api", "/health", "/healthz", "/ready", "/readyz", "/metrics"}
     if request.url.path in operational_paths or request.url.path.startswith("/mcp"):
         return await call_next(request)
-    async with data_operation(
-        client=get_lunchmoney_app(),
-        database=None if get_settings().ephemeral else get_shared_database(),
-        refresh=request.url.path not in _EXPLICIT_SYNC_PATHS,
-    ):
+    normalized_path = request.url.path.rstrip("/") or "/"
+    if get_settings().persistence_mode == "ephemeral" and normalized_path in {
+        "/",
+        "/dashboard/sync",
+        "/api/sync",
+        "/api/sync/status",
+    }:
+        raise StatefulModeRequired
+    async with _operation_factory().operation():
         return await call_next(request)
+
+
+def _operation_factory() -> OperationContextFactory[OperationContext]:
+    """Select the concrete REST operation factory without optional storage."""
+    client = get_lunchmoney_app()
+    if get_settings().persistence_mode == "ephemeral":
+        return EphemeralOperationContextFactory(client)
+    return StatefulOperationContextFactory(client, get_shared_database())
 
 
 fastapi_app.middleware("http")(bind_data_operation)
@@ -94,7 +110,32 @@ async def observe_request(
     try:
         response = await call_next(request)
         status_code = response.status_code
+    except StatefulModeRequired as error:
+        status_code = 409
+        response = JSONResponse(
+            status_code=status_code,
+            content={"detail": error.as_dict()},
+        )
+    except ApiException as error:
+        upstream_status = error.status if isinstance(error.status, int) else 502
+        status_code = upstream_status if 400 <= upstream_status < 600 else 502
+        metrics.record_upstream_failure(error)
+        logger.warning(
+            "Upstream request failure path=%s request_id=%s status=%s",
+            request.url.path,
+            request_id,
+            status_code,
+        )
+        response = JSONResponse(
+            status_code=status_code,
+            content={"detail": "Lunch Money upstream request failed"},
+        )
     except Exception:
+        logger.exception(
+            "Unhandled request failure path=%s request_id=%s",
+            request.url.path,
+            request_id,
+        )
         response = JSONResponse(
             status_code=status_code,
             content={"detail": "Internal server error"},
@@ -142,6 +183,16 @@ def _record_request(
 
 
 fastapi_app.middleware("http")(observe_request)
+
+
+@fastapi_app.exception_handler(StatefulModeRequired)
+async def stateful_mode_required_handler(
+    request: Request,
+    error: StatefulModeRequired,
+) -> JSONResponse:
+    """Map stateful-only operations to the stable REST conflict contract."""
+    del request
+    return JSONResponse(status_code=409, content={"detail": error.as_dict()})
 
 
 @fastapi_app.get(
@@ -192,6 +243,7 @@ app = FastAPI(
 app.middleware("http")(verify_api_key)
 app.middleware("http")(bind_data_operation)
 app.middleware("http")(observe_request)
+app.add_exception_handler(StatefulModeRequired, stateful_mode_required_handler)  # type: ignore[arg-type]
 apply_security_middleware(app=app, settings=get_settings())
 
 __all__: list[str] = [

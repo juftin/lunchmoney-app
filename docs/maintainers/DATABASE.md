@@ -3,19 +3,23 @@
 ## Configuration
 
 With no configuration, `LunchMoneyDatabase` uses the persistent SQLite file
-`sqlite+aiosqlite:///lunchmoney.db` in the current working directory. The
-`mcp` command instead defaults to per-operation ephemeral storage when using
-stdio; select `--no-ephemeral` to use this persistent default. Pass a URL to
-the constructor or set `LUNCHMONEY_DATABASE_URL`; an explicit constructor URL
-takes precedence.
+`lunchmoney.db` in the platform-specific user data directory reported by
+`platformdirs` (for example, `$XDG_DATA_HOME/lunchmoney-app` on Linux). The
+`mcp` command instead defaults to database-free ephemeral operation when using
+stdio; select `--persistence-mode stateful` to use the persistent default. Pass
+a URL to the constructor or set `LUNCHMONEY_DATABASE_URL`; an explicit
+constructor URL takes precedence.
 
 ```text
 sqlite+aiosqlite:////absolute/path/to/lunchmoney.db
 postgresql+asyncpg://user:password@host/database
 ```
 
-Create or update the schema before using the database. Runtime database
-construction does not call `create_all()` or run migrations automatically.
+Constructing `LunchMoneyDatabase` directly does not create or migrate its
+schema. Stateful application runtimes (`serve`, `schedule`, and `sync`) run
+Alembic migrations during startup before accessing the database, using bundled
+migrations when installed so they do not require a source checkout. For direct
+library use or an explicit operator migration, run:
 
 ```bash
 export LUNCHMONEY_DATABASE_URL=sqlite+aiosqlite:///lunchmoney.db
@@ -24,6 +28,17 @@ uv run alembic upgrade head
 
 The same command works with a `postgresql+asyncpg` URL. To reverse all
 migrations, run `uv run alembic downgrade base`.
+
+The CLI provides equivalent operator commands. `info` is safe for scripts and
+redacts database passwords. `delete` removes a file-backed SQLite database and
+its SQLite journal files; it drops every application table and Alembic revision
+state for non-file backends such as PostgreSQL.
+
+```bash
+lunchmoney-app db info
+lunchmoney-app db migrate
+lunchmoney-app db delete --yes
+```
 
 ## Convenience API
 

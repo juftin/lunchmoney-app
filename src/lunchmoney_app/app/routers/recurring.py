@@ -1,4 +1,4 @@
-"""Live recurring-item endpoints."""
+"""Recurring-item endpoints."""
 
 import datetime
 from typing import Annotated
@@ -6,13 +6,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from lunchmoney.models import RecurringObject
 
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_app.client import LunchMoneyApp
-from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.app.dependencies import OperationContext, get_operation_context
 from lunchmoney_app.services import fetch_recurring_item_by_id, fetch_recurring_items
 
 router = APIRouter(tags=["Recurring Items"])
-"""FastAPI APIRouter for live recurring-item endpoints."""
 
 
 @router.get(
@@ -21,30 +18,13 @@ router = APIRouter(tags=["Recurring Items"])
     operation_id="list_recurring_items",
 )
 async def list_recurring_items(
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
     include_suggested: bool | None = None,
 ) -> list[RecurringObject]:
-    """List live recurring items with optional matching information.
-
-    **Parameters:**
-
-    - **client**: Configured Lunch Money API client.
-    - **start_date**: Optional matching window start date.
-    - **end_date**: Optional matching window end date.
-    - **include_suggested**: Whether suggested recurring items should be returned.
-
-    **Returns:** Recurring items returned by Lunch Money.
-    """
-    return await fetch_recurring_items(
-        db=db,
-        client=client,
-        start_date=start_date,
-        end_date=end_date,
-        include_suggested=include_suggested,
-    )
+    """List recurring items with optional matching information."""
+    return await fetch_recurring_items(context, start_date, end_date, include_suggested)
 
 
 @router.get(
@@ -54,26 +34,11 @@ async def list_recurring_items(
 )
 async def get_recurring_item(
     recurring_item_id: int,
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    context: Annotated[OperationContext, Depends(dependency=get_operation_context)],
     start_date: datetime.date | None = None,
     end_date: datetime.date | None = None,
 ) -> RecurringObject:
-    """Fetch one live recurring item with optional matching information.
-
-    **Parameters:**
-
-    - **recurring_item_id**: Identifier of the recurring item to retrieve.
-    - **client**: Configured Lunch Money API client.
-    - **start_date**: Optional matching window start date.
-    - **end_date**: Optional matching window end date.
-
-    **Returns:** Recurring item returned by Lunch Money.
-    """
+    """Return one recurring item with optional matching information."""
     return await fetch_recurring_item_by_id(
-        db=db,
-        client=client,
-        recurring_item_id=recurring_item_id,
-        start_date=start_date,
-        end_date=end_date,
+        context, recurring_item_id, start_date, end_date
     )

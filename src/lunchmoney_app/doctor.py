@@ -92,14 +92,20 @@ def build_doctor_report(
     )
     database_check = _database_check(
         database_url=secret_settings.database_url,
-        stateless=settings.stateless,
+        ephemeral=settings.persistence_mode == "ephemeral",
     )
     redis_check = DoctorCheck(
         name="Redis lock backend",
         status="ok",
-        detail="configured"
-        if secret_settings.redis_url
-        else "not configured; file locks will be used",
+        detail=(
+            "not used in ephemeral mode"
+            if settings.persistence_mode == "ephemeral"
+            else (
+                "configured"
+                if secret_settings.redis_url
+                else "not configured; file locks will be used"
+            )
+        ),
     )
     api_key_check = DoctorCheck(
         name="REST API authentication",
@@ -119,13 +125,13 @@ def build_doctor_report(
     )
 
 
-def _database_check(database_url: str, stateless: bool) -> DoctorCheck:
+def _database_check(database_url: str, ephemeral: bool) -> DoctorCheck:
     """Check only the local SQLite data directory, never a remote database."""
-    if stateless:
+    if ephemeral:
         return DoctorCheck(
             name="database",
             status="ok",
-            detail="stateless in-memory SQLite selected",
+            detail="not used in ephemeral mode",
         )
     if not database_url.startswith("sqlite"):
         return DoctorCheck(

@@ -4,7 +4,7 @@
 
 This document serves as the master planning blueprint for **Lunch Money MCP**. It details:
 
-1. Dual **Deployment Architectures** (Persistent Cached Mode vs. Stateless In-Memory Mode).
+1. Dual **Persistence Modes** (stateful synchronized storage and database-free ephemeral access).
 2. A **100% Granular Mapping** of all 39 endpoints across 10 domain areas in the [Lunch Money v2 OpenAPI Specification](https://alpha.lunchmoney.dev/v2/docs).
 3. An 8-sprint implementation history through complete v2 API coverage, followed by a prioritized operational-product roadmap.
 
@@ -13,54 +13,28 @@ This document serves as the master planning blueprint for **Lunch Money MCP**. I
 ## 🏛️ Deployment & Persistence Architectures
 
 ```mermaid
-graph TD
-    subgraph Operation Modes
-        PersistentMode[Persistent Cached Mode]
-        StatelessMode[Stateless In-Memory Mode]
-    end
-
-    subgraph Storage Backends
-        DiskDB[(SQLite File / PostgreSQL)]
-        MemDB[(Shared In-Memory SQLite)]
-    end
-
-    subgraph Data Flow
-        LM_API[Upstream Lunch Money v2 API]
-        Services[Lunch Money MCP Services]
-        MCP_REST[FastAPI REST / FastMCP Server]
-    end
-
-    PersistentMode -->|Reads/Writes| DiskDB
-    DiskDB <-->|Periodic Background Sync| LM_API
-
-    StatelessMode -->|Reads/Writes| MemDB
-    MemDB <-->|Live Per-Operation Sync| LM_API
-
-    Services --> PersistentMode
-    Services --> StatelessMode
-    MCP_REST --> Services
+flowchart LR
+    Client[MCP or REST client] --> Service[Domain services]
+    Service -->|stateful reads and projections| DB[(SQLite or PostgreSQL)]
+    DB <-->|explicit or scheduled sync| API[Lunch Money v2 API]
+    Service -->|ephemeral live operations| API
 ```
 
-### 1. Persistent Cached Mode (Default)
+### 1. Stateful Mode (HTTP Default)
 
-- **Database Engine**: Persistent SQLite file (`lunchmoney.db`) or PostgreSQL database (`postgresql+asyncpg://`).
-- **Sync Strategy**: Background worker or explicit `/api/sync` calls fetch upstream updates and upsert changes into the database. Reads are served instantaneously from local disk/database cache.
-- **Use Cases**: Local CLI usage, long-running MCP servers, home-server deployments (Docker Compose).
+- Uses SQLite or PostgreSQL synchronized storage.
+- Enables migrations, explicit and scheduled sync, watermarks, cache status,
+  and the HTML dashboard.
+- Ordinary writes call Lunch Money first and then project the canonical result
+  into storage.
 
-### 2. Shared In-Memory Mode (`LUNCHMONEY_STATELESS=true`)
+### 2. Ephemeral Mode (MCP Stdio Default)
 
-- **Database Engine**: Shared in-memory SQLite (`sqlite+aiosqlite:///file:memdb?mode=memory&cache=shared&uri=true`) configured with `StaticPool`.
-- **Sync Strategy**: **100% refreshed from Lunch Money v2 API on demand**. For every request or operation:
-    1. An in-memory SQLite database instance is initialized and schema tables are instantiated.
-    2. Data is fetched live from the Lunch Money API and loaded into memory.
-    3. The request/tool operation is executed against the fresh in-memory data graph.
-- **Use Cases**: Ephemeral containers, serverless environments (AWS Lambda, Google Cloud Run, Vercel), security-restricted environments where storing financial data on disk is forbidden.
-
-### 3. Ephemeral Per-Operation Mode (`LUNCHMONEY_EPHEMERAL=true`)
-
-- **Database Engine**: A private in-memory SQLite database created for each REST or MCP data operation.
-- **Sync Strategy**: Refresh upstream data before the operation, then dispose the database immediately afterward.
-- **Use Cases**: Requests that must not retain financial data in process memory after completion.
+- Reads and writes Lunch Money live for one operation.
+- Creates no database engine, schema, migration, lock, SQLModel projection, or
+  cross-operation financial-data cache.
+- Dashboard, sync, watermarks, cache status, and scheduling return the stable
+  `stateful_mode_required` boundary.
 
 ---
 
@@ -131,8 +105,8 @@ collections.
 | `/transactions/{id}` | `DELETE` | `DELETE /api/transactions/{id}` | `delete_transaction`       | `delete_transaction`       | ✅ Done |
 
 `GET /api/transactions` applies Lunch Money's transaction filters in either source
-mode. Stateless servers retrieve every upstream page before returning all
-matches; persistent servers return all matching cached records. Both return one
+mode. Ephemeral servers retrieve every upstream page before returning all
+matches; stateful servers return all matching cached records. Both return one
 flat collection.
 
 ---
@@ -198,8 +172,8 @@ return flat collections of complete objects.
 
 ### Sprint 0: Incremental ETL Engine Architecture
 
-- [x] Add `LUNCHMONEY_STATELESS=true` setting & `IN_MEMORY_DATABASE_URL` resolution in `config.py`.
-- [x] Add `StaticPool` in-memory SQLite initialization in `LunchMoneyDatabase`.
+- [x] Add explicit stateful and database-free ephemeral persistence modes.
+- [x] Keep database construction and schema initialization inside stateful lifecycles.
 - [x] Add `db.create_tables()` schema initialization helper.
 - [x] Add `SyncMetadata` table and opt-in incremental sync timestamp filtering.
 
@@ -274,7 +248,7 @@ features.
       `--preload` as scheduler coordination: it preloads the app before worker
       forks and cannot guarantee one scheduler or one execution.
 - [x] Make the default deployment topology one scheduler process plus one or
-      more stateless web workers. Serialize sync through the existing distributed
+      more web workers. Serialize sync through the existing distributed
       migration/sync lock and expose last-run status.
 - [x] Keep APScheduler 3.11 in the supported single dedicated scheduler topology.
       APScheduler 3 job stores cannot be shared, so HA/multi-scheduler operation
@@ -330,6 +304,8 @@ features.
       rendered empty/error states.
 - [x] Establish Tabler as the locally served dashboard UI foundation, with a
       custom financial visual system layered over server-rendered templates.
+- [x] Keep long sanitized database URLs within the sync panel, with horizontal
+      scrolling limited to the URL value.
 
 ### Sprint 12: CLI, Packaging & Operator Experience
 
@@ -340,6 +316,10 @@ features.
 - [x] Provide config precedence and validation (`CLI > environment > .env >
 defaults`), redacted `doctor` diagnostics, meaningful exit codes, and no
       secret values in output.
+- [x] Use Click for the public command tree and native shell completion while
+      retaining Pydantic Settings as the typed configuration resolver; expose
+      every environment alternative through `config list`, `config show`, and
+      `config validate`, with environment-only values redacted.
 - [x] Publish Docker Compose as the first-class deployment path, with
       API-only, MCP-only, combined, and dedicated-scheduler examples; add
       release/versioning and upgrade documentation.

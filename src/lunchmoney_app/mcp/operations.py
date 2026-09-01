@@ -1,15 +1,21 @@
 """FastMCP middleware that binds the shared data-operation lifecycle."""
 
+import json
 from typing import Any
 
 from fastmcp.server.middleware.middleware import CallNext, Middleware, MiddlewareContext
+from fastmcp.tools.base import ToolResult
+from mcp.types import TextContent
 
 from lunchmoney_app.app.dependencies import get_lunchmoney_app, get_shared_database
 from lunchmoney_app.config import get_settings
-from lunchmoney_app.services.operations import data_operation
-
-_EXPLICIT_SYNC_TOOLS: frozenset[str] = frozenset({"sync_data", "get_sync_status"})
-"""MCP tools that establish storage but perform their own refresh or lookup."""
+from lunchmoney_app.services.operations import (
+    EphemeralOperationContextFactory,
+    OperationContext,
+    OperationContextFactory,
+    StatefulOperationContextFactory,
+)
+from lunchmoney_app.services.errors import StatefulModeRequired
 
 
 class DataOperationMiddleware(Middleware):
@@ -19,19 +25,41 @@ class DataOperationMiddleware(Middleware):
         self, context: MiddlewareContext[Any], call_next: CallNext[Any, Any]
     ) -> Any:
         """Bind storage for a tool invocation."""
-        async with data_operation(
-            client=get_lunchmoney_app(),
-            database=None if get_settings().ephemeral else get_shared_database(),
-            refresh=context.message.name not in _EXPLICIT_SYNC_TOOLS,
-        ):
-            return await call_next(context)
+        try:
+            tool_name = getattr(getattr(context, "message", None), "name", None)
+            if get_settings().persistence_mode == "ephemeral" and tool_name in {
+                "sync_data",
+                "get_sync_status",
+            }:
+                raise StatefulModeRequired
+            async with _operation_factory().operation():
+                return await call_next(context)
+        except StatefulModeRequired as error:
+            return ToolResult(
+                content=[
+                    TextContent(
+                        type="text",
+                        text=json.dumps(error.as_dict()),
+                    )
+                ],
+                structured_content=error.as_dict(),
+                is_error=True,
+            )
 
     async def on_read_resource(
         self, context: MiddlewareContext[Any], call_next: CallNext[Any, Any]
     ) -> Any:
         """Bind storage for a resource read."""
-        async with data_operation(
-            client=get_lunchmoney_app(),
-            database=None if get_settings().ephemeral else get_shared_database(),
-        ):
-            return await call_next(context)
+        async with _operation_factory().operation():
+            try:
+                return await call_next(context)
+            except StatefulModeRequired as error:
+                raise RuntimeError(json.dumps(error.as_dict())) from None
+
+
+def _operation_factory() -> OperationContextFactory[OperationContext]:
+    """Select the concrete MCP operation factory without optional storage."""
+    client = get_lunchmoney_app()
+    if get_settings().persistence_mode == "ephemeral":
+        return EphemeralOperationContextFactory(client)
+    return StatefulOperationContextFactory(client, get_shared_database())

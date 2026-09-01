@@ -3,6 +3,7 @@
 import datetime
 import importlib
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
 from unittest.mock import ANY, AsyncMock, create_autospec
@@ -14,6 +15,7 @@ from starlette.testclient import TestClient
 from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
 from lunchmoney_app.app.main import fastapi_app
 from lunchmoney_app.client import LunchMoneyApp
+from lunchmoney_app.config import RuntimeSettings
 from lunchmoney_app.database import LunchMoneyDatabase
 from lunchmoney_app.database.models import SyncMetadata
 from lunchmoney_app.schemas import (
@@ -23,6 +25,7 @@ from lunchmoney_app.schemas import (
     SyncStatusSummary,
 )
 from lunchmoney_app.services.dashboard import DashboardData
+from lunchmoney_app.services.operations import StatefulOperationContextFactory
 from database.factories import (
     manual_account_object,
     plaid_account_object,
@@ -511,8 +514,8 @@ def test_dashboard_passes_the_requested_period_to_its_service(
 
     assert response.status_code == 200
     dashboard_router.fetch_dashboard_data.assert_awaited_once_with(
-        db=ANY,
-        client=ANY,
+        context=ANY,
+        settings=ANY,
         period_start=datetime.date(2026, 7, 16),
     )
 
@@ -550,8 +553,8 @@ def test_dashboard_supports_month_format_period_parameter(
 
     assert response.status_code == 200
     dashboard_router.fetch_dashboard_data.assert_awaited_once_with(
-        db=ANY,
-        client=ANY,
+        context=ANY,
+        settings=ANY,
         period_start=datetime.date(2026, 5, 1),
     )
 
@@ -562,6 +565,7 @@ async def test_dashboard_service_keeps_other_sections_available_on_failure(
 ) -> None:
     """Keep cached content renderable when one live dashboard section fails."""
     database = create_autospec(LunchMoneyDatabase, instance=True)
+    database.database_url = "sqlite+aiosqlite:///dashboard-test.db"
     database.get_sync_metadata = AsyncMock(
         return_value=SyncMetadata(
             domain="transactions",
@@ -602,20 +606,28 @@ async def test_dashboard_service_keeps_other_sections_available_on_failure(
     )
     monkeypatch.setattr(
         dashboard_service,
-        "fetch_recent_transactions",
-        AsyncMock(return_value=[]),
-    )
-    monkeypatch.setattr(
-        dashboard_service,
         "get_scheduled_sync_status",
         AsyncMock(return_value=None),
     )
 
-    data = await dashboard_service.fetch_dashboard_data(
-        db=database,
-        client=cast(LunchMoneyApp, object()),
-        period_start=datetime.date(2026, 7, 16),
+    factory = StatefulOperationContextFactory(
+        client=cast(LunchMoneyApp, object()), database=database
     )
+    async with factory.operation() as context:
+        recent_transactions = AsyncMock(return_value=[])
+        monkeypatch.setattr(context.transactions, "recent", recent_transactions)
+        data = await dashboard_service.fetch_dashboard_data(
+            context=context,
+            settings=RuntimeSettings(),
+            period_start=datetime.date(2026, 7, 16),
+        )
+
+        dashboard_service.fetch_category_spending.assert_awaited_once_with(
+            context=context,
+            start_date=datetime.date(2026, 7, 1),
+            end_date=datetime.date(2026, 7, 31),
+            days=None,
+        )
 
     assert data.budget_summary is None
     assert data.accounts == accounts
@@ -623,17 +635,10 @@ async def test_dashboard_service_keeps_other_sections_available_on_failure(
     assert data.unavailable_sections == ("Budget status",)
     assert data.period_start == datetime.date(2026, 7, 1)
     assert data.period_end == datetime.date(2026, 7, 31)
-    dashboard_service.fetch_category_spending.assert_awaited_once_with(
-        db=database,
+    recent_transactions.assert_awaited_once_with(
         start_date=datetime.date(2026, 7, 1),
         end_date=datetime.date(2026, 7, 31),
-        days=None,
-    )
-    dashboard_service.fetch_recent_transactions.assert_awaited_once_with(
-        db=database,
         limit=10,
-        start_date=datetime.date(2026, 7, 1),
-        end_date=datetime.date(2026, 7, 31),
     )
 
 
@@ -653,6 +658,8 @@ def test_dashboard_renders_syncing_component(
     assert "Engine & Storage" in response.text
     assert "Database URL" in response.text
     assert "sqlite+aiosqlite:///lunchmoney.db" in response.text
+    assert 'class="sync-summary__database-url"' in response.text
+    assert 'class="sync-code sync-code--scrollable"' in response.text
     assert "Local DB Inventory" in response.text
     assert "Transactions Workload" in response.text
     assert "Metadata Workload" in response.text
@@ -660,6 +667,22 @@ def test_dashboard_renders_syncing_component(
     assert "*/10 * * * *" in response.text
     assert "0 * * * *" in response.text
     assert 'class="js-local-time"' in response.text
+
+
+def test_dashboard_database_url_styles_constrain_the_scroll_area() -> None:
+    """Keep a long database URL inside the sync panel's scrollable width."""
+    stylesheet = (
+        Path(__file__).parents[1] / "src/lunchmoney_app/app/static/dashboard.css"
+    ).read_text()
+    database_url_row = stylesheet.partition(".sync-summary__database-url {")[
+        2
+    ].partition("}")[0]
+    scrollable_code = stylesheet.partition(".sync-code--scrollable {")[2].partition(
+        "}"
+    )[0]
+
+    assert "min-width: 0;" in database_url_row
+    assert "max-width: 100%;" in scrollable_code
 
 
 def test_humanize_time_ago() -> None:

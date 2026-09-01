@@ -1,0 +1,18 @@
+{
+    "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+    "name": "lunchmoney-app",
+    "version": "0.13.0",
+    "description": "MCP-first access to Lunch Money data.",
+    "owner": {
+        "name": "Justin Flannery"
+    },
+    "plugins": [
+        {
+            "name": "lunchmoney-mcp",
+            "version": "0.13.0",
+            "description": "Use Lunch Money data through a local MCP server.",
+            "source": "./plugins/lunchmoney-mcp",
+            "category": "finance"
+        }
+    ]
+}

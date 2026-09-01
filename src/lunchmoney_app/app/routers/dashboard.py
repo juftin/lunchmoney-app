@@ -10,13 +10,15 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from lunchmoney_app.app.dependencies import get_database, get_lunchmoney_app
-from lunchmoney_app.client import LunchMoneyApp
-from lunchmoney_app.database import LunchMoneyDatabase
+from lunchmoney_app.config import get_settings
 from lunchmoney_app.services.dashboard import (
     DashboardData,
     fetch_dashboard_data,
     humanize_time_ago,
+)
+from lunchmoney_app.services.operations import (
+    StatefulOperationContext,
+    get_stateful_operation_context,
 )
 
 router = APIRouter(tags=["Dashboard"])
@@ -98,13 +100,18 @@ def _parse_period(period_raw: str | datetime.date | None) -> datetime.date | Non
 )
 async def dashboard(
     request: Request,
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    operation: Annotated[
+        StatefulOperationContext, Depends(dependency=get_stateful_operation_context)
+    ],
     period: Annotated[str | None, Query()] = None,
 ) -> HTMLResponse:
     """Render the authenticated, read-only Lunch Money dashboard for one month."""
     period_date = _parse_period(period)
-    data = await fetch_dashboard_data(db=db, client=client, period_start=period_date)
+    data = await fetch_dashboard_data(
+        context=operation,
+        settings=get_settings(),
+        period_start=period_date,
+    )
     chart_data = _build_chart_data(data)
     is_hx_request = bool(
         request.headers.get("HX-Request") or request.headers.get("hx-request")
@@ -147,16 +154,26 @@ async def dashboard(
 )
 async def dashboard_sync(
     request: Request,
-    db: Annotated[LunchMoneyDatabase, Depends(dependency=get_database)],
-    client: Annotated[LunchMoneyApp, Depends(dependency=get_lunchmoney_app)],
+    operation: Annotated[
+        StatefulOperationContext, Depends(dependency=get_stateful_operation_context)
+    ],
     period: Annotated[str | None, Query()] = None,
 ) -> HTMLResponse:
     """Trigger an instant database sync and re-render the dashboard cockpit content."""
     from lunchmoney_app.services.sync import execute_sync
 
-    await execute_sync(db=db, client=client, days=30, incremental=False)
+    await execute_sync(
+        db=operation.database,
+        client=operation.client,
+        days=30,
+        incremental=False,
+    )
     period_date = _parse_period(period)
-    data = await fetch_dashboard_data(db=db, client=client, period_start=period_date)
+    data = await fetch_dashboard_data(
+        context=operation,
+        settings=get_settings(),
+        period_start=period_date,
+    )
     chart_data = _build_chart_data(data)
     today = datetime.date.today()
     context = {

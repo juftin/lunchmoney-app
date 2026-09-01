@@ -1,0 +1,38 @@
+{
+    "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+    "name": "io.github.juftin/lunchmoney-app",
+    "title": "Lunch Money MCP",
+    "description": "MCP-first access to your Lunch Money data.",
+    "repository": {
+        "url": "https://github.com/juftin/lunchmoney-app",
+        "source": "github",
+        "id": "1314484565"
+    },
+    "version": "0.13.0",
+    "packages": [
+        {
+            "registryType": "pypi",
+            "identifier": "lunchmoney-app",
+            "version": "0.13.0",
+            "runtimeHint": "uvx",
+            "packageArguments": [
+                {
+                    "type": "positional",
+                    "value": "mcp"
+                }
+            ],
+            "transport": {
+                "type": "stdio"
+            },
+            "environmentVariables": [
+                {
+                    "name": "LUNCHMONEY_ACCESS_TOKEN",
+                    "description": "Personal access token used to query your Lunch Money account.",
+                    "isRequired": true,
+                    "isSecret": true,
+                    "format": "string"
+                }
+            ]
+        }
+    ]
+}

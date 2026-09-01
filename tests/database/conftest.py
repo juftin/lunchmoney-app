@@ -20,7 +20,9 @@ def migrated_database_url(tmp_path: Path) -> Iterator[str]:
     """Apply and reverse real migrations around one persistent SQLite file."""
     database_url = f"sqlite+aiosqlite:///{tmp_path / 'persistence.db'}"
     config = Config(str(PROJECT_ROOT / "alembic.ini"))
-    config.set_main_option("script_location", str(PROJECT_ROOT / "alembic"))
+    config.set_main_option(
+        "script_location", str(PROJECT_ROOT / "src/lunchmoney_app/database/migrations")
+    )
     config.set_main_option("sqlalchemy.url", database_url)
 
     command.upgrade(config, "head")
@@ -35,7 +37,9 @@ def migrated_postgres_database_url() -> Iterator[str]:
     if not database_url:
         pytest.skip("TEST_POSTGRES_URL is not configured")
     config = Config(str(PROJECT_ROOT / "alembic.ini"))
-    config.set_main_option("script_location", str(PROJECT_ROOT / "alembic"))
+    config.set_main_option(
+        "script_location", str(PROJECT_ROOT / "src/lunchmoney_app/database/migrations")
+    )
     config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
     try:

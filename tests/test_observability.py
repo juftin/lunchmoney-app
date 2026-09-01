@@ -3,12 +3,14 @@
 import json
 import logging
 from importlib import import_module
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
+from lunchmoney.exceptions import ApiException
+from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from lunchmoney_app.app.main import fastapi_app
+from lunchmoney_app.app.main import fastapi_app, observe_request
 from lunchmoney_app.observability import MetricsRegistry, log_event
 
 
@@ -17,6 +19,34 @@ class RateLimitedError(Exception):
 
     status: int = 429
     """HTTP status exposed by the generated Lunch Money client."""
+
+
+@pytest.mark.asyncio
+async def test_request_observer_maps_upstream_status_without_exposing_body() -> None:
+    """Preserve an upstream HTTP status while returning a bounded safe response."""
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/transactions/404",
+            "raw_path": b"/api/transactions/404",
+            "query_string": b"",
+            "headers": [],
+            "client": ("127.0.0.1", 1),
+            "server": ("localhost", 80),
+            "scheme": "http",
+        }
+    )
+
+    async def fail(_: Request) -> object:
+        """Raise a representative generated-client not-found response."""
+        raise ApiException(status=404, reason="sensitive upstream reason")
+
+    response = await observe_request(request, fail)
+
+    assert response.status_code == 404
+    assert response.body == b'{"detail":"Lunch Money upstream request failed"}'
+    assert b"sensitive" not in response.body
 
 
 def test_health_liveness_bypasses_rest_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -93,6 +123,75 @@ def test_readiness_hides_database_error_details(
         "database": "unavailable",
         "scheduler": "not_configured",
     }
+
+
+@pytest.mark.asyncio
+async def test_ephemeral_readiness_skips_database_and_reports_upstream_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Probe configuration without touching database or upstream availability."""
+    from types import SimpleNamespace
+
+    from starlette.requests import Request
+
+    from lunchmoney_app.config import RuntimeSettings
+
+    health_module = import_module("lunchmoney_app.app.routers.health")
+    settings = RuntimeSettings.model_validate(
+        {
+            "persistence_mode": "ephemeral",
+            "schedule_transactions_cron": None,
+            "schedule_metadata_cron": None,
+            "schedule_cron": None,
+            "embed_scheduler": False,
+        }
+    )
+    database_is_ready = AsyncMock(side_effect=AssertionError("database accessed"))
+    monkeypatch.setattr(health_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        health_module,
+        "get_secret_settings",
+        lambda: SimpleNamespace(access_token="synthetic-token"),
+    )
+    monkeypatch.setattr(health_module, "database_is_ready", database_is_ready)
+
+    response = await health_module.readyz(
+        Request({"type": "http", "method": "GET", "path": "/ready", "headers": []})
+    )
+
+    assert response.status_code == 200
+    assert json.loads(response.body) == {
+        "status": "ready",
+        "database": "not_applicable",
+        "scheduler": "not_configured",
+        "upstream_configuration": "configured",
+    }
+    database_is_ready.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_readiness_degrades_for_unpersisted_projection_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Honor the process-local stale fallback when marker persistence failed."""
+    from types import SimpleNamespace
+
+    health_module = import_module("lunchmoney_app.app.routers.health")
+    connection = AsyncMock()
+    connection_context = AsyncMock()
+    connection_context.__aenter__.return_value = connection
+    database = SimpleNamespace(
+        engine=SimpleNamespace(connect=Mock(return_value=connection_context)),
+        get_cached_response=AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(health_module, "get_shared_database", lambda: database)
+    monkeypatch.setattr(
+        health_module,
+        "get_unpersisted_stale_domains",
+        lambda: frozenset({"transactions"}),
+    )
+
+    assert await health_module.database_is_ready() is False
 
 
 def test_metrics_require_configured_api_key(monkeypatch: pytest.MonkeyPatch) -> None:

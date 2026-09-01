@@ -2,9 +2,10 @@
 
 ## Commands
 
-The command-line interface provides `mcp`, `serve`, `schedule`, `sync`,
-`doctor`, and `version`. Use command help to see the options applicable to one
-runtime:
+The Click command-line interface provides `mcp`, `serve`, `schedule`, `sync`,
+`doctor`, `version`, `config`, and `db`. Use command help to see every option
+applicable to one runtime, including its Pydantic default and environment
+variable alternative:
 
 ```bash
 lunchmoney-app --help
@@ -15,11 +16,30 @@ lunchmoney-app mcp --help
 Money. `sync` performs one foreground synchronization, and `version` prints the
 installed package version.
 
+Use `db info` to print safe database configuration JSON, `db migrate` to apply
+pending migrations, and `db delete --yes` to drop every Lunch Money application
+table in a configured PostgreSQL database or delete a configured SQLite file.
+Database URLs are still configured only through `LUNCHMONEY_DATABASE_URL` or
+`.env`; `db info` redacts any password.
+
+Use the configuration commands to discover every runtime and environment-only
+setting, inspect safely redacted resolved values, or validate configuration
+without starting a service:
+
+```bash
+lunchmoney-app config list
+lunchmoney-app config show
+lunchmoney-app config validate
+```
+
 ## Configuration
 
-For safe, CLI-exposed runtime settings, precedence is **CLI flags > process
-environment > `.env` > built-in defaults**. Secrets and connection URLs are
-environment/`.env`-only and cannot be passed as command-line flags.
+Click passes only explicitly supplied flags to Pydantic Settings. Pydantic then
+resolves safe runtime settings in this order: **CLI flags, process environment,
+`.env`, then built-in defaults**. It supplies the validated settings object to
+the application. Secrets and connection URLs are environment/`.env`-only,
+appear by name in `config list`, and cannot be passed as command-line flags.
+`config show` always redacts their values.
 
 Use a `.env` file for local development and a secret manager or deployment
 environment in production. Docker Compose also reads its project `.env` file to
@@ -28,29 +48,27 @@ environment values and take precedence over an application `.env` file.
 
 ## Data handling
 
-Every operational command (`mcp`, `serve`, `schedule`, and `sync`) accepts the
-same data-handling flags. Stdio MCP uses the privacy-focused default: each
-request goes to Lunch Money and nothing is retained when it finishes.
+The application has exactly two persistence modes. HTTP runtimes default to
+`stateful`; stdio MCP defaults to `ephemeral` when no mode is selected.
 
-| Flag          | What it does                                                         |
-| :------------ | :------------------------------------------------------------------- |
-| No flag       | Keeps data available for later requests, except for stdio MCP        |
-| `--stateless` | Keeps a live Lunch Money data cache between requests                 |
-| `--ephemeral` | Sends each request to Lunch Money and keeps nothing when it finishes |
+| Flag                           | What it does                                                                                                                  |
+| :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| `--persistence-mode stateful`  | Reads synchronized data from SQLite or PostgreSQL and enables sync, scheduling, and the dashboard                             |
+| `--persistence-mode ephemeral` | Reads Lunch Money live for each operation and creates no database, migrations, locks, or cross-operation financial-data cache |
 
-Use `--stateless` when a running server should reuse its live data between
-requests without retaining it after shutdown. Use `--ephemeral` when every
-request should go straight to Lunch Money:
+Select database-free operation explicitly for a remote MCP server:
 
 ```bash
-lunchmoney-app mcp --streamable-http --stateless
-lunchmoney-app mcp --streamable-http --ephemeral
+lunchmoney-app mcp --streamable-http --persistence-mode ephemeral
 ```
+
+Database and scheduler settings are configuration errors in ephemeral mode.
+The `schedule` and `sync` commands are stateful-only.
 
 ## Shell completion
 
-Generate a completion script for the installed executable, then source it in
-the current shell:
+Generate Click's native completion script for the installed executable, then
+source it in the current shell. Bash, Zsh, and Fish are supported:
 
 ```bash
 # Bash
@@ -98,10 +116,14 @@ through the `get_sync_status` MCP tool. To include it with Docker Compose, run:
 docker compose --profile scheduler up --build
 ```
 
-For local, single-process FastAPI development, enable the optional scheduler in
-the `serve` command:
+The `serve` command disables debug logging and file reloads by default. Enable
+both with `--debug --reload`, or use `task dev`, which enables reload while
+forwarding extra `serve` arguments (including `--debug`). Reloading watches
+only the application package directory. To enable the optional scheduler in
+that development task:
 
 ```bash
+lunchmoney-app serve --embed-scheduler --schedule-cron "0 * * * *"
 task dev -- --embed-scheduler --schedule-cron "0 * * * *"
 ```
 
