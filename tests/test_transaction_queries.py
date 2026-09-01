@@ -7,14 +7,25 @@ from unittest.mock import AsyncMock, create_autospec
 
 import pytest
 
-from database.factories import child_transaction_object, transaction_object
+from database.factories import (
+    category_object,
+    child_transaction_object,
+    manual_account_object,
+    plaid_account_object,
+    transaction_object,
+)
 from lunchmoney_app.client import LunchMoneyApp
 from lunchmoney_app.database import LunchMoneyDatabase
 from lunchmoney_app.database.models import Transaction
-from lunchmoney_app.schemas import TransactionQuery
-from lunchmoney_app.services import fetch_transactions
+from lunchmoney_app.schemas import (
+    AccountsSummary,
+    ReviewTransactionsQuery,
+    TransactionQuery,
+)
+from lunchmoney_app.services import fetch_transactions, review_transactions
 from lunchmoney_app.services.operations import (
     EphemeralOperationContextFactory,
+    OperationContext,
     StatefulOperationContextFactory,
 )
 
@@ -54,6 +65,63 @@ async def test_live_transaction_query_forwards_filters_and_returns_all_results()
         include_children=True,
         cache=False,
     )
+
+
+@pytest.mark.asyncio
+async def test_review_transactions_returns_linked_metadata_and_reference_data() -> None:
+    """Assemble a bounded review workspace without client-side identifier joins."""
+    transaction = transaction_object(is_split_parent=False).model_copy(
+        update={"status": "unreviewed"}
+    )
+    category = category_object()
+    plaid_account = plaid_account_object()
+    manual_account = manual_account_object()
+    refresh_transactions = AsyncMock(return_value={transaction.id: transaction})
+    categories = SimpleNamespace(list=AsyncMock(return_value=[category]))
+    accounts = SimpleNamespace(
+        list=AsyncMock(
+            return_value=AccountsSummary(
+                plaid_accounts=[plaid_account],
+                manual_accounts=[manual_account],
+            )
+        )
+    )
+    context = cast(
+        OperationContext,
+        SimpleNamespace(
+            client=cast(
+                LunchMoneyApp,
+                SimpleNamespace(refresh_transactions=refresh_transactions),
+            ),
+            categories=categories,
+            accounts=accounts,
+        ),
+    )
+    query = ReviewTransactionsQuery(
+        start_date=datetime.date(2026, 7, 16),
+        end_date=datetime.date(2026, 8, 30),
+    )
+
+    result = await review_transactions(context, query)
+
+    assert result.start_date == query.start_date
+    assert result.end_date == query.end_date
+    assert result.categories == [category]
+    assert result.accounts.plaid_accounts == [plaid_account]
+    assert result.transactions[0].transaction == transaction
+    assert result.transactions[0].category == category
+    assert result.transactions[0].plaid_account == plaid_account
+    assert result.transactions[0].manual_account is None
+    refresh_transactions.assert_awaited_once_with(
+        start_date=query.start_date,
+        end_date=query.end_date,
+        status="unreviewed",
+        include_metadata=True,
+        cache=False,
+    )
+    categories.list.assert_awaited_once()
+    assert categories.list.await_args.args[0].format == "flattened"
+    accounts.list.assert_awaited_once()
 
 
 @pytest.mark.asyncio

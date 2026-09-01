@@ -222,6 +222,15 @@ _Reference Spec_: [`DESIGN_EPHEMERAL_STATEFUL.md`](DESIGN_EPHEMERAL_STATEFUL.md)
 
 ---
 
+### 🧾 Uncleared Transaction Review Workflow
+
+- [x] **MCP Review and Categorization**: Add the confirmation-gated
+      `unreviewed_transactions_review` prompt and first-class
+      `review_transactions` MCP/REST workspace, including linked Plaid metadata,
+      categories, accounts, user documentation, and regression coverage.
+
+---
+
 ### 🧹 Follow-Up Hardening
 
 - [x] **Authoritative Sync Reconciliation**: Serialize all synchronization,

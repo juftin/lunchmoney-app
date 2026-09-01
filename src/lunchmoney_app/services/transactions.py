@@ -1,6 +1,9 @@
 """Service logic for transaction queries and upstream-first mutations."""
 
+import datetime
+
 from lunchmoney.models import (
+    CategoryObject,
     ChildTransactionObject,
     CreateNewTransactionsRequest,
     DeleteTransactionsRequest,
@@ -13,7 +16,13 @@ from lunchmoney.models import (
     UpdateTransactionsRequest,
 )
 
-from lunchmoney_app.schemas import TransactionQuery
+from lunchmoney_app.schemas import (
+    CategoryQuery,
+    ReviewTransactionItem,
+    ReviewTransactionsQuery,
+    ReviewTransactionsResponse,
+    TransactionQuery,
+)
 from lunchmoney_app.services.operations import OperationContext
 
 
@@ -23,6 +32,81 @@ async def fetch_transactions(
 ) -> list[TransactionObject]:
     """Return every matching transaction through the selected reader."""
     return await context.transactions.list(query)
+
+
+async def review_transactions(
+    context: OperationContext,
+    query: ReviewTransactionsQuery,
+) -> ReviewTransactionsResponse:
+    """Assemble the unreviewed transaction workspace with live Plaid metadata.
+
+    Parameters
+    ----------
+    context : OperationContext
+        Active operation dependencies and selected projections.
+    query : ReviewTransactionsQuery
+        Date-range and account controls for the review workspace.
+
+    Returns
+    -------
+    ReviewTransactionsResponse
+        Unreviewed transaction details, category choices, and account context.
+    """
+    end_date = query.end_date or datetime.date.today()
+    start_date = query.start_date or end_date - datetime.timedelta(days=query.days)
+    transaction_query = TransactionQuery(
+        start_date=start_date,
+        end_date=end_date,
+        manual_account_id=query.manual_account_id,
+        plaid_account_id=query.plaid_account_id,
+        status="unreviewed",
+        include_metadata=True,
+    )
+    transactions = list(
+        (
+            await context.client.refresh_transactions(
+                cache=False,
+                **transaction_query.model_dump(exclude_none=True),
+            )
+        ).values()
+    )
+    categories = await context.categories.list(CategoryQuery(format="flattened"))
+    accounts = await context.accounts.list()
+    categories_by_id: dict[int, CategoryObject] = {
+        category.id: category for category in categories
+    }
+    plaid_accounts_by_id = {account.id: account for account in accounts.plaid_accounts}
+    manual_accounts_by_id = {
+        account.id: account for account in accounts.manual_accounts
+    }
+
+    return ReviewTransactionsResponse(
+        start_date=start_date,
+        end_date=end_date,
+        transactions=[
+            ReviewTransactionItem(
+                transaction=transaction,
+                category=(
+                    categories_by_id.get(transaction.category_id)
+                    if transaction.category_id is not None
+                    else None
+                ),
+                plaid_account=(
+                    plaid_accounts_by_id.get(transaction.plaid_account_id)
+                    if transaction.plaid_account_id is not None
+                    else None
+                ),
+                manual_account=(
+                    manual_accounts_by_id.get(transaction.manual_account_id)
+                    if transaction.manual_account_id is not None
+                    else None
+                ),
+            )
+            for transaction in transactions
+        ],
+        categories=categories,
+        accounts=accounts,
+    )
 
 
 async def fetch_transaction_by_id(

@@ -48,6 +48,7 @@ async def test_mcp_tools_registration() -> None:
     assert "list_plaid_accounts" in tool_names
     assert "list_accounts" in tool_names
     assert "list_transactions" in tool_names
+    assert "review_transactions" in tool_names
     assert "get_account_summary" in tool_names
     assert "list_tags" in tool_names
     assert "get_tag" in tool_names
@@ -69,6 +70,20 @@ async def test_mcp_resources_and_prompts_registration() -> None:
     assert "lunchmoney://categories" in resource_uris
     assert "budget_health_check" in prompt_names
     assert "uncategorized_transactions_audit" in prompt_names
+    assert "unreviewed_transactions_review" in prompt_names
+    assert "uncleared_transactions_review" not in prompt_names
+    assert "uncleared_transactions_categorization" not in prompt_names
+
+
+def test_unreviewed_transactions_review_defaults_to_45_days() -> None:
+    """Keep the built-in transaction-review window bounded by default."""
+    from lunchmoney_app.mcp.server import unreviewed_transactions_review
+
+    prompt = unreviewed_transactions_review()
+
+    assert "previous 45 days" in prompt
+    assert "review_transactions" in prompt
+    assert "Plaid metadata" in prompt
 
 
 @pytest.mark.asyncio

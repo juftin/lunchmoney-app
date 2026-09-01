@@ -167,3 +167,17 @@ requires it. Register `https://mcp.example.com/auth/callback` with the provider.
 
 For a complete deployment checklist, backups, and security guidance, see the
 [operations runbook](OPERATIONS.md).
+
+## Review unreviewed transactions
+
+Use the `unreviewed_transactions_review` prompt to retrieve unreviewed,
+non-pending transactions with `review_transactions`. It defaults to the prior
+45 days and returns, in one response, complete transaction and Plaid metadata,
+each transaction's linked category and account, the full category list, and all
+accounts. After you confirm the exact values, it applies the needed category,
+notes, and payee updates through `bulk_update_transactions`, and marks each
+confirmed transaction as reviewed.
+
+The same workspace is available as the `review_transactions` MCP tool and
+`GET /api/transactions/review`. Supply `start_date`/`end_date` or a manual/Plaid
+account ID to narrow the default review window.

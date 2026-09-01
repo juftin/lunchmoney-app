@@ -7,12 +7,14 @@ from typing import Any, Literal
 
 from lunchmoney.models import (
     AccountTypeEnum,
+    CategoryObject,
     CreateManualAccountRequestObject,
     CreateManualAccountRequestObjectBalance,
     CreateManualAccountRequestObjectClosedOn,
     CurrencyEnum,
     ManualAccountObject,
     PlaidAccountObject,
+    TransactionObject,
     UpdateManualAccountRequestObject,
     UpdateManualAccountRequestObjectBalance,
     UpdateManualAccountRequestObjectClosedOn,
@@ -173,6 +175,49 @@ class TransactionQuery(BaseModel):
     """Whether the live upstream request includes nested transaction children."""
     include_files: bool | None = None
     """Whether the live upstream request includes transaction attachments."""
+
+
+class ReviewTransactionsQuery(BaseModel):
+    """Controls the bounded transaction-review workspace."""
+
+    days: int = Field(default=45, ge=1)
+    """Days before the resolved end date to review when start_date is omitted."""
+    start_date: datetime.date | None = None
+    """Optional inclusive transaction-date lower bound."""
+    end_date: datetime.date | None = None
+    """Optional inclusive transaction-date upper bound; defaults to today."""
+    manual_account_id: int | None = None
+    """Optional manual-account filter; zero selects cash transactions."""
+    plaid_account_id: int | None = None
+    """Optional Plaid-account filter; zero selects transactions without one."""
+
+
+class ReviewTransactionItem(BaseModel):
+    """One unreviewed transaction with its category and account context."""
+
+    transaction: TransactionObject
+    """Complete transaction including requested Plaid metadata."""
+    category: CategoryObject | None = None
+    """Current Lunch Money category assigned to the transaction, when present."""
+    plaid_account: PlaidAccountObject | None = None
+    """Linked Plaid account, when the transaction originated from one."""
+    manual_account: ManualAccountObject | None = None
+    """Linked manual account, when the transaction originated from one."""
+
+
+class ReviewTransactionsResponse(BaseModel):
+    """All context needed to review a bounded set of unreviewed transactions."""
+
+    start_date: datetime.date
+    """Inclusive lower bound applied to the transaction review queue."""
+    end_date: datetime.date
+    """Inclusive upper bound applied to the transaction review queue."""
+    transactions: list[ReviewTransactionItem] = Field(default_factory=list)
+    """Unreviewed transactions with linked category and account context."""
+    categories: list[CategoryObject] = Field(default_factory=list)
+    """Complete flattened category list available for reassignment."""
+    accounts: AccountsSummary
+    """Complete manual and Plaid account collections available for context."""
 
 
 class CategoryQuery(BaseModel):

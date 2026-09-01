@@ -14,7 +14,12 @@ from lunchmoney.models import (
 )
 
 from lunchmoney_app.mcp.app import mcp
-from lunchmoney_app.schemas import TransactionAttachmentUploadRequest, TransactionQuery
+from lunchmoney_app.schemas import (
+    ReviewTransactionsQuery,
+    ReviewTransactionsResponse,
+    TransactionAttachmentUploadRequest,
+    TransactionQuery,
+)
 from lunchmoney_app.services import (
     bulk_delete_transactions as bulk_delete_service,
     bulk_update_transactions as bulk_update_service,
@@ -26,6 +31,7 @@ from lunchmoney_app.services import (
     fetch_transaction_by_id,
     group_transactions as group_service,
     split_transaction as split_service,
+    review_transactions as review_transactions_service,
     ungroup_transactions as ungroup_service,
     unsplit_transaction as unsplit_service,
     update_transaction as update_service,
@@ -41,6 +47,16 @@ async def list_transactions(
     """List filtered transactions."""
     return await fetch_transactions(
         get_operation_context(), query or TransactionQuery()
+    )
+
+
+@mcp.tool()
+async def review_transactions(
+    query: ReviewTransactionsQuery | None = None,
+) -> ReviewTransactionsResponse:
+    """Return unreviewed transactions, their metadata, categories, and accounts."""
+    return await review_transactions_service(
+        get_operation_context(), query or ReviewTransactionsQuery()
     )
 
 
@@ -151,6 +167,7 @@ __all__ = [
     "get_transaction",
     "group_transactions",
     "list_transactions",
+    "review_transactions",
     "split_transaction",
     "ungroup_transactions",
     "unsplit_transaction",

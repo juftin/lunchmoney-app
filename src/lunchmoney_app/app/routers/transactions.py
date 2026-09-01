@@ -17,7 +17,12 @@ from lunchmoney.models import (
 )
 
 from lunchmoney_app.app.dependencies import OperationContext, get_operation_context
-from lunchmoney_app.schemas import TransactionAttachmentUploadRequest, TransactionQuery
+from lunchmoney_app.schemas import (
+    ReviewTransactionsQuery,
+    ReviewTransactionsResponse,
+    TransactionAttachmentUploadRequest,
+    TransactionQuery,
+)
 from lunchmoney_app.services import (
     bulk_delete_transactions,
     bulk_update_transactions,
@@ -29,6 +34,7 @@ from lunchmoney_app.services import (
     fetch_transaction_by_id,
     group_transactions,
     split_transaction,
+    review_transactions,
     ungroup_transactions,
     unsplit_transaction,
     update_transaction,
@@ -49,6 +55,18 @@ async def list_transactions(
 ) -> list[TransactionObject]:
     """List filtered transactions."""
     return await fetch_transactions(context, query)
+
+
+@router.get(
+    path="/transactions/review",
+    response_model=ReviewTransactionsResponse,
+    operation_id="review_transactions",
+)
+async def review_transactions_route(
+    context: ContextDep, query: Annotated[ReviewTransactionsQuery, Depends()]
+) -> ReviewTransactionsResponse:
+    """Return an unreviewed transaction workspace with linked review context."""
+    return await review_transactions(context, query)
 
 
 @router.post(
