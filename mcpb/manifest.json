@@ -3,7 +3,7 @@
     "manifest_version": "0.4",
     "name": "lunchmoney-app",
     "display_name": "Lunch Money MCP",
-    "version": "0.13.0",
+    "version": "0.14.0",
     "description": "MCP-first access to your Lunch Money data.",
     "author": {
         "name": "Justin Flannery",

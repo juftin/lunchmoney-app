@@ -1,6 +1,6 @@
 {
     "name": "lunchmoney-mcp",
-    "version": "0.13.0",
+    "version": "0.14.0",
     "description": "Use Lunch Money data through a local MCP server.",
     "author": {
         "name": "Justin Flannery",
