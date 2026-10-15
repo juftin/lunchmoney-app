@@ -131,7 +131,7 @@ docs = [
   "mkdocs-material>=9.7,<10",
   "mkdocs-section-index~=0.3.10",
   "mkdocstrings[python]~=0.30.0",
-  "pymdown-extensions>=11,<12"
+  "pymdown-extensions>=12,<13"
 ]
 
 [build-system]
