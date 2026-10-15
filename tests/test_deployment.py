@@ -103,3 +103,15 @@ def test_production_server_dependencies_are_declared() -> None:
     assert '"uvicorn>=0.41.0,<1"' in pyproject
     assert '"pydantic>=2.12.5,<3"' in pyproject
     assert '"pydantic-settings>=2.13.1,<3"' in pyproject
+
+
+def test_publish_workflow_publishes_docker_image_to_github_packages() -> None:
+    """Publish container images to GitHub Packages on release."""
+    publish_workflow = (PROJECT_ROOT / ".github/workflows/publish.yaml").read_text()
+    taskfile = (PROJECT_ROOT / "Taskfile.yaml").read_text()
+
+    assert "DOCKER_REPO: ghcr.io/juftin/lunchmoney-app" in taskfile
+    assert "docker:" in publish_workflow
+    assert "registry: ghcr.io" in publish_workflow
+    assert "packages: write" in publish_workflow
+    assert "task: publish" in publish_workflow

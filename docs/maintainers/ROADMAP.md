@@ -323,3 +323,5 @@ defaults`), redacted `doctor` diagnostics, meaningful exit codes, and no
 - [x] Publish Docker Compose as the first-class deployment path, with
       API-only, MCP-only, combined, and dedicated-scheduler examples; add
       release/versioning and upgrade documentation.
+- [x] Publish Docker container image to GitHub Packages
+      (`ghcr.io/juftin/lunchmoney-app`) automatically on release.
