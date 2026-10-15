@@ -19,14 +19,14 @@ jobs:
             id-token: write
         steps:
             - name: build
-              uses: juftin/actions/taskfile@v1
+              uses: juftin/actions/taskfile@5a54b64fe07d8de40f92676cae6b56c565ec28b2 # v1
               with:
                   checkout: true
                   setup-uv: true
                   task: dist
                   github-token: ${{ secrets.GITHUB_TOKEN }}
             - name: pypi
-              uses: pypa/gh-action-pypi-publish@release/v1
+              uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
 
     docker:
         name: docker
@@ -37,7 +37,7 @@ jobs:
             packages: write
         steps:
             - name: ghcr
-              uses: docker/login-action@v3
+              uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
               with:
                   registry: ghcr.io
                   username: ${{ github.actor }}
@@ -49,7 +49,7 @@ jobs:
                   echo "RELEASE_VERSION=${RELEASE_VERSION}"
                   echo "RELEASE_VERSION=${RELEASE_VERSION}" >> ${GITHUB_ENV}
             - name: docker
-              uses: juftin/actions/taskfile@v1
+              uses: juftin/actions/taskfile@5a54b64fe07d8de40f92676cae6b56c565ec28b2 # v1
               with:
                   checkout: true
                   github-token: ${{ secrets.GITHUB_TOKEN }}
