@@ -193,6 +193,9 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-12-cli-packaging--operator-ex
 - [x] **Release and Registry Publishing**: Publish PyPI from the established
       GitHub release workflow, and publish MCPB plus official MCP Registry
       metadata from Semantic Release.
+- [x] **GitHub Packages Container Publishing**: Publish Docker image to
+      GitHub Packages (`ghcr.io/juftin/lunchmoney-app`) on release via
+      `publish.yaml` and `task publish`.
 - [x] **Packaged Alembic Migrations**: Bundle migration scripts in wheel
       distributions so `lunchmoney-app serve` can initialize a database when
       installed with `uvx`.

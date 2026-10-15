@@ -100,9 +100,10 @@ Its prepare step updates the package and every versioned agent-bundle manifest
 in one commit, builds the Python distributions and MCPB, and renders
 release-specific MCP Registry metadata. Its GitHub plugin attaches every
 artifact to the GitHub release, then its publish hook publishes the immutable
-MCPB metadata to the official MCP Registry. The pre-existing `publish.yaml`
-workflow publishes the Python distributions to PyPI independently. Treat GitHub
-release notes as the authoritative compatibility and migration record.
+MCPB metadata to the official MCP Registry. The `publish.yaml` workflow
+publishes Python distributions to PyPI and container images to GitHub Packages
+(`ghcr.io/juftin/lunchmoney-app`). Treat GitHub release notes as the
+authoritative compatibility and migration record.
 
 Before enabling the first release, configure PyPI Trusted Publishing for the
 `juftin/lunchmoney-app` repository, workflow `publish.yaml`, and the protected
@@ -115,7 +116,8 @@ Upgrade a Compose deployment in a maintenance window:
    configuration requirements.
 2. Take and verify an off-host PostgreSQL backup as described below. Keep the
    previous image or source revision available for rollback.
-3. Update the checked-out release or image reference, then recreate the web
+3. Update the checked-out release or image reference (e.g.
+   `ghcr.io/juftin/lunchmoney-app:latest`), then recreate the web
    service: `docker compose up --build --detach --wait`.
 4. If scheduling is enabled, recreate the single scheduler too:
    `docker compose --profile scheduler up --build --detach scheduler`.
