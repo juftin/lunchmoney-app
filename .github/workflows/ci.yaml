@@ -16,7 +16,7 @@ permissions:
 jobs:
     ci:
         name: ${{ matrix.name }}
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04
         concurrency:
             group: ${{ github.workflow }}-${{ matrix.name }}-${{ github.event.pull_request.number }}
             cancel-in-progress: true
