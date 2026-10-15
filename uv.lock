@@ -2001,7 +2001,7 @@ requires-dist = [
     { name = "filelock", specifier = ">=3.32.0" },
     { name = "gunicorn", specifier = ">=23.0.0,<24" },
     { name = "jinja2", specifier = ">=3.1.6,<4" },
-    { name = "lunchmoney-python-async", specifier = "==2.25.0" },
+    { name = "lunchmoney-python-async", specifier = "==2.27.0" },
     { name = "platformdirs", specifier = ">=4.5.1,<5" },
     { name = "pydantic", specifier = ">=2.12.5,<3" },
     { name = "pydantic-settings", specifier = ">=2.13.1,<3" },
@@ -2039,7 +2039,7 @@ docs = [
 
 [[package]]
 name = "lunchmoney-python-async"
-version = "2.25.0"
+version = "2.27.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2049,9 +2049,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a8/25/1b0000ac0abd3baec8b4fcc9b31371db932e090749b4e231118a20b1f3c9/lunchmoney_python_async-2.25.0.tar.gz", hash = "sha256:2e13e90e12dc5f5c973aa8f5d507ebbfeccebbfc8726d94c26337a84e40082b4", size = 138537, upload-time = "2026-05-23T20:22:55.344Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/dd/2405395b671470f5c834d0fdd6e495ba5e02122d5c82b98bf17363d23209/lunchmoney_python_async-2.27.0.tar.gz", hash = "sha256:f2d7c88e64185e311cf179939b35d8ca9e83b3021c6966263d70116fc5c93c17", size = 195231, upload-time = "2026-09-29T23:32:26.032Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/8e/e99b69b9f42486644151c39a605a5471c79f6e66dc571ba6ba3fadaf559b/lunchmoney_python_async-2.25.0-py3-none-any.whl", hash = "sha256:54ddad1693ce0feb5986ec2e54977f5883f8f5d67651bf454e2df72932aab6f2", size = 271357, upload-time = "2026-05-23T20:22:54.119Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/7f/3dce7af07cc682d67b7007c0514a91190a0fab17f305c4ece4e6b6f32873/lunchmoney_python_async-2.27.0-py3-none-any.whl", hash = "sha256:d513709dbe048d8c616cb9d9c6fa896ba861c722d20887f66e7550349bc41b65", size = 411195, upload-time = "2026-09-29T23:32:24.449Z" },
 ]
 
 [[package]]
