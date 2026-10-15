@@ -123,7 +123,7 @@ dev = [
 ]
 docs = [
   "markdown-callouts~=0.4.0",
-  "markdown-exec~=1.11.0",
+  "markdown-exec~=1.12.5",
   "mkdocs~=1.6.1",
   "mkdocs-autorefs~=1.4.3",
   "mkdocs-gen-files~=0.5.0",
