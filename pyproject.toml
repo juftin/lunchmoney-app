@@ -9,7 +9,7 @@ authors = [
 ]
 license = "MIT"
 dependencies = [
-  "fastapi[standard]==0.139.2",
+  "fastapi[standard]==0.143.3",
   "lunchmoney-python-async==2.25.0",
   "sqlmodel==0.0.39",
   "aiosqlite>=0.22.1,<0.23.0",
