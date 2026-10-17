@@ -8,31 +8,31 @@
 
         <link
             rel="stylesheet"
-            href="{{ url_for('dashboard_static', path='/vendor/pico/pico.min.css') }}"
+            href="{{ url_for('dashboard_static', path='/vendor/pico/pico.min.css').path }}"
         />
         <link
             rel="stylesheet"
-            href="{{ url_for('dashboard_static', path='/dashboard.css') }}"
+            href="{{ url_for('dashboard_static', path='/dashboard.css').path }}"
         />
         <script
             defer
-            src="{{ url_for('dashboard_static', path='/vendor/htmx/htmx.min.js') }}"
+            src="{{ url_for('dashboard_static', path='/vendor/htmx/htmx.min.js').path }}"
         ></script>
         <script
             defer
-            src="{{ url_for('dashboard_static', path='/dashboard.js') }}"
+            src="{{ url_for('dashboard_static', path='/dashboard.js').path }}"
         ></script>
         <script
             defer
-            src="{{ url_for('dashboard_static', path='/vendor/idiomorph/idiomorph-ext.min.js') }}"
+            src="{{ url_for('dashboard_static', path='/vendor/idiomorph/idiomorph-ext.min.js').path }}"
         ></script>
         <script
             defer
-            src="{{ url_for('dashboard_static', path='/vendor/frappe/frappe-charts.min.js') }}"
+            src="{{ url_for('dashboard_static', path='/vendor/frappe/frappe-charts.min.js').path }}"
         ></script>
         <script
             defer
-            src="{{ url_for('dashboard_static', path='/vendor/alpine/alpine.min.js') }}"
+            src="{{ url_for('dashboard_static', path='/vendor/alpine/alpine.min.js').path }}"
         ></script>
     </head>
     <body x-data="dashboard" hx-ext="morph" @keydown.window="onKeydown">
@@ -45,7 +45,7 @@
                 <a class="brand" href="/">
                     <img
                         class="brand-mascot"
-                        src="{{ url_for('dashboard_static', path='/mascot.png') }}"
+                        src="{{ url_for('dashboard_static', path='/mascot.png').path }}"
                         alt=""
                     />
                     <span>Lunch Money</span>

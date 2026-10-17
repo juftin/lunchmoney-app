@@ -120,6 +120,16 @@ Completed: `/health` exposes liveness and `/ready` reports database and embedded
 
 Completed: a single-user, single–Lunch Money-account, authenticated and accessible FastAPI HTML dashboard uses server-rendered templates and existing services. Spending is grouped into an accessible parent/child category tree and the local mascot provides the brand mark without introducing a separate JavaScript application or duplicating service-layer analytics.
 
+Dashboard asset URLs must use same-origin paths that preserve the request's
+ASGI `root_path`. Absolute URLs from Jinja
+`url_for` can use the upstream HTTP scheme behind a TLS-terminating proxy,
+causing mixed-content failures for CSS and JavaScript. Keep dashboard URL
+generation independent of forwarded-header trust, and cover HTTP upstream
+requests and asset URL prefix retention in regression tests. Full prefixed
+deployment support remains unverified: the public static authentication
+exemption currently matches literal `/static/` request paths without accounting
+for `root_path`.
+
 ### Sprint 12: CLI, Packaging & Operator Experience
 
 Completed: the Click executable provides `mcp`, `serve`, `schedule`, `sync`,

@@ -168,6 +168,8 @@ _Reference Spec_: [`ROADMAP.md`](ROADMAP.md#sprint-11-server-rendered-financial-
 - [x] **Service Reuse**: Keep dashboard routes as thin delegators to existing services and test authorized, empty, and error rendering.
 - [x] **Interactive Category Tree**: Group dashboard spending by parent category with accessible child disclosure and a local mascot brand mark.
 - [x] **Long Database URL Containment**: Keep sanitized database URLs within the sync panel and make only the URL value horizontally scrollable.
+- [x] **Dashboard Proxy URLs**: Use same-origin asset paths that preserve ASGI `root_path`; verify CSS/JavaScript URLs behind a TLS-terminating proxy without broadening forwarded-header trust.
+- [ ] **Prefixed Static Authentication**: Make the public static authentication exemption account for ASGI `root_path`, and verify static requests under a URL prefix.
 
 ### 🧰 Sprint 12: CLI, Packaging & Operator Experience
 
