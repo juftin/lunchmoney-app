@@ -8,12 +8,12 @@
         "source": "github",
         "id": "1314484565"
     },
-    "version": "0.15.1",
+    "version": "0.15.2",
     "packages": [
         {
             "registryType": "pypi",
             "identifier": "lunchmoney-app",
-            "version": "0.15.1",
+            "version": "0.15.2",
             "runtimeHint": "uvx",
             "packageArguments": [
                 {

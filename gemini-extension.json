@@ -1,6 +1,6 @@
 {
     "name": "lunchmoney-app",
-    "version": "0.15.1",
+    "version": "0.15.2",
     "description": "MCP-first access to your Lunch Money data.",
     "settings": [
         {
@@ -15,7 +15,7 @@
             "command": "uvx",
             "args": [
                 "--from",
-                "lunchmoney-app==0.15.1",
+                "lunchmoney-app==0.15.2",
                 "lunchmoney-app",
                 "mcp"
             ]
