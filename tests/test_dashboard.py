@@ -2,6 +2,7 @@
 
 import datetime
 import importlib
+import re
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -207,6 +208,50 @@ def test_dashboard_requires_api_key_and_renders_populated_content(
     assert "spending-workspace" in stylesheet.text
     assert script.status_code == 200
     assert "Alpine" in script.text
+
+
+@pytest.mark.parametrize("scheme", ["http", "https"])
+@pytest.mark.parametrize("root_path", ["", "/lunchmoney"])
+def test_dashboard_assets_use_same_origin_paths(
+    monkeypatch: pytest.MonkeyPatch,
+    scheme: str,
+    root_path: str,
+) -> None:
+    """Keep assets on the browser's origin behind TLS termination and path mounts."""
+    _configure_dashboard(monkeypatch=monkeypatch, data=_dashboard_data())
+    try:
+        with TestClient(
+            fastapi_app,
+            base_url=f"{scheme}://localhost",
+            root_path=root_path,
+        ) as client:
+            response = client.get(
+                "/",
+                headers={
+                    "X-API-Key": "dashboard-key",
+                    "X-Forwarded-Proto": "https",
+                },
+            )
+            assert response.status_code == 200
+            asset_urls = re.findall(
+                r'<(?:link|script|img)\b[^>]*(?:href|src)="([^"]+)"',
+                response.text,
+            )
+            assert set(asset_urls) == {
+                f"{root_path}/static/{path}"
+                for path in (
+                    "vendor/pico/pico.min.css",
+                    "dashboard.css",
+                    "vendor/htmx/htmx.min.js",
+                    "dashboard.js",
+                    "vendor/idiomorph/idiomorph-ext.min.js",
+                    "vendor/frappe/frappe-charts.min.js",
+                    "vendor/alpine/alpine.min.js",
+                    "mascot.png",
+                )
+            }
+    finally:
+        fastapi_app.dependency_overrides.clear()
 
 
 def test_dashboard_groups_accounts_and_uses_currency_symbols(

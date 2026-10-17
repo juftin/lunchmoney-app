@@ -154,6 +154,13 @@ that overwrite forwarded headers. Never use a wildcard or an untrusted client
 address. Leave `LUNCHMONEY_CORS_ALLOWED_ORIGINS` empty unless a browser client
 is required; when it is, list complete HTTPS origins rather than a wildcard.
 
+The dashboard uses same-origin paths for its assets so an
+HTTPS connection through Tailscale Serve or another TLS-terminating proxy does
+not produce HTTP CSS/JavaScript URLs when the upstream connection uses HTTP.
+Generated asset URLs retain the ASGI `root_path`, but full URL-prefix deployment
+support is not yet verified. Proxy-header trust does not need to be broadened
+to load dashboard assets.
+
 The defaults below apply in each web worker. Tune them for the deployed reverse
 proxy and expected workload, while keeping an edge rate limit for a global,
 multi-worker limit.
