@@ -22,6 +22,7 @@ descriptions below remain historical records of the current implementation.
 - **FastAPI Routers (`src/lunchmoney_app/app/routers/`)**: Routers must be clean 1-to-2 line delegators calling service functions.
 - **FastMCP Server (`src/lunchmoney_app/mcp/server.py`)**: FastMCP tools must be clean 1-to-2 line delegators calling the exact same service functions as FastAPI routers. FastMCP tools are explicitly registered via `@mcp.tool()`, so route `operation_id` alignment is decoupled and not required.
 - **Upstream-First Mutation Pattern**: All write operations (create/update/delete) **must** call the Lunch Money v2 API first. The canonical response is authoritative. The selected stateful projector reconciles SQLModel storage; ephemeral mode retains no projection.
+- **Transaction Identifier Width**: Transaction IDs, split/group parent references, and transaction references in tag links and attachments use PostgreSQL `BIGINT`, including ORM query bindings. Revision `0007` upgrades existing PostgreSQL columns without discarding cached graphs. Keep SQLite's `INTEGER` variant, which already stores signed 64-bit IDs. Downgrading fails if transaction IDs exceed the signed 32-bit range.
 
 ### 2. Code Quality & Verification Standard
 

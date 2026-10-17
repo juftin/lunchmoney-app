@@ -129,6 +129,14 @@ Application startup serializes Alembic migrations with the shared migration
 lock. A failed readiness check after an upgrade is a reason to stop traffic and
 inspect the migration and dependency state—not to bypass the readiness check.
 
+Revision `0007` widens PostgreSQL transaction IDs and their split, group, tag,
+and attachment references to `BIGINT`. This fixes synchronization failures for
+IDs above `2,147,483,647` while retaining existing records and relationships.
+SQLite already supports these IDs and needs no schema change. Allow time for
+PostgreSQL to lock and rewrite the affected tables during the upgrade. Once
+larger IDs have been synchronized, downgrading to `0006` fails unless those
+records are removed; retain a pre-upgrade backup if a schema rollback is needed.
+
 ## Network policy
 
 The server starts with localhost and `127.0.0.1` as its only accepted `Host`
