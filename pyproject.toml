@@ -19,7 +19,7 @@ dependencies = [
   "sqlalchemy[asyncio]>=2.0.51,<3",
   "filelock>=3.32.0",
   "redis>=8.0.1",
-  "gunicorn>=23.0.0,<24",
+  "gunicorn>=26.2,<27",
   "uvicorn-worker>=0.4.0,<1",
   "apscheduler==3.11.2",
   "typing-extensions>=4.12.2",
