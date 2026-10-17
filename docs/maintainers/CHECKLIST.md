@@ -245,6 +245,7 @@ _Reference Spec_: [`DESIGN_EPHEMERAL_STATEFUL.md`](DESIGN_EPHEMERAL_STATEFUL.md)
       existing graphs.
 - [x] **Plaid Fetch Summary Invalidation**: Invalidate cached summary snapshots after a successful Plaid fetch trigger, so imported transactions cannot leave stale summary data before the next synchronization.
 - [x] **Upstream HTTP Error Mapping**: Translate generated Lunch Money client errors, especially upstream 404 responses, into the corresponding REST API status instead of returning generic 500 responses without exposing upstream response details.
+- [x] **64-Bit Transaction IDs**: Widen PostgreSQL transaction keys and all transaction references, migrate existing graphs without data loss, and cover synchronization of IDs above the signed 32-bit limit.
 
 ---
 

@@ -13,7 +13,7 @@ from lunchmoney.models import (
     TransactionAttachmentObject,
     TransactionObject,
 )
-from sqlalchemy import JSON, Numeric, String
+from sqlalchemy import JSON, BigInteger, Integer, Numeric, String
 from sqlmodel import Field, Relationship, SQLModel
 
 from lunchmoney_app.database.models._datetime import (
@@ -47,6 +47,7 @@ class TransactionTagLink(SQLModel, table=True):
     __tablename__: ClassVar[str] = "transaction_tag_links"
 
     transaction_id: int = Field(
+        sa_type=cast(builtin_type[Any], BigInteger().with_variant(Integer, "sqlite")),
         foreign_key="transactions.id",
         ondelete="CASCADE",
         primary_key=True,
@@ -77,6 +78,7 @@ class TransactionAttachment(SQLModel, table=True):
     api_id: int | None = Field(default=None, index=True)
     """Optional attachment identifier supplied by Lunch Money."""
     transaction_id: int = Field(
+        sa_type=cast(builtin_type[Any], BigInteger().with_variant(Integer, "sqlite")),
         foreign_key="transactions.id",
         ondelete="CASCADE",
     )
@@ -170,7 +172,11 @@ class Transaction(SQLModel, table=True):
 
     __tablename__: ClassVar[str] = "transactions"
 
-    id: int = Field(primary_key=True, index=True)
+    id: int = Field(
+        primary_key=True,
+        index=True,
+        sa_type=cast(builtin_type[Any], BigInteger().with_variant(Integer, "sqlite")),
+    )
     """Lunch Money transaction identifier."""
     var_date: date
     """Calendar date on which the transaction occurred."""
@@ -220,6 +226,7 @@ class Transaction(SQLModel, table=True):
     is_split_parent: bool | None = None
     """Whether this row owns split child transactions."""
     split_parent_id: int | None = Field(
+        sa_type=cast(builtin_type[Any], BigInteger().with_variant(Integer, "sqlite")),
         foreign_key="transactions.id",
         ondelete="CASCADE",
     )
@@ -227,6 +234,7 @@ class Transaction(SQLModel, table=True):
     is_group_parent: bool
     """Whether this row owns grouped child transactions."""
     group_parent_id: int | None = Field(
+        sa_type=cast(builtin_type[Any], BigInteger().with_variant(Integer, "sqlite")),
         foreign_key="transactions.id",
         ondelete="CASCADE",
     )
