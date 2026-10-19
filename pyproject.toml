@@ -130,7 +130,7 @@ docs = [
   "mkdocs-literate-nav~=0.6.2",
   "mkdocs-material>=9.7,<10",
   "mkdocs-section-index~=0.3.10",
-  "mkdocstrings[python]~=0.30.0",
+  "mkdocstrings[python]~=1.0.8",
   "pymdown-extensions>=11,<12"
 ]
 
