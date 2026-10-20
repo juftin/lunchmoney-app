@@ -72,7 +72,7 @@ jobs:
         steps:
             - name: ${{ matrix.name }}
               if: github.event_name == 'pull_request' || matrix.run_on_push
-              uses: juftin/actions/taskfile@v1
+              uses: juftin/actions/taskfile@5a54b64fe07d8de40f92676cae6b56c565ec28b2 # v1
               with:
                   task: ${{ matrix.task }}
                   checkout: true
