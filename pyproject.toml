@@ -113,7 +113,7 @@ convention = "numpy"
 [dependency-groups]
 dev = [
   "marimo>=0.23.16",
-  "mypy>=1,<2",
+  "mypy>=2,<3",
   "pre-commit>=4.6.1",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
