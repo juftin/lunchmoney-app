@@ -76,7 +76,7 @@ services:
             - ALL
 
     postgres:
-        image: postgres:17-alpine
+        image: postgres:17-alpine@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
         container_name: lunchmoney-postgres
         environment:
             POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
@@ -93,7 +93,7 @@ services:
         restart: unless-stopped
 
     redis:
-        image: redis:7-alpine
+        image: redis:7-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
         container_name: lunchmoney-redis
         volumes:
             - redis_data:/data
