@@ -17,17 +17,17 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Check out repository
-              uses: actions/checkout@v7
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
             - name: Set up uv
-              uses: astral-sh/setup-uv@v9.0.0
+              uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
               with:
                   enable-cache: true
             - name: Set up Task
-              uses: go-task/setup-task@v2
+              uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2
             - name: Audit Python dependencies
               run: task security
             - name: Scan secrets and infrastructure configuration
-              uses: aquasecurity/trivy-action@v0.36.0
+              uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
               with:
                   scan-type: fs
                   scan-ref: .
@@ -38,7 +38,7 @@ jobs:
             - name: Build production image for vulnerability scanning
               run: docker build --tag lunchmoney-app:ci .
             - name: Scan production image
-              uses: aquasecurity/trivy-action@v0.36.0
+              uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
               with:
                   image-ref: lunchmoney-app:ci
                   format: table
@@ -59,7 +59,7 @@ jobs:
             LUNCHMONEY_DATABASE_URL: postgresql+asyncpg://lunchmoney_ci:lunchmoney_ci_password@postgres:5432/lunchmoney
         steps:
             - name: Check out repository
-              uses: actions/checkout@v7
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
             - name: Start the production Compose topology
               run: docker compose up --build --detach --wait
             - name: Verify liveness and database readiness
