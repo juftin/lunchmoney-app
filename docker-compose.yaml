@@ -76,7 +76,7 @@ services:
             - ALL
 
     postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine@sha256:ff64c9e3bdf8e2120107d3559de8db314e8305f7e38c5105903c6295876738ff
         container_name: lunchmoney-postgres
         environment:
             POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
