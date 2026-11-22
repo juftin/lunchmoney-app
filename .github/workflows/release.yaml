@@ -45,7 +45,7 @@ jobs:
             url: ${{ steps.deployment.outputs.page_url }}
         steps:
             - name: build-docs
-              uses: juftin/actions/taskfile@v1
+              uses: juftin/actions/taskfile@5a54b64fe07d8de40f92676cae6b56c565ec28b2 # v1
               with:
                   checkout: true
                   setup-uv: true
@@ -54,5 +54,5 @@ jobs:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   args: build
             - name: Publish Docs
-              uses: juftin/actions/github-pages@v1
+              uses: juftin/actions/github-pages@5a54b64fe07d8de40f92676cae6b56c565ec28b2 # v1
               id: deployment
